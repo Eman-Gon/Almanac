@@ -375,8 +375,8 @@ Every proposed rule requires human approval.
 
 | Failure | Required behavior |
 |---|---|
-| Model timeout | Use deterministic fallback and log warning |
-| Invalid JSON | Retry once with schema reminder, then fallback |
+| Primary model timeout or provider error | Try the configured backup once, then use deterministic fallback and log warnings |
+| Invalid JSON | Retry once using the configured backup with a schema reminder; if no backup exists, retry the primary once, then fallback |
 | Missing required field | Return `needs_confirmation` |
 | No feasible plan | Explain constraints and suggest partial acceptance or redirect |
 | Route infeasible | Return warning or infeasible status; do not hide failure |

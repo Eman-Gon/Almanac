@@ -45,7 +45,27 @@ export function DonationDetailClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { generatePlans, hydrated, state } = useDemoState();
-  const usedVenice = searchParams.get("intake") === "venice";
+  const intakeSource = searchParams.get("intake");
+  const usedPrimary = intakeSource === "primary_model";
+  const usedBackup = intakeSource === "backup_model";
+  const modelLabel = searchParams.get("model")?.slice(0, 80) ?? baselineAgentRun.modelOrRuleset;
+  const intakeStatus = usedBackup
+    ? {
+        title: "Backup Venice extraction validated",
+        description: "The primary model failed, and the backup output passed validation; staff review is still required.",
+        activity: "Validated backup-model extraction",
+      }
+    : usedPrimary
+      ? {
+          title: "Primary Venice extraction validated",
+          description: "The primary model output passed the intake schema; staff review is still required.",
+          activity: "Validated primary-model extraction",
+        }
+      : {
+          title: "Demo fallback used",
+          description: "No model is required. A validated seeded extraction is active.",
+          activity: "Validated fallback extraction",
+        };
 
   function generate() {
     generatePlans();
@@ -79,9 +99,7 @@ export function DonationDetailClient() {
           <div className="source-message-meta">Received 10:45 AM · Market Street Grocery</div>
           <div className="fallback-notice" role="status">
             <Bot size={18} aria-hidden="true" />
-            {usedVenice
-              ? <div><strong>Venice extraction validated</strong><span>Model output passed the intake schema; staff review is still required.</span></div>
-              : <div><strong>Demo fallback used</strong><span>No model is required. A validated seeded extraction is active.</span></div>}
+            <div><strong>{intakeStatus.title}</strong><span>{intakeStatus.description}</span></div>
           </div>
         </Panel>
 
@@ -119,7 +137,7 @@ export function DonationDetailClient() {
         <Panel title="Agent and audit activity">
           <ol className="activity-list">
             <li><span className="activity-dot blue" /><div><strong>Offer received</strong><small>{baselineAuditEvents[0].occurredAt.slice(11, 16)} · System</small></div></li>
-            <li><span className="activity-dot purple" /><div><strong>{usedVenice ? "Validated Venice extraction" : "Validated fallback extraction"}</strong><small>{usedVenice ? "Configured Venice model" : baselineAgentRun.modelOrRuleset} · High confidence</small></div></li>
+            <li><span className="activity-dot purple" /><div><strong>{intakeStatus.activity}</strong><small>{usedPrimary || usedBackup ? modelLabel : baselineAgentRun.modelOrRuleset} · High confidence</small></div></li>
           </ol>
         </Panel>
       </div>

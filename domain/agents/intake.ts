@@ -12,6 +12,7 @@ import type { AgentRun, Confidence, DonationOffer } from "@/domain/types";
 
 const DEFAULT_BASE_URL = "https://api.venice.ai/api/v1";
 const DEFAULT_TIMEOUT_MS = 8_000;
+const MAX_OUTPUT_TOKENS = 1_000;
 
 const VeniceConfigSchema = z.object({
   provider: z.literal("venice"),
@@ -55,6 +56,12 @@ export type IntakeResult = {
   fallbackUsed: boolean;
   warnings: string[];
   followUpQuestions: string[];
+  execution: {
+    source: "primary_model" | "backup_model" | "deterministic_fallback";
+    provider: "venice" | "deterministic";
+    model: string;
+    attemptedModels: string[];
+  };
 };
 
 type VeniceConfig = z.infer<typeof VeniceConfigSchema>;
@@ -86,7 +93,8 @@ function readVeniceConfig(): VeniceConfig | null {
 function fallbackResult(
   input: IntakeRequest,
   errorCode: IntakeAgentError["code"],
-  warning: string,
+  warnings: string[],
+  attemptedModels: string[] = [],
 ): IntakeResult {
   const isSeededScenario =
     input.donorId === seededDonation.donorId &&
@@ -110,8 +118,14 @@ function fallbackResult(
       errorCode,
     },
     fallbackUsed: true,
-    warnings: [warning],
+    warnings,
     followUpQuestions: [],
+    execution: {
+      source: "deterministic_fallback",
+      provider: "deterministic",
+      model: baselineAgentRun.modelOrRuleset,
+      attemptedModels,
+    },
   };
 }
 
@@ -153,6 +167,7 @@ async function requestExtraction(
     body: JSON.stringify({
       model,
       temperature: 0,
+      max_tokens: MAX_OUTPUT_TOKENS,
       messages: [
         {
           role: "user",
@@ -219,70 +234,158 @@ function buildDonation(
   return parsed.success ? parsed.data : null;
 }
 
+type AttemptFailureCode = IntakeAgentError["code"];
+
+type ModelAttempt =
+  | {
+      success: true;
+      extraction: z.infer<typeof IntakeExtractionSchema>;
+      donation: DonationOffer;
+    }
+  | {
+      success: false;
+      code: AttemptFailureCode;
+    };
+
+async function attemptModel(
+  config: VeniceConfig,
+  input: IntakeRequest,
+  model: string,
+  schemaReminder: boolean,
+): Promise<ModelAttempt> {
+  try {
+    const extraction = await requestExtraction(
+      config,
+      input.sourceText,
+      schemaReminder,
+      model,
+    );
+    const donation = buildDonation(input, extraction);
+    return donation
+      ? { success: true, extraction, donation }
+      : { success: false, code: "MISSING_REQUIRED_FIELD" };
+  } catch (error) {
+    if (error instanceof z.ZodError || error instanceof SyntaxError) {
+      return { success: false, code: "INVALID_AGENT_OUTPUT" };
+    }
+    if (
+      error instanceof Error &&
+      (error.name === "TimeoutError" || error.name === "AbortError")
+    ) {
+      return { success: false, code: "AGENT_TIMEOUT" };
+    }
+    return { success: false, code: "AGENT_UNAVAILABLE" };
+  }
+}
+
+function failureWarning(
+  role: "Primary" | "Backup",
+  model: string,
+  code: AttemptFailureCode,
+): string {
+  const reason: Record<AttemptFailureCode, string> = {
+    AGENT_UNAVAILABLE: "was unavailable",
+    AGENT_TIMEOUT: "timed out",
+    INVALID_AGENT_OUTPUT: "returned invalid structured output",
+    MISSING_REQUIRED_FIELD: "did not return all required donation facts",
+  };
+  return `${role} model ${model} ${reason[code]}.`;
+}
+
+function successfulResult(
+  attempt: Extract<ModelAttempt, { success: true }>,
+  startedAt: string,
+  model: string,
+  source: "primary_model" | "backup_model",
+  attemptedModels: string[],
+  warnings: string[],
+): IntakeResult {
+  const confidence: Confidence = attempt.extraction.confidence;
+  return {
+    donation: attempt.donation,
+    agentRun: {
+      id: `RUN-${crypto.randomUUID()}`,
+      agentType: "intake",
+      entityId: attempt.donation.id,
+      startedAt,
+      completedAt: new Date().toISOString(),
+      status: "success",
+      confidence,
+      modelOrRuleset: `venice:${model}`,
+    },
+    fallbackUsed: false,
+    warnings,
+    followUpQuestions: attempt.extraction.followUpQuestions,
+    execution: {
+      source,
+      provider: "venice",
+      model,
+      attemptedModels,
+    },
+  };
+}
+
 export async function parseDonationOffer(input: IntakeRequest): Promise<IntakeResult> {
   const config = readVeniceConfig();
   if (!config) {
     return fallbackResult(
       input,
       "AGENT_UNAVAILABLE",
-      "Venice is not configured; the validated seeded extraction was used.",
+      ["Venice is not configured; the validated seeded extraction was used."],
     );
   }
 
   const startedAt = new Date().toISOString();
-  let extraction: z.infer<typeof IntakeExtractionSchema> | null = null;
-  let modelUsed = config.model;
-
-  try {
-    extraction = await requestExtraction(config, input.sourceText, false);
-  } catch (error) {
-    if (error instanceof z.ZodError || error instanceof SyntaxError) {
-      modelUsed = config.backupModel ?? config.model;
-      try {
-        extraction = await requestExtraction(config, input.sourceText, true, modelUsed);
-      } catch {
-        return fallbackResult(
-          input,
-          "INVALID_AGENT_OUTPUT",
-          "Venice returned invalid structured output twice; the validated seeded extraction was used.",
-        );
-      }
-    } else {
-      const code = error instanceof Error && error.name === "TimeoutError"
-        ? "AGENT_TIMEOUT"
-        : "AGENT_UNAVAILABLE";
-      return fallbackResult(
-        input,
-        code,
-        "Venice was unavailable; the validated seeded extraction was used.",
-      );
-    }
-  }
-
-  const parsedDonation = extraction ? buildDonation(input, extraction) : null;
-  if (!extraction || !parsedDonation) {
-    return fallbackResult(
-      input,
-      "MISSING_REQUIRED_FIELD",
-      "Required donation facts were missing or invalid; the validated seeded extraction was used.",
+  const attemptedModels = [config.model];
+  const primary = await attemptModel(config, input, config.model, false);
+  if (primary.success) {
+    return successfulResult(
+      primary,
+      startedAt,
+      config.model,
+      "primary_model",
+      attemptedModels,
+      [],
     );
   }
 
-  const confidence: Confidence = extraction.confidence;
-  return {
-    donation: parsedDonation,
-    agentRun: {
-      id: `RUN-${crypto.randomUUID()}`,
-      agentType: "intake",
-      entityId: parsedDonation.id,
-      startedAt,
-      completedAt: new Date().toISOString(),
-      status: "success",
-      confidence,
-      modelOrRuleset: `venice:${modelUsed}`,
-    },
-    fallbackUsed: false,
-    warnings: [],
-    followUpQuestions: extraction.followUpQuestions,
-  };
+  const warnings = [failureWarning("Primary", config.model, primary.code)];
+  const hasDistinctBackup =
+    Boolean(config.backupModel) && config.backupModel !== config.model;
+  const retryModel = hasDistinctBackup
+    ? config.backupModel
+    : primary.code === "INVALID_AGENT_OUTPUT"
+      ? config.model
+      : undefined;
+
+  if (retryModel) {
+    attemptedModels.push(retryModel);
+    const backup = await attemptModel(
+      config,
+      input,
+      retryModel,
+      primary.code === "INVALID_AGENT_OUTPUT",
+    );
+    if (backup.success) {
+      if (hasDistinctBackup) {
+        warnings.push(`Backup model ${retryModel} produced validated output.`);
+      } else {
+        warnings.push(`Primary model ${retryModel} produced valid output on its schema retry.`);
+      }
+      return successfulResult(
+        backup,
+        startedAt,
+        retryModel,
+        hasDistinctBackup ? "backup_model" : "primary_model",
+        attemptedModels,
+        warnings,
+      );
+    }
+    warnings.push(failureWarning(hasDistinctBackup ? "Backup" : "Primary", retryModel, backup.code));
+    warnings.push("The validated seeded extraction was used after model attempts failed.");
+    return fallbackResult(input, backup.code, warnings, attemptedModels);
+  }
+
+  warnings.push("The validated seeded extraction was used because no backup model was configured.");
+  return fallbackResult(input, primary.code, warnings, attemptedModels);
 }

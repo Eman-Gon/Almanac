@@ -145,10 +145,12 @@ No known critical or high-severity defect may remain in the primary scenario.
 
 ### Model fallback
 
-- Simulate failed LLM response.
-- Verify fallback extraction.
+- Simulate primary success and verify the primary model is recorded.
+- Simulate primary timeout, provider failure, invalid JSON, and missing required facts; verify the backup model is attempted.
+- Simulate both model attempts failing and verify fallback extraction.
 - Verify UI remains usable.
 - Verify agent run status is `fallback_used`.
+- Verify the response and UI distinguish primary, backup, and deterministic sources without exposing the API key.
 
 ---
 

@@ -40,7 +40,7 @@ Input:
 }
 ```
 
-Output: a runtime-validated `DonationOffer`, its `AgentRun`, `fallbackUsed`, warnings, and follow-up questions. When Venice is configured, the route uses it only for bounded natural-language extraction, retries invalid structured output once, and deterministically loads a known donor location. For the exact seeded hero offer, missing configuration, provider errors, timeouts, invalid output, or missing required facts return the validated seeded extraction with `fallbackUsed: true`. Other offers fail with `AGENT_UNAVAILABLE`, `INVALID_AGENT_OUTPUT`, or `MISSING_REQUIRED_FIELD` rather than inheriting fabricated seed facts.
+Output: a runtime-validated `DonationOffer`, its `AgentRun`, `fallbackUsed`, warnings, follow-up questions, and an `execution` record containing `source`, `provider`, `model`, and `attemptedModels`. When Venice is configured, the route uses it only for bounded natural-language extraction and deterministically loads a known donor location. It attempts the configured primary model, then makes at most one second call: the distinct backup model after a timeout, provider error, invalid structured output, or missing required facts; or the primary model with a schema reminder when malformed output occurs and no backup is configured. For the exact seeded hero offer, missing configuration or failure of all attempts returns the validated seeded extraction with `fallbackUsed: true`. Other offers fail with `AGENT_UNAVAILABLE`, `AGENT_TIMEOUT`, `INVALID_AGENT_OUTPUT`, or `MISSING_REQUIRED_FIELD` rather than inheriting fabricated seed facts.
 
 ### `GET /api/donations/:id`
 

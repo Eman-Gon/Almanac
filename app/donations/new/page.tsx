@@ -9,7 +9,13 @@ import { Panel } from "@/components/shared/panel";
 import { donation, donor } from "@/data/seed/scenario";
 
 const ParseResponseSchema = z.object({
-  data: z.object({ fallbackUsed: z.boolean() }),
+  data: z.object({
+    fallbackUsed: z.boolean(),
+    execution: z.object({
+      source: z.enum(["primary_model", "backup_model", "deterministic_fallback"]),
+      model: z.string().min(1),
+    }),
+  }),
 });
 
 const emptyForm = {
@@ -72,7 +78,11 @@ export default function DonationIntakePage() {
       const payload = ParseResponseSchema.safeParse(await response.json());
       if (!response.ok) throw new Error("Donation parsing failed.");
       if (!payload.success) throw new Error("Donation parsing returned an invalid response.");
-      router.push(`/donations/DON-104?intake=${payload.data.data.fallbackUsed ? "fallback" : "venice"}`);
+      const query = new URLSearchParams({
+        intake: payload.data.data.execution.source,
+        model: payload.data.data.execution.model,
+      });
+      router.push(`/donations/DON-104?${query.toString()}`);
     } catch {
       setError("The offer could not be parsed. Check the server and try again.");
       setParsing(false);
