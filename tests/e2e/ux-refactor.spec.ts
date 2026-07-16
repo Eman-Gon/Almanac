@@ -7,6 +7,8 @@ test("decision-critical screens use progressive disclosure and contextual naviga
   await expect(page.locator(".urgent-offer-card").getByRole("link", { name: "Review donation" })).toBeVisible();
   await expect(page.locator(".refactor-kpi-card")).toHaveCount(3);
   await expect(page.getByTestId("network-map-canvas")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Map", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Communications", exact: true })).toHaveCount(0);
   await expect(page.getByText("Simulated demo data", { exact: true })).toBeVisible();
   const briefing = page.locator("details").filter({ hasText: "View full briefing" });
   await expect(briefing).not.toHaveAttribute("open");

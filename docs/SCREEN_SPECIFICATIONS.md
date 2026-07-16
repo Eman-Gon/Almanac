@@ -106,6 +106,32 @@ Historical rows are not interactive operational records and must not affect dash
 
 ---
 
+## Communication Test Center
+
+**Route:** `/communications`
+
+### Purpose
+
+Send a human-approved test update through Vapi without allowing the communication agent to change an operational decision.
+
+### Required components
+
+- Voice-call and SMS channel choices
+- Test contact name and E.164 test number
+- Staff-entered approved message
+- Separate approved voicemail message for voice calls
+- Explicit authorization checkbox before sending
+- Preview-only result when Vapi is not fully configured
+- Provider status for a live voice request when a Vapi call ID is available
+
+### Guardrails
+
+- The server keeps Vapi credentials out of the browser.
+- Live requests require `VAPI_TEST_CALLS_ENABLED=true` and match `VAPI_TEST_TO_NUMBER` exactly.
+- A call response is informational and unverified; it cannot accept a donation, alter allocation, certify food safety, or dispatch a mission.
+
+---
+
 ## 2. Donation Intake
 
 **Route:** `/donations/new`

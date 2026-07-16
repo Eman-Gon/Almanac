@@ -58,6 +58,11 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
   await expect(page.locator('section[aria-label="Mission summary"]').getByText("assigned", { exact: true })).toBeVisible();
   await page.goto("/missions/MSN-104");
   await expect(page.locator('section[aria-label="Mission summary"]').getByText("superseded", { exact: true })).toBeVisible();
+  await page.goto("/map?mission=MSN-104");
+  await expect(page.getByTestId("map-route-layer")).toHaveAttribute("data-route-status", "superseded");
+  await expect(page.getByText("Superseded route", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Original route superseded by the human-approved replacement mission.")).toBeVisible();
+  await expect(page.getByText("Human-approved route currently in execution.")).toHaveCount(0);
   await page.goto("/missions/MSN-105");
   await page.locator('a[href="/packing/PKG-105"]').first().click();
   await expect(page.getByRole("checkbox", { name: "Mark Harbor Light Pantry batch complete" })).toBeChecked();

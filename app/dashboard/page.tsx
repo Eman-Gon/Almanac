@@ -60,7 +60,7 @@ export default function DashboardPage() {
                 <div><span className="section-eyebrow">Strawberry Rescue</span><h3>{activeMissionId === "MSN-105" ? "Recovery route" : "Approved route"}</h3><p>1,200 lb · {activeMission.stops.length} stops · {activeMission.status.replaceAll("_", " ")}</p></div>
                 <ArrowRight size={18} aria-hidden="true" />
               </Link>
-            ) : <EmptyState title="No mission has been created for this donation yet."><Link className="button button-secondary" href="/donations/DON-104">Review donation</Link></EmptyState>}
+            ) : <EmptyState title="No mission has been created for this donation yet." />}
           </Panel>
           <NetworkSnapshot partnerLocations={partnerLocations} refrigeratedVehicles={refrigeratedVehicles} capacityWarnings={capacityWarnings} />
         </div>

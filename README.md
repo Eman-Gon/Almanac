@@ -98,6 +98,11 @@ LLM_BACKUP_MODEL=minimax-m25
 LLM_TIMEOUT_MS=12000
 NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_MAP_TILE_URL=
+VAPI_API_KEY=
+VAPI_ASSISTANT_ID=
+VAPI_PHONE_NUMBER_ID=
+VAPI_TEST_TO_NUMBER=
+VAPI_TEST_CALLS_ENABLED=false
 ```
 
 `LLM_API_KEY` is read only in the server route and must never use a `NEXT_PUBLIC_` prefix. `VENICE_API_KEY` and `VENICE_BASE_URL` remain supported as aliases. The primary model is attempted first; `LLM_BACKUP_MODEL` is attempted after a timeout, provider error, invalid structured output, or missing required facts. At most two model calls are made, and each response is capped at 1,000 tokens. The response records the selected source, model, attempted models, and failover warnings. If configuration is absent or both models fail, the exact seeded hero offer uses the validated deterministic fallback. Unrelated offers fail safely instead of inheriting synthetic strawberry facts. The map always uses bundled local rendering.
@@ -122,6 +127,7 @@ NEXT_PUBLIC_MAP_TILE_URL=
 | `/simulate` | Trigger the executable partner-cancellation fixture; other controls are disabled previews |
 | `/impact` | Review calculated results and audit history |
 | `/partners/[id]` | Inspect a partner agency profile |
+| `/communications` | Preview or explicitly send a Vapi test call or SMS update |
 
 Unknown dynamic IDs render the intentional shared not-found state. Only partner and partner-program destinations link to `/partners/[id]`.
 
@@ -149,6 +155,9 @@ GET  /api/missions/:id
 POST /api/missions/:id/events
 POST /api/missions/:id/disruptions
 POST /api/disruptions/:id/approve-recovery
+
+POST /api/communications/test
+GET  /api/communications/status/:id
 
 GET  /api/impact/:missionId
 POST /api/demo/reset

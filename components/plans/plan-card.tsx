@@ -63,7 +63,7 @@ export function PlanCard({
       <div className="plan-capacity-language"><span>Cold-capacity use</span><strong>{capacityLabel(plan)}</strong></div>
       <div className="plan-card-actions">
         <button className="button button-secondary plan-select-button" type="button" onClick={onSelect} disabled={disabled || selected} aria-pressed={selected}>
-          {selected ? "Selected plan" : "Select plan"}
+          Select plan
         </button>
         <button className="text-button" type="button" onClick={onViewDetails}>View plan details</button>
       </div>

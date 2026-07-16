@@ -351,6 +351,14 @@ interface CommunicationDraft {
 - Inventing contacts or commitments
 - Including unnecessary sensitive data
 
+### Vapi test transport
+
+- The communication screen may deliver only an explicitly human-confirmed test call or SMS.
+- Live transport is server-only and restricted to the configured `VAPI_TEST_TO_NUMBER`.
+- Voice calls use the approved message and a separate approved voicemail message; voicemail detection is not a food-safety or allocation decision.
+- Delivery status may be displayed, but a response from a contact remains unverified until staff review it.
+- Missing Vapi configuration returns a deterministic preview and does not contact anyone.
+
 ---
 
 ## Optional stretch agent: Notes-to-Action Agent

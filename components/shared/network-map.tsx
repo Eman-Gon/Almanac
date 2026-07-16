@@ -35,7 +35,17 @@ export type MapRouteSummary = {
   miles: number;
   stops: number;
   loadLb: number;
-  status: "candidate" | "approved" | "disrupted" | "replanned";
+  status: "candidate" | "approved" | "disrupted" | "replanned" | Extract<Mission["status"], "superseded" | "delivered" | "closed">;
+};
+
+const routeSummaryNotes: Record<MapRouteSummary["status"], string> = {
+  candidate: "Candidate route shown for decision context.",
+  approved: "Human-approved route currently in execution.",
+  disrupted: "A canceled stop requires human-approved replanning.",
+  replanned: "Human-approved replacement route is active.",
+  superseded: "Original route superseded by the human-approved replacement mission.",
+  delivered: "Delivered route retained for impact and audit context.",
+  closed: "Closed mission retained for audit context.",
 };
 
 export type MapRouteStop = Mission["stops"][number];
@@ -472,7 +482,7 @@ function InteractiveLocationList({
         <div><span className="map-eyebrow">On route</span><strong>{routesVisible ? `${routeLocations.length} stops` : `${contextLocations.length} visible locations`}</strong></div>
         <span className="map-list-hint">Select for details</span>
       </div>
-      {routeSummary ? routesVisible ? <div className="map-route-summary"><RouteSummaryLine routeSummary={routeSummary} /><span className="map-route-summary-note">{routeSummary.status === "replanned" ? "Human-approved replacement route is active." : routeSummary.status === "disrupted" ? "A canceled stop requires human-approved replanning." : routeSummary.status === "approved" ? "Human-approved route currently in execution." : "Candidate route shown for decision context."}</span></div> : <div className="map-layer-hidden-note"><RouteSummaryLine routeSummary={routeSummary} /><span>Routes layer hidden · location context remains available.</span></div> : null}
+      {routeSummary ? routesVisible ? <div className="map-route-summary"><RouteSummaryLine routeSummary={routeSummary} /><span className="map-route-summary-note">{routeSummaryNotes[routeSummary.status]}</span></div> : <div className="map-layer-hidden-note"><RouteSummaryLine routeSummary={routeSummary} /><span>Routes layer hidden · location context remains available.</span></div> : null}
       <div className="map-legend" aria-label="Map legend">
         <span><i className="legend-swatch legend-blue" />Donor</span>
         {layers.capacity ? <span data-testid="map-legend-capacity"><i className="legend-swatch legend-purple" />Warehouse</span> : null}

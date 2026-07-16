@@ -14,6 +14,7 @@ import { donation, partners, warehouse } from "@/data/seed/scenario";
 import { createMission } from "@/domain/execution/create-execution";
 import { totalRouteMiles } from "@/domain/metrics/calculate";
 import { generatePlanSet } from "@/domain/planning/generate-plans";
+import type { Mission } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
 
 function formatTime(value: string): string {
@@ -38,6 +39,61 @@ function statusTone(status: string): "green" | "amber" | "red" {
   return "red";
 }
 
+function routeDisplayStatus(
+  mission: Mission | undefined,
+  recovery: boolean,
+  hasApprovedPlan: boolean,
+): MapRouteSummary["status"] {
+  if (!mission) return hasApprovedPlan ? "approved" : "candidate";
+
+  switch (mission.status) {
+    case "superseded":
+    case "delivered":
+    case "closed":
+      return mission.status;
+    case "disrupted":
+    case "replanning":
+      return "disrupted";
+    case "approved":
+    case "assigned":
+    case "in_transit":
+      return recovery ? "replanned" : "approved";
+    case "draft":
+      return "candidate";
+  }
+}
+
+function routeStatusLabel(status: MapRouteSummary["status"]): string {
+  switch (status) {
+    case "candidate": return "Candidate route";
+    case "disrupted": return "Replanning required";
+    case "replanned": return "Replanned route";
+    case "superseded": return "Superseded route";
+    case "delivered": return "Delivered route";
+    case "closed": return "Closed route";
+    case "approved": return "Approved route";
+  }
+}
+
+function routeStatusTone(status: MapRouteSummary["status"]): "blue" | "green" | "amber" | "red" {
+  if (status === "candidate" || status === "closed") return "blue";
+  if (status === "disrupted") return "red";
+  if (status === "superseded") return "amber";
+  return "green";
+}
+
+function routeSummaryLabel(status: MapRouteSummary["status"], missionId: string, planName: string): string {
+  switch (status) {
+    case "superseded": return `${missionId} · Superseded route`;
+    case "delivered": return `${missionId} · Delivered route`;
+    case "closed": return `${missionId} · Closed route`;
+    case "disrupted": return `${missionId} · Replanning required`;
+    case "replanned": return `${missionId} · Replacement route`;
+    case "approved": return `${planName} · Approved`;
+    case "candidate": return `${planName} · Candidate`;
+  }
+}
+
 export default function MapPage() {
   const { hydrated, state } = useDemoState();
   const searchParams = useSearchParams();
@@ -48,7 +104,6 @@ export default function MapPage() {
   const returnToParam = searchParams.get("returnTo");
   const returnTo = returnToParam?.startsWith("/") ? returnToParam : "/dashboard";
   const recovery = contextMissionId === "MSN-105";
-  const disrupted = state.stage === "disrupted" && contextMissionId === "MSN-104";
 
   const planSet = useMemo(() => generatePlanSet(), []);
   const replacementMissionUnavailable = recovery && (
@@ -88,7 +143,10 @@ export default function MapPage() {
     ? state.disruption!.recoveryOption
     : selectedPlan;
   const missionId = contextMissionId;
-  const mission = recovery ? state.missions[missionId]! : state.missions[missionId] ?? createMission(activePlan, missionId);
+  const persistedMission = state.missions[missionId];
+  const mission = recovery ? persistedMission! : persistedMission ?? createMission(activePlan, missionId);
+  const routeStatus = routeDisplayStatus(persistedMission, recovery, Boolean(state.approvedPlan));
+  const disrupted = routeStatus === "disrupted";
   const routeLocationIds = mission.stops.map((stop) => stop.locationId);
   const stagingLb = activePlan.allocations
     .filter((allocation) => allocation.handling === "pack")
@@ -102,28 +160,45 @@ export default function MapPage() {
     .slice()
     .sort((a, b) => Date.parse(a.receivingWindows[0]?.end ?? "") - Date.parse(b.receivingWindows[0]?.end ?? ""))[0];
   const routeSummary: MapRouteSummary = {
-    label: recovery ? "MSN-105 · Replacement route" : disrupted ? "MSN-104 · Replanning required" : state.approvedPlan ? `${activePlan.name} · Approved` : `${activePlan.name} · Candidate`,
+    label: routeSummaryLabel(routeStatus, missionId, activePlan.name),
     miles: totalRouteMiles(mission.routeLegs),
     stops: mission.stops.length,
     loadLb: donation.quantityLb,
-    status: recovery ? "replanned" : disrupted ? "disrupted" : state.approvedPlan ? "approved" : "candidate",
+    status: routeStatus,
   };
 
-  const contextMessage = recovery
-    ? `${state.disruption?.affectedQuantityLb.toLocaleString() ?? "Affected"} lb moved off Eastside after cancellation. The replacement route keeps the quantity accounted for and raises meal-kit staging to ${stagingLb.toLocaleString()} lb.`
-    : disrupted
-      ? `${state.disruption?.affectedQuantityLb.toLocaleString() ?? "Affected"} lb at Eastside is canceled and still requires a human-approved recovery plan. The interrupted route remains visible for decision context.`
-    : `${stagingLb.toLocaleString()} lb uses ${stagingPct}% of short-dwell cold staging. Use the route stops below to check receiving windows before approval.`;
+  let contextMessage: string;
+  if (routeStatus === "superseded") {
+    contextMessage = "MSN-104 was superseded after human approval. Open MSN-105 to inspect the active replacement route.";
+  } else if (routeStatus === "delivered" || routeStatus === "closed") {
+    contextMessage = `${missionId} is ${routeStatus}. This route remains visible for calculated impact and audit review.`;
+  } else if (recovery) {
+    contextMessage = `${state.disruption?.affectedQuantityLb.toLocaleString() ?? "Affected"} lb moved off Eastside after cancellation. The replacement route keeps the quantity accounted for and raises meal-kit staging to ${stagingLb.toLocaleString()} lb.`;
+  } else if (disrupted) {
+    contextMessage = `${state.disruption?.affectedQuantityLb.toLocaleString() ?? "Affected"} lb at Eastside is canceled and still requires a human-approved recovery plan. The interrupted route remains visible for decision context.`;
+  } else {
+    contextMessage = `${stagingLb.toLocaleString()} lb uses ${stagingPct}% of short-dwell cold staging. Use the route stops below to check receiving windows before approval.`;
+  }
+
+  const routeContextDescription = routeStatus === "superseded"
+    ? "Original route retained for audit context"
+    : routeStatus === "delivered" || routeStatus === "closed"
+      ? "Completed route retained for audit context"
+      : recovery
+        ? "Replacement route after Eastside cancellation"
+        : disrupted
+          ? "Interrupted route awaiting human-approved recovery"
+          : "Donor pickup → cold staging → partner deliveries";
 
   return (
     <>
       <PageHeader
         title={requestedMissionId || requestedPlanId ? "Route map" : "Network map"}
         subtitle={`${recovery ? "Recovery route" : activePlan.name} · ${donation.productDescription} · ${donation.quantityLb.toLocaleString()} lb`}
-        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: recovery ? "Mission" : "Plans", href: recovery ? `/missions/${missionId}` : "/plans/PLN-104" }, { label: "Map" }]}
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: requestedMissionId ? "Mission" : "Plans", href: requestedMissionId ? `/missions/${missionId}` : "/plans/PLN-104" }, { label: "Map" }]}
         backHref={returnTo}
         backLabel={returnTo.includes("/missions/") ? "Back to Mission" : returnTo.includes("/plans/") ? "Back to Plan" : returnTo.includes("/partners/") ? "Back to Partner" : "Back to Dashboard"}
-        status={<span className={`plain-status ${routeSummary.status === "disrupted" ? "plain-status-red" : routeSummary.status === "replanned" ? "plain-status-amber" : "plain-status-green"}`}>{routeSummary.status === "candidate" ? "Candidate route" : routeSummary.status === "disrupted" ? "Replanning required" : routeSummary.status === "replanned" ? "Replanned route" : "Approved route"}</span>}
+        status={<span className={`plain-status plain-status-${routeStatusTone(routeSummary.status)}`}>{routeStatusLabel(routeSummary.status)}</span>}
       />
       <div className="page-content map-page">
         <Panel className="full-map-panel map-workspace">
@@ -133,7 +208,7 @@ export default function MapPage() {
                 <h2>Network decision map</h2>
                 <span className={`map-workspace-state map-workspace-state-${routeSummary.status}`}><i aria-hidden="true" />{routeSummary.label}</span>
               </div>
-              <p>{recovery ? "Replacement route after Eastside cancellation" : disrupted ? "Interrupted route awaiting human-approved recovery" : "Donor pickup → cold staging → partner deliveries"}</p>
+              <p>{routeContextDescription}</p>
             </div>
             <div className="map-story-facts" aria-label="Route story">
               <span><Package size={15} aria-hidden="true" /><strong>{donation.quantityLb.toLocaleString()} lb</strong> {donation.productDescription.toLowerCase()}</span>

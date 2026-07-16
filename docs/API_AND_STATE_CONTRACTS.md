@@ -222,6 +222,30 @@ The shared deterministic domain calculations—not rendered UI components or an 
 
 ---
 
+## Communication endpoints
+
+### `POST /api/communications/test`
+
+Creates a human-confirmed test communication request. The input must contain an E.164 test number, a channel (`voice` or `sms`), an approved message, and `confirmed: true`.
+
+Voice requests use the configured Vapi assistant and phone number, enable Vapi voicemail detection, and provide the approved `voicemailMessage`. SMS requests use Vapi's outbound SMS transport with the exact approved message.
+
+Live requests are intentionally gated by all of the following server-only environment variables:
+
+- `VAPI_API_KEY`
+- `VAPI_ASSISTANT_ID`
+- `VAPI_PHONE_NUMBER_ID`
+- `VAPI_TEST_TO_NUMBER`
+- `VAPI_TEST_CALLS_ENABLED=true`
+
+When the live gate is not complete, the endpoint returns a labeled `preview` result and makes no external request. When enabled, only the exact configured test number is accepted. The endpoint never changes donation, plan, mission, partner, or food-safety state.
+
+### `GET /api/communications/status/:id`
+
+Returns the current Vapi status for a live voice test request. It returns a preview status without contacting Vapi while live test calls are disabled. The browser may poll this endpoint after a live request; no call status is persisted in the browser's operational demo state.
+
+---
+
 ## Demo endpoints
 
 ### `POST /api/demo/reset`
