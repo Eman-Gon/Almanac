@@ -19,9 +19,10 @@ import { PlanCard } from "@/components/plans/plan-card";
 import { QuantityEditorDialog } from "@/components/plans/quantity-editor-dialog";
 import { NetworkMap } from "@/components/shared/network-map";
 import { Panel } from "@/components/shared/panel";
-import { partners, warehouse } from "@/data/seed/scenario";
+import { vehicles, warehouse } from "@/data/seed/scenario";
 import { generatePlanSet, getDestinationName } from "@/domain/planning/generate-plans";
 import { accountedQuantityLb, validatePlanOption } from "@/domain/planning/quantity";
+import { scenarioValidationContext } from "@/domain/planning/scenario-context";
 import type { PlanOption } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
 
@@ -45,24 +46,31 @@ function handlingLabel(handling: PlanOption["allocations"][number]["handling"]):
 
 export function DecisionRoomClient() {
   const router = useRouter();
-  const { state, selectPlan, approvePlan } = useDemoState();
+  const { state, selectPlan, editPlan, approvePlan } = useDemoState();
   const [planSet] = useState(generatePlanSet);
-  const [options, setOptions] = useState(planSet.options);
   const [approvalOpen, setApprovalOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
 
-  const selectedPlan = useMemo(
-    () => options.find((option) => option.id === state.selectedPlanId) ?? options[2],
-    [options, state.selectedPlanId],
+  const options = useMemo(
+    () =>
+      planSet.options.map(
+        (option) => state.planOverrides[option.id] ?? option,
+      ),
+    [planSet.options, state.planOverrides],
   );
-  const validation = validatePlanOption(selectedPlan, 1_200);
 
-  function applyEdit(updated: PlanOption) {
-    setOptions((current) => current.map((option) => (option.id === updated.id ? updated : option)));
+  const selectedPlan = useMemo(
+    () => state.approvedPlan ?? options.find((option) => option.id === state.selectedPlanId) ?? options[2],
+    [options, state.approvedPlan, state.selectedPlanId],
+  );
+  const validation = validatePlanOption(selectedPlan, scenarioValidationContext);
+
+  function applyEdit(updated: PlanOption, reason: string) {
+    editPlan(updated, reason);
   }
 
   function completeApproval(reason: string) {
-    approvePlan(reason);
+    approvePlan(selectedPlan, reason);
     router.push("/packing/PKG-104");
   }
 
@@ -78,8 +86,8 @@ export function DecisionRoomClient() {
       <div className="page-content decision-room-page">
         <section className="decision-summary" aria-label="Decision constraints">
           <div><Clock3 className="summary-red" aria-hidden="true" /><span>Pickup before<strong>1:00 PM</strong></span></div>
-          <div><Snowflake className="summary-blue" aria-hidden="true" /><span>Warehouse cold capacity<strong>{warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb} lb</strong></span></div>
-          <div><Truck className="summary-green" aria-hidden="true" /><span>Refrigerated vehicle capacity<strong>1,400 lb</strong></span></div>
+          <div><Snowflake className="summary-blue" aria-hidden="true" /><span>Cold space available<strong>{warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb} lb storage · {warehouse.refrigeratedStagingCapacityAvailableLb} lb staging</strong></span></div>
+          <div><Truck className="summary-green" aria-hidden="true" /><span>Refrigerated vehicle capacity<strong>{vehicles[0].capacityLb.toLocaleString()} lb</strong></span></div>
           <div><CheckCircle2 className="summary-green" aria-hidden="true" /><span><strong>{accountedQuantityLb(selectedPlan).toLocaleString()} lb</strong>accounted for</span></div>
         </section>
 
@@ -89,6 +97,7 @@ export function DecisionRoomClient() {
               key={plan.id}
               plan={plan}
               selected={selectedPlan.id === plan.id}
+              disabled={Boolean(state.approvedPlan)}
               onSelect={() => selectPlan(plan.id)}
             />
           ))}
@@ -101,11 +110,18 @@ export function DecisionRoomClient() {
                 <thead><tr><th>Location</th><th>Allocation</th><th>Handling</th><th>Arrival window</th><th>Capacity fit</th><th>Score</th></tr></thead>
                 <tbody>
                   {selectedPlan.allocations.map((allocation) => {
-                    const partner = partners.find((item) => item.id === allocation.destinationId);
-                    const capacityFits = !partner || allocation.quantityLb <= partner.refrigeratedCapacityAvailableLb;
+                    const capacityFits = !validation.issues.some(
+                      (issue) => issue.entityId === allocation.destinationId,
+                    );
                     return (
                       <tr key={allocation.id}>
-                        <td><Link href={`/partners/${allocation.destinationId}`}><span className="table-location-icon" />{getDestinationName(allocation.destinationId)}</Link></td>
+                        <td>
+                          {allocation.destinationType === "partner" || allocation.destinationType === "packing_program" ? (
+                            <Link href={`/partners/${allocation.destinationId}`}><span className="table-location-icon" />{getDestinationName(allocation.destinationId)}</Link>
+                          ) : (
+                            <span><span className="table-location-icon" />{getDestinationName(allocation.destinationId)}</span>
+                          )}
+                        </td>
                         <td className="number-cell"><strong>{allocation.quantityLb.toLocaleString()} lb</strong></td>
                         <td>{handlingLabel(allocation.handling)}</td>
                         <td>{arrivalWindow(allocation.destinationId)}</td>
@@ -118,7 +134,7 @@ export function DecisionRoomClient() {
                     <tr>
                       <td><span className="table-location-icon hold" />Supervisor inspection hold</td>
                       <td className="number-cell"><strong>{selectedPlan.inspectionHoldLb} lb</strong></td>
-                      <td>Inspection hold</td><td>By 1:00 PM</td><td><span className="fit-cell"><CheckCircle2 size={14} aria-hidden="true" />Fits</span></td><td>—</td>
+                      <td>Inspection hold</td><td>By 1:00 PM</td><td>{validation.capacity.warehouseStorage.excessQuantityLb === 0 ? <span className="fit-cell"><CheckCircle2 size={14} aria-hidden="true" />Fits storage</span> : <span className="conflict-cell"><AlertTriangle size={14} aria-hidden="true" />Exceeds</span>}</td><td>—</td>
                     </tr>
                   ) : null}
                 </tbody>
@@ -158,8 +174,8 @@ export function DecisionRoomClient() {
                   <tr><th>Distributed before risk deadline</th>{options.map((option) => <td key={option.id}>{option.metrics.quantityDistributedInTimeLb.toLocaleString()} lb</td>)}</tr>
                   <tr><th>Expected inspection hold / loss</th>{options.map((option) => <td key={option.id}>{option.metrics.expectedSpoilageLb} lb</td>)}</tr>
                   <tr><th>Total miles</th>{options.map((option) => <td key={option.id}>{option.metrics.totalMiles.toFixed(1)} mi</td>)}</tr>
-                  <tr><th>Equity indicator</th>{options.map((option) => <td key={option.id}>{option.metrics.equityIndicator} / 100</td>)}</tr>
-                  <tr><th>Refusal risk</th>{options.map((option) => <td key={option.id}>{option.metrics.refusalRiskScore} / 100</td>)}</tr>
+                  <tr><th>Equity indicator · seeded estimate</th>{options.map((option) => <td key={option.id}>{option.metrics.equityIndicator} / 100</td>)}</tr>
+                  <tr><th>Refusal risk · seeded estimate</th>{options.map((option) => <td key={option.id}>{option.metrics.refusalRiskScore} / 100</td>)}</tr>
                 </tbody>
               </table>
             </div>
@@ -179,9 +195,9 @@ export function DecisionRoomClient() {
           </div>
           <div className="approver-label"><span>Approver</span><strong>demo_user</strong></div>
           <div className="rail-actions">
-            <button className="button button-secondary" type="button" onClick={() => setEditorOpen(true)} disabled={selectedPlan.strategy === "warehouse_first"}>Edit quantities</button>
-            <button className="button button-primary" type="button" disabled={!validation.approvable} onClick={() => state.stage === "approved" ? router.push("/packing/PKG-104") : setApprovalOpen(true)}>
-              {state.stage === "approved" ? "Open packing plan" : "Review & approve"}<ChevronRight size={16} aria-hidden="true" />
+            <button className="button button-secondary" type="button" onClick={() => setEditorOpen(true)} disabled={selectedPlan.strategy === "warehouse_first" || Boolean(state.approvedPlan)}>Edit quantities</button>
+            <button className="button button-primary" type="button" disabled={!state.approvedPlan && !validation.approvable} onClick={() => state.approvedPlan ? router.push("/packing/PKG-104") : setApprovalOpen(true)}>
+              {state.approvedPlan ? "Open packing plan" : "Review & approve"}<ChevronRight size={16} aria-hidden="true" />
             </button>
           </div>
         </div>

@@ -21,6 +21,8 @@
 - Missions
 - Impact
 
+After persisted state hydrates, Missions points to `MSN-105` when recovery is approved; `/missions` uses the same active-mission resolution.
+
 ### Shared states
 
 Every data screen must support:
@@ -30,6 +32,10 @@ Every data screen must support:
 - Error
 - Low-confidence or incomplete data
 - Read-only after mission completion where appropriate
+
+The root demo-state provider must finish validating browser storage before rendering the shell or any action control. During that gate, show **Loading saved demo state…** so a click cannot mutate the temporary seed state.
+
+Unknown dynamic IDs render the intentional shared not-found state with a dashboard escape. Donor and warehouse labels must never link to `/partners/[id]`; only actual partner or partner-program destinations use partner-profile links.
 
 ---
 
@@ -175,7 +181,8 @@ Compare complete operational plans and obtain human approval.
 - Expected inspection hold or loss
 - Miles
 - Staff or volunteer minutes
-- Cold-capacity utilization
+- Long-term refrigerated-storage utilization
+- Refrigerated-staging utilization
 - Need-match score
 - Equity indicator
 - Refusal risk
@@ -203,6 +210,8 @@ Require:
 - Only valid plans can be approved.
 - Total quantities reconcile.
 - Approval creates mission and packing plan.
+- Edits change quantities only; identity, allocation metadata, and authoritative metrics are rebuilt from the canonical option.
+- Distributed pounds, households, storage, and staging update after edits. Route miles, spoilage, labor, need-match, equity, and refusal risk remain labeled seeded strategy estimates.
 
 ---
 
@@ -246,17 +255,17 @@ Do not rely on color alone; include icons, labels, or patterns.
 
 ### Controls
 
-- Toggle route
-- Toggle demand
-- Toggle cold capacity
-- Fit to mission
-- Filter by product fit
+- Toggle routes
+- Toggle demand partners
+- Toggle warehouse capacity
+- Toggle vehicles
 - Open partner profile
 
 ### Acceptance criteria
 
 - Map renders with local seed data.
 - Route display does not require a live routing API.
+- Every layer checkbox immediately updates both the schematic map and its visible legend/list.
 - Keyboard users can access a synchronized location list.
 
 ---
@@ -267,7 +276,7 @@ Do not rely on color alone; include icons, labels, or patterns.
 
 ### Purpose
 
-Translate the approved plan into warehouse action.
+Translate the approved plan into warehouse action. The implemented IDs are `PKG-104` after primary plan approval and `PKG-105` after recovery approval.
 
 ### Required components
 
@@ -292,6 +301,11 @@ Translate the approved plan into warehouse action.
 - Quantities exactly match approved allocations.
 - Refrigerated product is visibly identified.
 - No completion action changes allocation quantities.
+- Every batch exposes `pending | complete` status, and completion survives navigation in the same browser.
+- The plan becomes complete only after every batch is complete.
+- A supported ID with no created plan shows a prerequisite state directing the user to plan or recovery approval; the screen must not fabricate executable packing data.
+- `PKG-105` uses `BAT-101`-series IDs; when a completed destination/staging quantity grows, it shows an already-packed `-C` batch and a pending recovery-only `-R` delta.
+- After recovery, `PKG-104` remains visible but its start and completion controls are disabled; `PKG-105` is active.
 
 ---
 
@@ -320,13 +334,15 @@ Show the approved pickup and delivery sequence.
 - Mark pickup complete
 - Mark stop complete
 - Trigger disruption
-- View packing plan
+- View the packing plan for the current mission (`PKG-104` or `PKG-105`)
 - View impact
 
 ### Acceptance criteria
 
 - Mission stop quantities match plan allocations.
 - Completed stops cannot be accidentally edited.
+- Only the first pending stop is enabled; out-of-order completion is blocked.
+- Planned route totals match the strategy template: 18.4 miles Warehouse First, 45.7 Direct Distribution, and 24.8 Mixed Plan.
 - Disruption creates a recoverable state, not silent mutation.
 
 ---
@@ -341,14 +357,13 @@ Create a controlled live-demo failure.
 
 ### Required scenario buttons
 
-- Pantry canceled
-- Truck breakdown
-- Freezer capacity lost
-- Driver unavailable
-- Donation quantity doubled
-- Pickup deadline shortened
+- Eastside Community Pantry canceled — executable primary fixture
+- Truck breakdown — disabled preview
+- Cold capacity lost — disabled preview
+- Driver unavailable — disabled preview
+- Pickup deadline shortened — disabled preview
 
-Only one or two must be fully implemented for MVP; others may be visibly labeled `preview`.
+Only the named partner cancellation is executable in the MVP. Every other control is disabled and visibly labeled `Preview`.
 
 ### Required output
 
@@ -363,6 +378,9 @@ Only one or two must be fully implemented for MVP; others may be visibly labeled
 - Primary disruption is deterministic.
 - Replan changes route and allocations.
 - Audit history records the disruption and approval.
+- The canceled partner and affected original stop show `canceled`.
+- The original mission shows `superseded` after recovery approval.
+- Recovery approval creates `PKG-105` and `MSN-105`; changed, canceled, and new packing batches remain `pending`.
 
 ---
 
@@ -382,7 +400,8 @@ Summarize calculated scenario outcomes and demonstrate trust.
 - Estimated spoilage avoided
 - Estimated households supported
 - Miles
-- Cold-capacity utilization
+- Long-term refrigerated-storage utilization
+- Refrigerated-staging utilization
 - Replanning time
 - Human overrides
 

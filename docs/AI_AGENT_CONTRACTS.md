@@ -94,11 +94,12 @@ Determine whether candidate handling paths are operationally feasible.
 
 - Donation offer
 - Product lot
-- Warehouse capacity
+- Warehouse long-term refrigerated-storage headroom
+- Warehouse short-dwell refrigerated staging capacity
 - Partner capacity
 - Vehicle capacity
 - Dock and receiving windows
-- Optional packing capacity
+- Packing-program confirmed demand
 
 ### Outputs
 
@@ -106,6 +107,7 @@ Determine whether candidate handling paths are operationally feasible.
 interface CapacityAssessment {
   warehouseFeasible: boolean;
   compatibleWarehouseCapacityLb: number;
+  refrigeratedStagingCapacityAvailableLb: number;
   directDistributionFeasible: boolean;
   vehicleOptions: string[];
   capacityWarnings: CapacityWarning[];
@@ -121,6 +123,7 @@ Fully deterministic. The agent label represents a bounded service, not an LLM ca
 
 - Ignoring temperature compatibility
 - Treating unavailable capacity as available
+- Treating short-dwell staging as interchangeable with long-term storage
 - Approving an override
 
 ---
@@ -294,11 +297,14 @@ interface RecoveryOutput {
 
 ### Required behavior
 
-- Preserve completed stops
+- Preserve only completed stops whose location and pickup/drop-off quantities are unchanged
 - Replan only remaining work
+- Mark the canceled partner and affected original stop `canceled`
 - Mark original mission as superseded after approval
 - Recalculate metrics
 - Create audit events
+
+After human approval, deterministic execution services create `PKG-105` and `MSN-105`. `PKG-105` uses non-colliding IDs and, when a completed destination/staging quantity grows, separates the already-packed amount from a pending recovery-only delta. The agent does not fabricate or silently activate those resources.
 
 ### Prohibited behavior
 

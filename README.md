@@ -2,7 +2,7 @@
 
 ChoiceGrid is an AI-assisted food-bank operations prototype for deciding where urgent food should go, how it should be packed, and how to recover when the plan changes.
 
-The product is designed for food-bank allocation, warehouse, and transportation teams. It uses AI for natural-language interpretation and explanations while keeping quantities, capacity, scoring, routing assumptions, and impact metrics deterministic and auditable.
+The product is designed for food-bank allocation, warehouse, and transportation teams. The current build uses a deterministic structured-extraction fallback for the demo while keeping quantities, capacity, scoring, routing assumptions, and impact metrics deterministic and auditable.
 
 ## Start here
 
@@ -22,7 +22,7 @@ ChoiceGrid:
 3. Compares three distribution plans.
 4. Lets a staff member approve or edit one plan.
 5. Creates packing or cross-dock instructions and a route map.
-6. Replans when a pantry cancels or a truck becomes unavailable.
+6. Replans when a partner cancels; additional disruption concepts are disabled previews.
 7. Calculates the scenario's operational and community impact.
 
 ---
@@ -39,28 +39,26 @@ ChoiceGrid:
 
 ---
 
-## Proposed technical stack
+## Implemented technical stack
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- shadcn/ui or equivalent reusable components
-- React Leaflet
-- Zod
-- Zustand or equivalent lightweight state management
-- Local fixture repository for demo data
-- Optional server-side LLM integration for structured extraction and explanations
+- Next.js 16 App Router and React 19
+- Strict TypeScript 5.9
+- Tailwind CSS 4 with repository-owned reusable components
+- Lucide icons
+- Zod 4 runtime schemas
+- React context plus versioned browser `localStorage` for durable demo state
+- Local deterministic fixtures and domain services
+- Bundled schematic map and precomputed route geometry
 - Vitest, Testing Library, and Playwright
 
-The hackathon demo must remain usable without a live routing service or production database.
+The demo uses no production database, live routing service, map-tile service, or live LLM call.
 
 ---
 
-## Expected quick start
+## Quick start
 
 ```bash
 npm install
-cp .env.example .env.local
 npm run dev
 ```
 
@@ -70,7 +68,7 @@ Then open:
 http://localhost:3000/dashboard
 ```
 
-Expected validation commands:
+Validation commands:
 
 ```bash
 npm run lint
@@ -78,21 +76,18 @@ npm run typecheck
 npm run test
 npm run test:e2e
 npm run build
-```
-
-Reset the seeded demo:
-
-```bash
 npm run demo:reset
 ```
 
-These commands are the intended contract. Update this file if repository initialization chooses different names.
+The final command reports immutable seed readiness; it cannot clear a browser's `localStorage`. Use **Reset scenario** in the app to clear browser demo state and return to `/dashboard`.
+
+After `npm run build`, use `npm run start` to serve the production build. `npm run test:watch` starts Vitest in watch mode.
 
 ---
 
 ## Environment variables
 
-A minimal `.env.example` should document optional values such as:
+No environment variable is required for the current MVP. `.env.example` reserves these names for possible future integrations:
 
 ```text
 LLM_API_KEY=
@@ -101,7 +96,7 @@ NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_MAP_TILE_URL=
 ```
 
-The demo should degrade gracefully when `LLM_API_KEY` is absent by using deterministic seeded extraction results.
+The current application does not read these variables. Donation parsing always uses the validated deterministic fallback, and the map uses bundled local rendering.
 
 ---
 
@@ -109,20 +104,57 @@ The demo should degrade gracefully when `LLM_API_KEY` is absent by using determi
 
 | Route | Purpose |
 |---|---|
+| `/` | Redirect to `/dashboard` |
 | `/dashboard` | Operations control tower |
+| `/donations` | List the seeded active offer |
 | `/donations/new` | Enter or paste a donation offer |
 | `/donations/[id]` | Review extracted donation details |
+| `/plans` | Redirect to seeded plan set `PLN-104` |
 | `/plans/[id]` | Compare and approve plans |
-| `/map` | View demand, capacity, and routes |
-| `/packing/[id]` | Review packing or cross-dock instructions |
+| `/map` | View demand, capacity, vehicles, and routes with functional layer toggles |
+| `/packing/[id]` | Review created packing or cross-dock instructions (`PKG-104` after plan approval; `PKG-105` after recovery approval) |
+| `/missions` | Redirect to active mission `MSN-104`, or `MSN-105` after recovery |
 | `/missions/[id]` | Track the approved mission |
-| `/simulate` | Trigger a controlled disruption |
+| `/simulate` | Trigger the executable partner-cancellation fixture; other controls are disabled previews |
 | `/impact` | Review calculated results and audit history |
 | `/partners/[id]` | Inspect a partner agency profile |
 
+Unknown dynamic IDs render the intentional shared not-found state. Only partner and partner-program destinations link to `/partners/[id]`.
+
 ---
 
-## Suggested repository structure
+## Implemented API routes
+
+```text
+POST /api/donations/parse
+GET  /api/donations/:id
+
+POST /api/plans/generate
+GET  /api/plans/:id
+POST /api/plans/:id/approve
+
+GET  /api/partners
+GET  /api/partners/:id
+GET  /api/map/network
+
+GET  /api/packing/:id
+POST /api/packing/:id/start
+POST /api/packing/:id/complete
+
+GET  /api/missions/:id
+POST /api/missions/:id/events
+POST /api/missions/:id/disruptions
+POST /api/disruptions/:id/approve-recovery
+
+GET  /api/impact/:missionId
+POST /api/demo/reset
+```
+
+All routes use the shared response envelope documented in `docs/API_AND_STATE_CONTRACTS.md`. The evolving workflow lives in validated browser demo state: `GET /api/packing/:id`, `GET /api/missions/:id`, and `GET /api/impact/:missionId` require `?preview=true` and return a labeled, non-persisted seed projection; without it they return `409 STATE_REQUIRED`. `GET /api/map/network` is also labeled as a non-persisted seed projection. Stateful actions require current resources and do not persist browser state. Plan payloads may edit canonical allocation quantities only; submitted identities and metrics are not authoritative.
+
+---
+
+## Repository structure
 
 ```text
 app/
@@ -138,37 +170,32 @@ app/
 └── api/
 
 components/
+├── donations/
+├── execution/
 ├── layout/
-├── dashboard/
+├── partners/
 ├── plans/
-├── map/
-├── packing/
-├── missions/
 └── shared/
 
 domain/
-├── schemas/
-├── scoring/
-├── planning/
-├── routing/
+├── api/
+├── dashboard/
+├── demo/
+├── execution/
 ├── metrics/
-└── repositories/
-
-agents/
-├── intake/
-├── capacity/
-├── matching/
 ├── planning/
 ├── recovery/
-└── communication/
+├── schemas/
+└── scoring/
 
 data/
-├── seed/
-└── fixtures/
+└── seed/
+
+state/
+scripts/
 
 tests/
 ├── unit/
-├── integration/
 └── e2e/
 ```
 
@@ -185,6 +212,13 @@ Start with:
 - `docs/API_AND_STATE_CONTRACTS.md`
 - `docs/AI_AGENT_CONTRACTS.md`
 - `docs/DEMO_SCENARIOS.md`
+
+Presentation support:
+
+- `DEMO_SCRIPT.md`
+- `PITCH_DECK_OUTLINE.md`
+- `BACKUP_DEMO_VIDEO.md`
+- `FOOD_BANK_INTERVIEW.md`
 
 Background research is in:
 
@@ -205,7 +239,9 @@ The following must genuinely work:
 - Quantity conservation
 - Map markers and route display
 - Packing-plan generation
-- One disruption and replan
+- Persistent per-batch packing completion
+- One partner-cancellation disruption and human-approved replan
+- Canceled partner and stop state plus mission supersession
 - Calculated impact metrics
 - Audit trail
 

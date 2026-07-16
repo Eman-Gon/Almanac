@@ -37,8 +37,11 @@ function routeIsActive(pathname: string, href: string): boolean {
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { resetScenario } = useDemoState();
+  const { hydrated, resetScenario, state } = useDemoState();
   const [menuOpen, setMenuOpen] = useState(false);
+  const missionHref = hydrated && state.stage === "recovered"
+    ? "/missions/MSN-105"
+    : "/missions/MSN-104";
 
   function reset() {
     resetScenario();
@@ -65,12 +68,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <nav className="primary-nav" aria-label="Primary navigation">
           {navigation.map((item) => {
-            const active = routeIsActive(pathname, item.href);
+            const href = item.label === "Missions" ? missionHref : item.href;
+            const active = routeIsActive(pathname, href);
             const Icon = item.icon;
             return (
               <Link
-                key={item.href}
-                href={item.href}
+                key={item.label}
+                href={href}
                 className={`nav-link ${active ? "nav-link-active" : ""}`}
                 aria-current={active ? "page" : undefined}
                 onClick={() => setMenuOpen(false)}

@@ -2,7 +2,7 @@
 
 ## API style
 
-The proposed implementation uses Next.js route handlers or server actions. The contracts below are stable regardless of transport.
+The implemented MVP uses Next.js route handlers plus a versioned browser demo-state store. The endpoint list below describes routes that exist in the repository; future production endpoints are out of scope.
 
 All API responses use a consistent envelope:
 
@@ -10,7 +10,7 @@ All API responses use a consistent envelope:
 interface ApiResponse<T> {
   data: T | null;
   error: ApiError | null;
-  meta?: {
+  meta: {
     requestId: string;
     generatedAt: string;
     demoMode: boolean;
@@ -29,18 +29,6 @@ interface ApiError {
 
 ## Donation endpoints
 
-### `GET /api/donations`
-
-Returns donation summaries, optionally filtered by status.
-
-```text
-Query: status, urgency, donorId
-```
-
-### `POST /api/donations`
-
-Create a structured donation draft.
-
 ### `POST /api/donations/parse`
 
 Input:
@@ -52,15 +40,11 @@ Input:
 }
 ```
 
-Output: validated `IntakeOutput` plus created or updated `DonationOffer`.
+Output: the validated seeded `DonationOffer`, the deterministic fallback `AgentRun`, and `fallbackUsed: true`.
 
 ### `GET /api/donations/:id`
 
 Returns full donation, extraction fields, related agent runs, and audit events.
-
-### `PATCH /api/donations/:id`
-
-Allows confirmed field edits. Requires an edit reason for fields originally populated by an agent when the value changes materially.
 
 ---
 
@@ -77,28 +61,13 @@ Input:
 }
 ```
 
-Output: `PlanSet` with three options or an explicit infeasibility response.
+Output: a `PlanSet` with three complete options. An infeasible option remains in the comparison with blocking risks and cannot be approved.
 
 ### `GET /api/plans/:id`
 
-Returns plan set, options, score details, and map references.
+Returns the seeded plan set and its three calculated options.
 
-### `PATCH /api/plans/:planSetId/options/:optionId`
-
-Allows quantity edits before approval.
-
-Input:
-
-```json
-{
-  "allocations": [
-    {"allocationId": "ALL-001", "quantityLb": 520}
-  ],
-  "reason": "Adjusted for updated pantry capacity"
-}
-```
-
-The server recalculates all metrics and validates conservation.
+Quantity edits are implemented in the versioned local demo store rather than a separate HTTP endpoint. Only `Allocation.quantityLb` may change. The browser rebuilds the option from its canonical seeded identity and allocation rows, persists the edited quantities and reason, and writes an audit event before approval.
 
 ### `POST /api/plans/:planSetId/approve`
 
@@ -107,19 +76,24 @@ Input:
 ```json
 {
   "optionId": "OPT-003",
+  "option": "optional current edited PlanOption",
   "approverId": "demo_user",
   "reason": "Best balance of urgency and cold capacity"
 }
 ```
 
+When `option` is supplied, it must match `optionId` and belong to the route's plan set. Allocation IDs, destinations, types, product lots, handling, arrival times, strategy, hold, and declined quantity must match the canonical option; only row quantities are accepted from the submitted object. The handler rebuilds authoritative identity and strategy fields from that canonical option, recalculates distributed pounds, households, long-term storage use, and refrigerated-staging use, then reruns conservation, partner, vehicle, temperature, and window validation.
+
+Submitted metrics are not authoritative. Expected spoilage, staff minutes, need-match, equity, refusal risk, and route miles remain labeled seeded strategy-level scenario estimates because no quantity-sensitive formula is implemented for them. The seeded mission templates total 18.4 miles for Warehouse First, 45.7 miles for Direct Distribution, and 24.8 miles for Mixed Plan.
+
 Output:
 
 - Approved plan option
 - Packing plan
-- Draft mission
+- Assigned mission
 - Audit event
 
-Approval must be idempotent.
+The browser demo-state approval action also records draft, approval, and assignment lifecycle events and is idempotent for an already approved state.
 
 ---
 
@@ -127,13 +101,7 @@ Approval must be idempotent.
 
 ### `GET /api/partners`
 
-Filters:
-
-- product category
-- status
-- minimum capacity
-- receiving time
-- usability tag
+Returns the complete synthetic partner list. Query filters are not implemented in the MVP.
 
 ### `GET /api/partners/:id`
 
@@ -141,11 +109,7 @@ Returns profile, demand, capacity, windows, service gap, and notes.
 
 ### `GET /api/map/network`
 
-Returns normalized locations, statuses, and optional route layers.
-
-### `GET /api/map/routes/:missionId`
-
-Returns route legs and polylines.
+Returns the synthetic donor, warehouse, partners, vehicles, and precomputed primary route. The response is always labeled `projection: "seed_preview_not_persisted"`; this route does not read the browser's evolving approval or recovery state.
 
 ---
 
@@ -153,15 +117,40 @@ Returns route legs and polylines.
 
 ### `GET /api/packing/:id`
 
-Returns batches derived from the approved plan.
+Supports `PKG-104` and recovery plan `PKG-105` only as explicit seed previews:
+
+```text
+GET /api/packing/PKG-104?preview=true
+GET /api/packing/PKG-105?preview=true
+```
+
+Without `preview=true`, the endpoint returns `409 STATE_REQUIRED` because an HTTP GET cannot read the browser's approved state. A preview response is labeled `projection: "seed_preview_not_persisted"`; it is not proof that approval or recovery occurred. The browser workflow creates and persists `PKG-104` after plan approval and `PKG-105` after recovery approval.
 
 ### `POST /api/packing/:id/start`
 
-Moves status from `ready` to `in_progress` and records audit event.
+The HTTP action accepts `PKG-104` or `PKG-105`. It requires the current, already-created `PackingPlan` in the request body, verifies that its ID matches the route, and starts only a `ready` plan. Any other status returns `409 INVALID_STATE_TRANSITION`. The endpoint never synthesizes a missing resource.
+
+```json
+{
+  "packingPlan": {"id": "PKG-104", "status": "ready", "batches": []}
+}
+```
+
+The abbreviated object above shows the required resource shape conceptually; callers must submit the complete schema-valid packing plan. The browser UI performs the same transition against the validated plan stored in `DemoState`.
 
 ### `POST /api/packing/:id/complete`
 
-Marks batches complete without changing allocation quantities.
+Updates one batch without changing allocation quantities.
+
+```json
+{
+  "batchId": "BAT-001",
+  "complete": true,
+  "packingPlan": "full current PackingPlan resource"
+}
+```
+
+The HTTP action accepts `PKG-104` or `PKG-105` and requires the current schema-valid packing plan. The route ID must match the plan, `batchId` must exist, and packing must already be `in_progress` or `complete`; a `ready` plan returns `409 INVALID_STATE_TRANSITION`. `complete: false` reopens the batch. Repeating the current batch state returns `changed: false` without an audit event. The plan becomes `complete` only when every batch is complete.
 
 ---
 
@@ -169,19 +158,21 @@ Marks batches complete without changing allocation quantities.
 
 ### `GET /api/missions/:id`
 
-Returns mission, stops, route, event timeline, and current disruptions.
+`MSN-104` and `MSN-105` are available only as explicit non-persisted seed projections through `?preview=true`. Without that flag, the endpoint returns `409 STATE_REQUIRED`; a mission must be created by plan or recovery approval. Preview responses carry `projection: "seed_preview_not_persisted"`. The browser demo state owns the real evolving mission, timeline, completion, and disruption state. Mission route legs are deterministic templates scaled to the approved strategy total: Warehouse First 18.4 miles, Direct Distribution 45.7 miles, and Mixed Plan 24.8 miles.
 
 ### `POST /api/missions/:id/events`
 
 Examples:
 
 ```json
-{"type": "pickup_complete", "stopId": "STP-001"}
+{"type": "pickup_complete", "stopId": "STP-001", "mission": "current Mission resource"}
 ```
 
 ```json
-{"type": "delivery_complete", "stopId": "STP-003"}
+{"type": "delivery_complete", "stopId": "STP-003", "mission": "current Mission resource"}
 ```
+
+The action requires the full current mission resource, a matching route ID, an existing stop, and mission status `assigned` or `in_transit`. Only the first pending stop may complete; out-of-order requests return `409 INVALID_STATE_TRANSITION`. `pickup_complete` must target a pickup stop and `delivery_complete` a drop-off stop.
 
 ### `POST /api/missions/:id/disruptions`
 
@@ -190,16 +181,34 @@ Input:
 ```json
 {
   "type": "partner_canceled",
-  "affectedEntityId": "PAR-003",
-  "details": {"reason": "Receiving staff unavailable"}
+  "affectedEntityId": "PAR-002",
+  "details": {"reason": "Receiving staff unavailable"},
+  "approvedPlan": "current approved PlanOption resource",
+  "mission": "current assigned or in-transit Mission resource"
 }
 ```
 
-Output: disruption record and replacement plan options.
+The action validates the current approved plan, matching mission, eligible non-complete stop, and all plan constraints. Output contains the disruption, Partner B with `canceled` status, the original mission in `replanning` with its affected stop `canceled`, and the validated replacement option.
 
 ### `POST /api/disruptions/:id/approve-recovery`
 
-Approves a replacement plan and creates a superseding mission.
+Requires the current approved original plan, original packing plan `PKG-104`, original mission already in `replanning`, and matching recorded disruption with its affected quantity. The plan, packing plan, and mission must link to the same approved option; the affected mission stop must already be `canceled`. On success it approves the replacement plan, marks the original mission `superseded`, and creates `MSN-105` plus `PKG-105`.
+
+Recovery batch IDs start at `BAT-101`, avoiding collisions with `PKG-104`'s `BAT-001` series. Completed work is matched by destination and staging location. When recovery increases a completed quantity, `PKG-105` splits it into an already-packed `-C` batch and a pending recovery-only `-R` delta; for example, 400 lb already packed for Community Kitchen plus a new 60 lb recovery delta. In browser state, `PKG-104` becomes read-only history after recovery.
+
+```json
+{
+  "originalPlan": "current approved PlanOption resource",
+  "originalPackingPlan": "current PKG-104 resource",
+  "originalMission": "current MSN-104 resource in replanning with the affected stop canceled",
+  "disruption": {
+    "id": "DSP-001",
+    "missionId": "MSN-104",
+    "partnerId": "PAR-002",
+    "affectedQuantityLb": 320
+  }
+}
+```
 
 ---
 
@@ -207,9 +216,9 @@ Approves a replacement plan and creates a superseding mission.
 
 ### `GET /api/impact/:missionId`
 
-Returns calculated metrics, baseline assumptions, and audit history.
+Returns calculated seed-preview metrics for supported mission `MSN-104` or `MSN-105` only when `preview=true`. Without that flag it returns `409 STATE_REQUIRED`; impact requires an approved mission. Preview responses are labeled `projection: "seed_preview_not_persisted"`. The browser impact screen instead composes the current approved plan, mission, and evolving audit history from validated local demo state.
 
-The server—not the client—should be the canonical source of impact calculations.
+The shared deterministic domain calculations—not rendered UI components or an LLM—are the canonical source of impact values. The browser and route projection both compose those calculations from their respective validated inputs.
 
 ---
 
@@ -217,68 +226,45 @@ The server—not the client—should be the canonical source of impact calculati
 
 ### `POST /api/demo/reset`
 
-- Available only when demo mode is enabled
-- Restores fixture state
-- Returns starting donation and dashboard summary
-- Idempotent
-
-### `POST /api/demo/advance`
-
-Optional helper for presentation mode. It must call the same domain services as manual actions rather than replacing them with hard-coded UI state.
+- Returns the starting scenario, donation, and dashboard summary.
+- Is idempotent.
+- Does not mutate a browser's local state. The in-app reset control clears the versioned browser demo state; `npm run demo:reset` reports immutable seed readiness from the terminal.
 
 ---
 
 ## Client state
 
-Suggested state slices:
-
-```ts
-interface AppState {
-  demo: DemoState;
-  donations: DonationState;
-  plans: PlanState;
-  map: MapState;
-  missions: MissionState;
-  ui: UiState;
-}
-```
-
-### Demo state
+The implemented state is one Zod-validated `DemoState` persisted under the versioned browser key `choicegrid-demo-v2`:
 
 ```ts
 interface DemoState {
-  enabled: boolean;
-  scenarioId: string;
-  lastResetAt?: string;
+  version: 2;
+  stage: "initial" | "plans_generated" | "approved" | "disrupted" | "recovered";
+  selectedPlanId: string;
+  planOverrides: Record<string, PlanOption>;
+  allocationEditReason: string;
+  approvedPlan: PlanOption | null;
+  approvalReason: string;
+  packingPlans: Record<string, PackingPlan>;
+  activePackingPlanId: string | null;
+  missions: Record<string, Mission>;
+  partnerStatusOverrides: Record<string, "available" | "limited" | "unavailable" | "canceled">;
+  disruption: DemoDisruption | null;
+  auditEvents: AuditEvent[];
+  fallbackUsed: boolean;
+  resetCount: number;
 }
 ```
 
-### Plan state
+The provider validates persisted state before rendering the application shell; until hydration finishes it shows one loading state, so actions cannot mutate the seed state before browser storage is read. Edited allocations, both packing plans, mission progress, disruption, supersession, and audit history then survive navigation and reload until reset. Recovery activates `PKG-105`, keeps `PKG-104` read-only, and makes `/missions`, sidebar, dashboard, and map mission links resolve to active replacement `MSN-105`. Server routes remain stateless transition functions and seed projections; callers must pass current prerequisite resources explicitly.
 
-```ts
-interface PlanState {
-  activePlanSetId?: string;
-  selectedOptionId?: string;
-  editedAllocations: Record<string, number>;
-  isGenerating: boolean;
-  validationErrors: string[];
-}
-```
+### Seeded recovery chronology
 
-### Map state
-
-```ts
-interface MapState {
-  selectedLocationId?: string;
-  selectedMissionId?: string;
-  visibleLayers: {
-    demand: boolean;
-    capacity: boolean;
-    routes: boolean;
-    vehicles: boolean;
-  };
-}
-```
+- Disruption creation: `2026-07-15T11:18:00-07:00`
+- Replanning event: `2026-07-15T11:18:01-07:00`
+- Recovery approval and replacement creation: `2026-07-15T11:18:11-07:00`
+- `PKG-105` start and batch actions: `11:19:00` and `11:19:30`
+- `MSN-105` stop completion: `11:20:00`
 
 ---
 
@@ -314,8 +300,10 @@ Disruption branch:
 assigned / in_transit
 → disrupted
 → replanning
-→ superseded by replacement mission
+→ superseded
 ```
+
+The human-approved replacement mission then follows `draft → approved → assigned`. The audit record stores `replacementMissionId` on the original mission event and `supersedesMissionId` on the replacement event.
 
 Invalid transitions must return `409 CONFLICT` or equivalent domain error.
 
@@ -332,6 +320,7 @@ Invalid transitions must return `409 CONFLICT` or equivalent domain error.
 | `WINDOW_INFEASIBLE` | Pickup or receiving time cannot be met |
 | `TEMPERATURE_INCOMPATIBLE` | Product and storage/vehicle mismatch |
 | `PLAN_NOT_APPROVABLE` | Plan contains unresolved blocking warnings |
+| `STATE_REQUIRED` | Stateful resource must be created by approval; GET preview requires `preview=true` |
 | `INVALID_STATE_TRANSITION` | Entity state does not permit action |
 | `AGENT_UNAVAILABLE` | LLM call failed; fallback may be used |
 | `DEMO_MODE_REQUIRED` | Demo-only endpoint used outside demo mode |
@@ -340,8 +329,8 @@ Invalid transitions must return `409 CONFLICT` or equivalent domain error.
 
 ## Concurrency and idempotency
 
-- Plan approval must use an idempotency key or current-version check.
-- Quantity edits should include the plan version.
+- Demo approval and recovery actions return the current state when already complete.
+- Persisted state has an explicit version and fails closed to the seed state when validation fails.
 - A second disruption cannot silently overwrite an unresolved first disruption.
 - Reset is idempotent.
 - Completed mission stops are immutable except through a documented correction flow, which is out of MVP scope.

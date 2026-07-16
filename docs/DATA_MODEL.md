@@ -167,10 +167,13 @@ interface Warehouse {
   occupiedDryLb: number;
   occupiedRefrigeratedLb: number;
   occupiedFrozenLb: number;
+  refrigeratedStagingCapacityAvailableLb: number;
   dockWindows: TimeWindow[];
   active: boolean;
 }
 ```
+
+`refrigeratedCapacityLb - occupiedRefrigeratedLb` is long-term refrigerated-storage headroom. `refrigeratedStagingCapacityAvailableLb` is a separate short-dwell, same-day staging constraint. An allocation with `handling: "store"` or an inspection hold consumes long-term storage headroom; an allocation with `handling: "pack"` consumes staging capacity. The same pounds must never be counted against both pools unless the operational workflow explicitly moves them between pools at different modeled times.
 
 ---
 
@@ -292,11 +295,14 @@ interface PlanMetrics {
   totalMiles: number;
   staffMinutes: number;
   coldCapacityUtilizationPct: number;
+  refrigeratedStagingUtilizationPct: number;
   needMatchScore: number;
   equityIndicator: number;
   refusalRiskScore: number;
 }
 ```
+
+Plan edits are quantity-only overlays on a canonical `PlanOption`. The system accepts changed `Allocation.quantityLb` values only when plan and allocation identities still match, then reconstructs all authoritative fields from the canonical option. Distributed pounds, households, long-term storage use, and refrigerated-staging use are quantity-derived. Route miles, expected spoilage, staff minutes, need-match, equity, and refusal risk remain seeded strategy-level scenario estimates until quantity-sensitive formulas exist.
 
 ---
 
@@ -319,8 +325,20 @@ interface PackingBatch {
   stagingLocation: string;
   temperatureClass: TemperatureClass;
   instruction: string;
+  status: "pending" | "complete";
 }
 ```
+
+The relevant `DemoState` fields store packing plans by ID rather than as one replaceable value:
+
+```ts
+interface DemoState {
+  packingPlans: Record<string, PackingPlan>;
+  activePackingPlanId: string | null;
+}
+```
+
+Plan approval inserts `PKG-104` with `BAT-001`-series batches. Recovery approval inserts and activates `PKG-105` with non-colliding `BAT-101`-series batches without deleting `PKG-104`. If a completed destination/staging batch gains quantity during recovery, the replacement splits it into an already-packed `-C` batch and a pending recovery-only `-R` delta. `PKG-104` is historical and read-only after recovery.
 
 ---
 
@@ -334,6 +352,7 @@ type MissionStatus =
   | "in_transit"
   | "disrupted"
   | "replanning"
+  | "superseded"
   | "delivered"
   | "closed";
 
@@ -370,6 +389,8 @@ interface RouteLeg {
   polyline: [number, number][];
 }
 ```
+
+The seeded strategy templates sum to 18.4 miles for Warehouse First, 45.7 miles for Direct Distribution, and 24.8 miles for Mixed Plan. A mission may complete only its first pending stop; canceled stops are skipped and out-of-order completion is rejected.
 
 ---
 
@@ -451,6 +472,11 @@ interface OperationalNote {
 8. Consequential status changes create audit events.
 9. Replanned missions supersede rather than silently overwrite the original mission.
 10. Unknown values remain unknown until confirmed.
+11. Long-term refrigerated storage and short-dwell refrigerated staging are validated as separate capacity pools.
+12. Completing a packing batch changes only its completion status; it cannot change approved quantities.
+13. Recovery packing uses non-colliding batch IDs and separates already-packed quantity from a pending recovery-only delta when a completed destination/staging batch grows.
+14. Canonical plan and allocation identities cannot be changed through quantity editing; submitted metrics are not authoritative.
+15. Mission stops complete in route sequence, and a superseded mission or historical packing plan is read-only.
 
 ---
 
@@ -462,6 +488,7 @@ interface OperationalNote {
 - `VEH-001` through `VEH-003`: vehicle fleet
 - `DRV-001` through `DRV-004`: synthetic drivers
 - Three plan options
-- One approved mission
-- One pantry-cancellation fixture
-- One truck-breakdown fixture
+- One primary packing plan created after approval and one deterministic replacement packing plan created after recovery approval
+- One primary mission created after approval and one deterministic replacement mission created after recovery approval
+- One executable partner-cancellation fixture
+- Disabled preview controls for additional disruption concepts; previews are not executable fixtures

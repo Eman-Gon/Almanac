@@ -57,11 +57,11 @@ Dashboard
 4. User confirms or corrects missing fields.
 5. User selects **Generate plans**.
 6. Capacity, need, planning, and routing services run.
-7. The decision room displays three valid alternatives.
+7. The decision room displays three complete alternatives; infeasible alternatives are visibly blocked.
 8. User inspects metrics, assumptions, exclusions, and map.
 9. User approves one plan or edits quantities.
 10. System validates quantities and capacities.
-11. System creates an approved mission and packing plan.
+11. System creates approved packing plan `PKG-104` and assigned mission `MSN-104`.
 12. User opens the mission map.
 13. User reviews route stops and receiving windows.
 14. User opens impact after the mission or simulated completion.
@@ -70,7 +70,7 @@ Dashboard
 
 - Donation status is `approved` or `in_execution`.
 - Approved allocations conserve quantity.
-- Mission and packing plan reference the same allocations.
+- Mission `MSN-104` and packing plan `PKG-104` reference the same allocations.
 - An approval audit event exists.
 
 ---
@@ -98,9 +98,9 @@ Each option must be complete enough to execute.
 
 ### Example options
 
-- **Warehouse First:** receive all product at the warehouse.
-- **Direct Distribution:** cross-dock or pick up and deliver directly to agencies.
-- **Mixed Plan:** split product among direct delivery, warehouse packing, and inspection hold.
+- **Warehouse First:** receive all product at the warehouse; seeded route template 18.4 miles.
+- **Direct Distribution:** cross-dock or pick up and deliver directly to agencies; seeded route template 45.7 miles.
+- **Mixed Plan:** split product among direct delivery, warehouse packing, and inspection hold; seeded route template 24.8 miles.
 
 ### User actions
 
@@ -117,13 +117,15 @@ Each option must be complete enough to execute.
 
 ## Flow 4 — Edit allocation before approval
 
-1. User changes a destination quantity.
-2. System recalculates capacity, vehicle load, and conservation.
+1. User changes a destination quantity; plan and allocation identities cannot be edited.
+2. System rebuilds the option from its canonical rows, recalculates distributed pounds, households, storage and staging utilization, and validates conservation, partner, vehicle, temperature, and windows.
 3. Invalid values show inline errors.
 4. System suggests where unassigned quantity can move.
 5. User enters an edit reason.
 6. User approves the edited plan.
 7. Audit event stores original and final quantities.
+
+Expected spoilage, staff minutes, need-match, equity, refusal risk, and route miles remain labeled seeded strategy estimates; they are not presented as dynamically recalculated from quantity edits.
 
 ### Invalid examples
 
@@ -135,36 +137,63 @@ Each option must be complete enough to execute.
 
 ---
 
-## Flow 5 — Pantry cancellation
+## Flow 5 — Packing-batch completion
+
+1. User opens `PKG-104` after plan approval or `PKG-105` after recovery approval.
+2. User starts packing.
+3. Every primary batch begins `pending`; a recovery plan may begin `in_progress` when it contains preserved completed work.
+4. User marks individual batches `complete` or reopens them.
+5. Batch and plan progress persist across navigation in the same browser.
+
+### Required behavior
+
+- Completion controls never change approved quantities.
+- The packing plan becomes `complete` only when all batches are complete.
+- A supported packing route opened before its prerequisite approval shows an intentional not-created state rather than synthetic executable instructions.
+- `PKG-105` uses `BAT-101`-series IDs. If a completed destination/staging batch grows during recovery, it splits into an already-packed `-C` batch and a pending recovery-only `-R` delta.
+- After recovery, `PKG-104` remains visible as read-only history and only active `PKG-105` can change.
+
+## Flow 5A — Mission-stop completion
+
+1. User opens the active mission.
+2. Only the first pending route stop is enabled for completion.
+3. Pickup and delivery event types must match the stop's action.
+4. Completing the final non-canceled stop marks the mission `delivered`.
+
+Out-of-order completion is rejected and creates no audit event.
+
+---
+
+## Flow 6 — Partner cancellation
 
 1. User opens an approved mission.
-2. User triggers **Pantry canceled**.
-3. System marks the stop unavailable.
+2. User triggers the named **Eastside Community Pantry canceled** fixture.
+3. System marks Partner B and its affected route stop `canceled`.
 4. Recovery Agent identifies affected quantity and windows.
-5. Deterministic planner produces replacement options.
+5. Deterministic planner sends 260 lb to Northside Family Resource Center and increases Community Kitchen staging from 400 lb to 460 lb.
 6. User reviews changes.
 7. User approves the replacement.
-8. Map, packing instructions, metrics, and audit history update.
+8. System creates replacement packing plan `PKG-105` with non-colliding batch IDs. Already-packed quantity is retained; any added recovery-only quantity is a separate pending batch.
+9. The original mission becomes `superseded`, replacement mission `MSN-105` becomes assigned, and the route, metrics, and audit history update.
 
 ### Success state
 
-- No quantity remains assigned to the canceled pantry.
+- No quantity remains assigned to the canceled partner.
 - Replacement destinations stay within capacity.
 - Route and impact metrics are recalculated.
+- `PKG-104` remains read-only history, `PKG-105` is active, and recovery packing quantities match the approved replacement.
+- The Missions navigation and `/missions` redirect resolve to `MSN-105` after recovery.
+- Audit history links the superseded and replacement missions.
 
 ---
 
-## Flow 6 — Truck breakdown
+## Flow 7 — Additional disruption previews
 
-1. User marks the assigned vehicle unavailable.
-2. System checks other vehicles and loads.
-3. If a feasible replacement exists, route is regenerated.
-4. If no vehicle is feasible, system suggests quantity reduction, delayed movement, or partner pickup.
-5. Human approval is required.
+Truck breakdown, cold-capacity loss, driver unavailability, and a shortened pickup deadline appear as disabled preview controls. They are not executable fixtures and must not be presented as implemented recovery paths.
 
 ---
 
-## Flow 7 — Low-confidence or failed AI call
+## Flow 8 — Low-confidence or failed AI call
 
 1. AI request fails or output schema is invalid.
 2. System shows a non-blocking status.
@@ -176,7 +205,7 @@ The application must never become unusable because an external model is unavaila
 
 ---
 
-## Flow 8 — Partner profile inspection
+## Flow 9 — Partner profile inspection
 
 From a map marker or plan row:
 
@@ -186,7 +215,7 @@ From a map marker or plan row:
 
 ---
 
-## Flow 9 — Demo reset
+## Flow 10 — Demo reset
 
 1. Presenter opens a hidden or clearly labeled demo-control menu.
 2. Presenter selects **Reset scenario**.
@@ -194,4 +223,4 @@ From a map marker or plan row:
 4. All temporary approvals, disruptions, and audit events are cleared.
 5. Dashboard opens at the starting alert.
 
-Reset must be idempotent and available only in demo mode.
+Reset must be idempotent and available only in demo mode. The in-app action clears the browser's versioned `localStorage`; `npm run demo:reset` can verify immutable fixture readiness but cannot clear browser state.

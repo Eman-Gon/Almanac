@@ -8,9 +8,13 @@ function stagingFor(plan: PlanOption, destinationId: string): string {
   return "Cross-dock outbound · Lane B";
 }
 
-export function createPackingPlan(plan: PlanOption): PackingPlan {
+export function createPackingPlan(
+  plan: PlanOption,
+  packingPlanId: "PKG-104" | "PKG-105" = "PKG-104",
+): PackingPlan {
+  const batchNumberOffset = packingPlanId === "PKG-105" ? 100 : 0;
   const batches: PackingPlan["batches"] = plan.allocations.map((allocation, index) => ({
-    id: `BAT-${String(index + 1).padStart(3, "0")}`,
+    id: `BAT-${String(batchNumberOffset + index + 1).padStart(3, "0")}`,
     destinationId: allocation.destinationId,
     productLotId: allocation.productLotId,
     quantityLb: allocation.quantityLb,
@@ -21,11 +25,12 @@ export function createPackingPlan(plan: PlanOption): PackingPlan {
       allocation.handling === "pack"
         ? `Place in refrigerated staging for ${getDestinationName(allocation.destinationId)} meal-kit line.`
         : `Cross-dock directly to the outbound lane for ${getDestinationName(allocation.destinationId)}.`,
+    status: "pending",
   }));
 
   if (plan.inspectionHoldLb > 0) {
     batches.push({
-      id: `BAT-${String(batches.length + 1).padStart(3, "0")}`,
+      id: `BAT-${String(batchNumberOffset + batches.length + 1).padStart(3, "0")}`,
       destinationId: warehouse.id,
       productLotId: productLot.id,
       quantityLb: plan.inspectionHoldLb,
@@ -33,19 +38,70 @@ export function createPackingPlan(plan: PlanOption): PackingPlan {
       stagingLocation: "Refrigerated inspection bay · Hold 2",
       temperatureClass: "refrigerated",
       instruction: "Hold for supervisor inspection; do not release automatically.",
+      status: "pending",
     });
   }
 
   return {
-    id: "PKG-104",
+    id: packingPlanId,
     approvedPlanOptionId: plan.id,
     batches,
     status: "ready",
   };
 }
 
-function initialRouteLegs(): Mission["routeLegs"] {
-  return [
+export function startPackingPlan(packingPlan: PackingPlan): PackingPlan {
+  if (packingPlan.status === "complete") return packingPlan;
+  return { ...packingPlan, status: "in_progress" };
+}
+
+export function setPackingBatchCompletion(
+  packingPlan: PackingPlan,
+  batchId: string,
+  complete: boolean,
+): PackingPlan {
+  if (!packingPlan.batches.some((batch) => batch.id === batchId)) {
+    throw new Error(`Packing batch ${batchId} was not found.`);
+  }
+  const batches = packingPlan.batches.map((batch) =>
+    batch.id === batchId
+      ? { ...batch, status: complete ? ("complete" as const) : ("pending" as const) }
+      : batch,
+  );
+
+  return {
+    ...packingPlan,
+    batches,
+    status: batches.every((batch) => batch.status === "complete")
+      ? "complete"
+      : "in_progress",
+  };
+}
+
+function scaleRouteLegs(
+  legs: Mission["routeLegs"],
+  targetMiles: number,
+): Mission["routeLegs"] {
+  const templateMiles = legs.reduce((total, leg) => total + leg.distanceMiles, 0);
+  if (templateMiles === 0 || targetMiles === templateMiles) return legs;
+  const scale = targetMiles / templateMiles;
+  let assignedMiles = 0;
+
+  return legs.map((leg, index) => {
+    const distanceMiles = index === legs.length - 1
+      ? Number((targetMiles - assignedMiles).toFixed(1))
+      : Number((leg.distanceMiles * scale).toFixed(1));
+    assignedMiles += distanceMiles;
+    return {
+      ...leg,
+      distanceMiles,
+      durationMinutes: Math.max(1, Math.round(leg.durationMinutes * scale)),
+    };
+  });
+}
+
+function initialRouteLegs(targetMiles: number): Mission["routeLegs"] {
+  return scaleRouteLegs([
     {
       fromStopId: "STP-001",
       toStopId: "STP-002",
@@ -86,11 +142,11 @@ function initialRouteLegs(): Mission["routeLegs"] {
         [37.3189, -121.8861],
       ],
     },
-  ];
+  ], targetMiles);
 }
 
-function recoveryRouteLegs(): Mission["routeLegs"] {
-  return [
+function recoveryRouteLegs(targetMiles: number): Mission["routeLegs"] {
+  return scaleRouteLegs([
     {
       fromStopId: "STP-101",
       toStopId: "STP-102",
@@ -131,7 +187,20 @@ function recoveryRouteLegs(): Mission["routeLegs"] {
         [37.3189, -121.8861],
       ],
     },
-  ];
+  ], targetMiles);
+}
+
+function warehouseRouteLegs(targetMiles: number): Mission["routeLegs"] {
+  return [{
+    fromStopId: "STP-001",
+    toStopId: "STP-002",
+    distanceMiles: targetMiles,
+    durationMinutes: 24,
+    polyline: [
+      [donor.location.latitude, donor.location.longitude],
+      [warehouse.location.latitude, warehouse.location.longitude],
+    ],
+  }];
 }
 
 export function createMission(
@@ -139,6 +208,12 @@ export function createMission(
   missionId: "MSN-104" | "MSN-105" = "MSN-104",
 ): Mission {
   const recovery = missionId === "MSN-105";
+  const warehouseAllocationLb = plan.allocations
+    .filter((allocation) => allocation.destinationId === warehouse.id)
+    .reduce((total, allocation) => total + allocation.quantityLb, 0);
+  const deliveryAllocations = plan.allocations.filter(
+    (allocation) => allocation.destinationId !== warehouse.id,
+  );
   const stops: Mission["stops"] = [
     {
       id: recovery ? "STP-101" : "STP-001",
@@ -161,11 +236,13 @@ export function createMission(
       locationType: "warehouse",
       arrivalWindow: warehouse.dockWindows[0],
       quantityPickupLb: 0,
-      quantityDropoffLb: plan.inspectionHoldLb,
+      quantityDropoffLb: plan.inspectionHoldLb + warehouseAllocationLb,
       status: "pending",
-      instructions: ["Cross-dock partner batches", "Move inspection hold to Hold 2"],
+      instructions: warehouseAllocationLb > 0
+        ? ["Receive warehouse allocation", "Move refrigerated quantity to assigned storage"]
+        : ["Cross-dock partner batches", "Move inspection hold to Hold 2"],
     },
-    ...plan.allocations.map((allocation, index) => ({
+    ...deliveryAllocations.map((allocation, index) => ({
       id: recovery
         ? `STP-${String(index + 103).padStart(3, "0")}`
         : `STP-${String(index + 3).padStart(3, "0")}`,
@@ -192,7 +269,11 @@ export function createMission(
     vehicleId: vehicles[0].id,
     driverId: drivers[0].id,
     stops,
-    routeLegs: recovery ? recoveryRouteLegs() : initialRouteLegs(),
+    routeLegs: recovery
+      ? recoveryRouteLegs(plan.metrics.totalMiles)
+      : plan.strategy === "warehouse_first"
+        ? warehouseRouteLegs(plan.metrics.totalMiles)
+        : initialRouteLegs(plan.metrics.totalMiles),
     status: "assigned",
     createdAt: recovery
       ? "2026-07-15T11:18:11-07:00"
@@ -203,16 +284,51 @@ export function createMission(
   };
 }
 
-export function createApprovalAuditEvent(reason?: string): AuditEvent {
+export function setMissionStopComplete(mission: Mission, stopId: string): Mission {
+  if (mission.status !== "assigned" && mission.status !== "in_transit") {
+    return mission;
+  }
+  const stop = mission.stops.find((candidate) => candidate.id === stopId);
+  if (!stop) throw new Error(`Mission stop ${stopId} was not found.`);
+  if (stop.status === "canceled") return mission;
+  if (getNextCompletableMissionStopId(mission) !== stopId) return mission;
+
+  const stops = mission.stops.map((candidate) =>
+    candidate.id === stopId
+      ? { ...candidate, status: "complete" as const }
+      : candidate,
+  );
+  const delivered = stops
+    .filter((candidate) => candidate.status !== "canceled")
+    .every((candidate) => candidate.status === "complete");
+
+  return {
+    ...mission,
+    stops,
+    status: delivered ? "delivered" : mission.status,
+  };
+}
+
+export function getNextCompletableMissionStopId(mission: Mission): string | null {
+  if (mission.status !== "assigned" && mission.status !== "in_transit") {
+    return null;
+  }
+  return mission.stops.find((stop) => stop.status === "pending")?.id ?? null;
+}
+
+export function createApprovalAuditEvent(
+  plan: PlanOption,
+  reason?: string,
+): AuditEvent {
   return {
     id: "AUD-102",
     eventType: "plan_approved",
     entityType: "PlanOption",
-    entityId: "OPT-003",
+    entityId: plan.id,
     actorType: "human",
     actorId: "demo_user",
     occurredAt: "2026-07-15T10:50:00-07:00",
-    previousState: { status: "selected" },
+    previousState: { status: plan.status },
     newState: { status: "approved", missionId: "MSN-104", packingPlanId: "PKG-104" },
     reason: reason || "Best balance of urgency, capacity, and documented need.",
   };

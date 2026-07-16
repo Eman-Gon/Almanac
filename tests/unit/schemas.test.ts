@@ -27,6 +27,11 @@ describe("seed schemas", () => {
     expect(WarehouseSchema.safeParse(warehouse).success).toBe(true);
     expect(partners.every((partner) => PartnerAgencySchema.safeParse(partner).success)).toBe(true);
     expect(vehicles.every((vehicle) => VehicleSchema.safeParse(vehicle).success)).toBe(true);
+    expect(warehouse.refrigeratedStagingCapacityAvailableLb).toBe(500);
+    expect(partners.find((partner) => partner.id === "PAR-003")).toMatchObject({
+      refrigeratedCapacityAvailableLb: 500,
+      demandSignals: [expect.objectContaining({ desiredQuantityLb: 460 })],
+    });
   });
 
   it("rejects a negative donation quantity", () => {

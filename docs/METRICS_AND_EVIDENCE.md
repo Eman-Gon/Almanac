@@ -46,6 +46,14 @@ total_route_miles = sum(route_leg_miles)
 
 If precomputed route geometry is used, store an explicit seeded distance for each leg.
 
+The implemented strategy templates sum exactly to:
+
+| Strategy | Seeded route total |
+|---|---:|
+| Warehouse First | 18.4 mi |
+| Direct Distribution | 45.7 mi |
+| Mixed Plan | 24.8 mi |
+
 ### Vehicle utilization
 
 ```text
@@ -57,10 +65,31 @@ Do not exceed 100%.
 ### Cold-capacity utilization
 
 ```text
-cold_capacity_utilization_pct = occupied_cold_weight_lb / cold_capacity_lb * 100
+planned_long_term_cold_utilization_pct =
+  (occupied_refrigerated_lb + stored_allocation_lb + inspection_hold_lb)
+  / refrigerated_capacity_lb * 100
 ```
 
-Report warehouse and partner capacity separately when appropriate.
+Short-dwell staging is a separate constraint and metric:
+
+```text
+refrigerated_staging_utilization_pct =
+  staged_packing_allocation_lb / refrigerated_staging_capacity_available_lb * 100
+```
+
+For the seeded Mixed Plan, 400 lb uses 80% of the 500 lb staging pool. Recovery stages 460 lb, or 92%. The 60 lb inspection hold consumes long-term refrigerated-storage headroom, not staging. Report warehouse storage, warehouse staging, and partner capacity separately.
+
+### Quantity-edit recalculation boundary
+
+Before approval, allocation edits may change only pounds on canonical allocation rows. Recalculate:
+
+- Pounds distributed in time
+- Estimated households supported
+- Long-term refrigerated-storage utilization
+- Refrigerated-staging utilization
+- Conservation and partner, vehicle, temperature, and receiving-window validity
+
+Do not claim dynamic recalculation for expected spoilage, staff minutes, need-match, equity, refusal risk, or route miles. Those remain visibly labeled seeded strategy-level scenario estimates because the MVP has no quantity-sensitive formula for them. Submitted client metric values are ignored in favor of canonical values and the listed deterministic recalculations.
 
 ### Staff time saved
 
@@ -236,6 +265,7 @@ The seeded strawberry scenario may be configured to produce approximately:
 - 1,200 lb offered
 - 1,140 lb assigned or distributed in time
 - 60 lb inspection hold or expected handling loss
+- 80% initial and 92% recovered refrigerated-staging utilization
 - 380 estimated households supported
 - 94% modeled spoilage avoidance
 - 11-second replanning time

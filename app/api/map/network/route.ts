@@ -6,5 +6,5 @@ import { generatePlanSet } from "@/domain/planning/generate-plans";
 
 export function GET() {
   const plan = generatePlanSet().options[2];
-  return NextResponse.json(apiSuccess({ donor, warehouse, partners, vehicles, route: createMission(plan).routeLegs }));
+  return NextResponse.json(apiSuccess({ projection: "seed_preview_not_persisted", donor, warehouse, partners, vehicles, route: createMission(plan).routeLegs }));
 }

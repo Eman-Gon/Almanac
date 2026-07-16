@@ -1,5 +1,9 @@
 import { donation, partners, productLot, scenario, warehouse } from "@/data/seed/scenario";
-import { estimatedHouseholdsSupported } from "@/domain/metrics/calculate";
+import {
+  estimatedHouseholdsSupported,
+  plannedColdStorageUtilizationPct,
+  refrigeratedStagingUtilizationPct,
+} from "@/domain/metrics/calculate";
 import { calculateDestinationScore } from "@/domain/scoring/destination-score";
 import type { Allocation, DestinationScore, PlanOption, PlanSet } from "@/domain/types";
 
@@ -89,11 +93,86 @@ function commonAssumptions() {
     "Route miles use the seeded distance matrix; no live routing service is required.",
     "Food condition remains subject to staff inspection.",
     `Destination ranking uses ${scenario.scoreConfigVersion}.`,
+    "Expected spoilage, staff effort, need-match, equity, and refusal-risk are seeded strategy-level estimates; allocation edits recalculate quantity, households, and capacity metrics only.",
   ];
 }
 
-function createWarehousePlan(): PlanOption {
+export function withDerivedCapacityMetrics(plan: PlanOption): PlanOption {
   return {
+    ...plan,
+    metrics: {
+      ...plan.metrics,
+      coldCapacityUtilizationPct: plannedColdStorageUtilizationPct(plan, warehouse),
+      refrigeratedStagingUtilizationPct: refrigeratedStagingUtilizationPct(
+        plan,
+        warehouse,
+      ),
+    },
+  };
+}
+
+export function applyCanonicalAllocationEdit(
+  canonical: PlanOption,
+  submitted: PlanOption,
+): PlanOption | null {
+  if (
+    canonical.id !== submitted.id ||
+    canonical.planSetId !== submitted.planSetId ||
+    canonical.strategy !== submitted.strategy ||
+    canonical.inspectionHoldLb !== submitted.inspectionHoldLb ||
+    canonical.declinedLb !== submitted.declinedLb ||
+    canonical.allocations.length !== submitted.allocations.length
+  ) {
+    return null;
+  }
+
+  const allocations = canonical.allocations.map((canonicalAllocation) => {
+    const submittedAllocation = submitted.allocations.find(
+      (candidate) => candidate.id === canonicalAllocation.id,
+    );
+    if (
+      !submittedAllocation ||
+      submittedAllocation.productLotId !== canonicalAllocation.productLotId ||
+      submittedAllocation.destinationId !== canonicalAllocation.destinationId ||
+      submittedAllocation.destinationType !== canonicalAllocation.destinationType ||
+      submittedAllocation.plannedArrivalAt !== canonicalAllocation.plannedArrivalAt ||
+      submittedAllocation.handling !== canonicalAllocation.handling
+    ) {
+      return null;
+    }
+    return {
+      ...canonicalAllocation,
+      quantityLb: submittedAllocation.quantityLb,
+    };
+  });
+
+  if (allocations.some((allocation) => allocation === null)) return null;
+  const canonicalAllocations = allocations as Allocation[];
+  const quantityDistributedInTimeLb = canonicalAllocations.reduce(
+    (total, allocation) => total + allocation.quantityLb,
+    0,
+  );
+
+  return withDerivedCapacityMetrics({
+    ...canonical,
+    allocations: canonicalAllocations,
+    metrics: {
+      ...canonical.metrics,
+      quantityDistributedInTimeLb,
+      estimatedHouseholdsSupported: estimatedHouseholdsSupported(
+        quantityDistributedInTimeLb,
+        scenario.householdWeightLb,
+      ),
+    },
+  });
+}
+
+function createWarehousePlan(): PlanOption {
+  const storageHeadroomLb =
+    warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb;
+  const storedQuantityLb = 1_200;
+
+  return withDerivedCapacityMetrics({
     id: "OPT-001",
     planSetId,
     name: "Warehouse First",
@@ -117,7 +196,8 @@ function createWarehousePlan(): PlanOption {
       estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_200, 3),
       totalMiles: 18.4,
       staffMinutes: 110,
-      coldCapacityUtilizationPct: 126,
+      coldCapacityUtilizationPct: 0,
+      refrigeratedStagingUtilizationPct: 0,
       needMatchScore: 72,
       equityIndicator: 54,
       refusalRiskScore: 6,
@@ -127,16 +207,16 @@ function createWarehousePlan(): PlanOption {
       {
         code: "CAPACITY_EXCEEDED",
         level: "critical",
-        message: "Exceeds refrigerated capacity by 780 lb.",
+        message: `Exceeds refrigerated capacity by ${storedQuantityLb - storageHeadroomLb} lb.`,
         blocking: true,
       },
     ],
     excludedDestinations: [],
-  };
+  });
 }
 
 function createDirectPlan(): PlanOption {
-  return {
+  return withDerivedCapacityMetrics({
     id: "OPT-002",
     planSetId,
     name: "Direct Distribution",
@@ -155,7 +235,8 @@ function createDirectPlan(): PlanOption {
       estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_200, 3),
       totalMiles: 45.7,
       staffMinutes: 108,
-      coldCapacityUtilizationPct: 92,
+      coldCapacityUtilizationPct: 0,
+      refrigeratedStagingUtilizationPct: 0,
       needMatchScore: 84,
       equityIndicator: 83,
       refusalRiskScore: 11,
@@ -172,11 +253,11 @@ function createDirectPlan(): PlanOption {
     excludedDestinations: [
       { destinationId: "PAR-010", reason: "Destination is unavailable today." },
     ],
-  };
+  });
 }
 
 function createMixedPlan(): PlanOption {
-  return {
+  return withDerivedCapacityMetrics({
     id: "OPT-003",
     planSetId,
     name: "Mixed Plan",
@@ -195,7 +276,8 @@ function createMixedPlan(): PlanOption {
       estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_140, 3),
       totalMiles: 24.8,
       staffMinutes: 96,
-      coldCapacityUtilizationPct: 79,
+      coldCapacityUtilizationPct: 0,
+      refrigeratedStagingUtilizationPct: 0,
       needMatchScore: 91,
       equityIndicator: 87,
       refusalRiskScore: 8,
@@ -216,7 +298,7 @@ function createMixedPlan(): PlanOption {
       },
       { destinationId: "PAR-010", reason: "Destination is unavailable today." },
     ],
-  };
+  });
 }
 
 export function generatePlanSet(): PlanSet {

@@ -23,12 +23,13 @@ SCN-STRAWBERRY-001
 - Temperature: refrigerated
 - Pickup deadline: 1:00 PM
 - Modeled risk deadline: 36 hours after offer
-- Main warehouse refrigerated capacity available: 420 lb
+- Main warehouse long-term refrigerated-storage headroom: 420 lb
+- Separate short-dwell refrigerated staging available: 500 lb
 - Vehicle 1 refrigerated capacity: 1,400 lb
 - Two high-demand pantries can receive today
 - One pantry has high need but limited cold capacity
-- One meal-kit program can use 400 lb tomorrow
-- 60 lb is reserved for inspection hold or expected handling loss
+- Community Kitchen has 500 lb compatible capacity and confirmed demand for up to 460 lb; the primary plan stages 400 lb
+- 60 lb is reserved for supervisor inspection hold in long-term refrigerated storage and modeled as expected loss for impact calculations
 
 All values are synthetic.
 
@@ -64,17 +65,19 @@ Hi, Market Street Grocery has about 80 cases of strawberries available today, ro
 ### Option A — Warehouse First
 
 - Receive 1,200 lb at warehouse
-- Exceeds currently available refrigerated capacity unless overflow or immediate outbound movement is arranged
+- Exceeds the 420 lb long-term refrigerated-storage headroom by 780 lb
+- Seeded route template: 18.4 miles
 - Lowest coordination complexity
 - Highest modeled spoilage risk
 
-This option may be marked warning or partially infeasible.
+This option is visibly infeasible and cannot be approved. The separate short-dwell staging pool does not make a `store` allocation feasible.
 
 ### Option B — Direct Distribution
 
 - Send product directly to three partners
 - Low warehouse utilization
 - Higher route miles
+- Seeded route template: 45.7 miles
 - Strong immediate access
 - Greater receiving-window sensitivity
 
@@ -94,6 +97,8 @@ Totals:
 ```
 
 Option C should be recommended because it balances urgency, cold capacity, demand, and operating feasibility.
+
+Its seeded route template totals 24.8 miles.
 
 ---
 
@@ -123,15 +128,15 @@ Option C should be recommended because it balances urgency, cold capacity, deman
 ### 50–65 seconds
 
 1. Open packing plan or mission.
-2. Show destination quantities and route.
+2. On `PKG-104`, start packing and complete Community Kitchen batch `BAT-003`; then show destination quantities and route.
 3. State that all major operational actions remain human-approved.
 
 ### 65–80 seconds
 
-1. Trigger **Pantry canceled**.
+1. Trigger **Eastside Community Pantry canceled**.
 2. Show affected quantity.
 3. Approve recovery option.
-4. Show changed route.
+4. Show replacement packing plan `PKG-105` and the changed route.
 
 ### 80–90 seconds
 
@@ -141,7 +146,7 @@ Option C should be recommended because it balances urgency, cold capacity, deman
 
 ---
 
-## Primary disruption: Pantry cancellation
+## Primary disruption: Partner cancellation
 
 ### Event
 
@@ -149,53 +154,54 @@ Partner B cancels after plan approval because receiving staff are unavailable.
 
 ### Expected system behavior
 
-1. Mark Partner B unavailable.
+1. Mark Partner B and its affected route stop `canceled`.
 2. Identify 320 affected pounds.
 3. Preserve all completed or unaffected work.
-4. Generate replacement options.
-5. Recommend distributing 260 lb to an alternate partner and adding 60 lb to meal-kit staging or inspection hold, depending on seeded capacity.
+4. Generate the deterministic replacement option.
+5. Send 260 lb to Northside Family Resource Center and increase Community Kitchen staging from 400 lb to 460 lb. The original 60 lb inspection hold remains unchanged.
 6. Recalculate route, miles, households, and spoilage risk.
 7. Require human approval.
-8. Record audit events.
+8. Create `PKG-105` with `BAT-101`-series IDs. Split the already-packed Community Kitchen 400 lb into a completed `-C` row and its additional 60 lb recovery delta into a pending `-R` row.
+9. Mark original mission `MSN-104` `superseded`, assign replacement mission `MSN-105`, and record linked audit events.
 
 ### Success criteria
 
 - No remaining allocation to canceled partner
 - No capacity violation
+- Community Kitchen remains within 500 lb compatible capacity, confirmed 460 lb demand, and 500 lb refrigerated staging capacity
 - Total quantity still conserved
 - New route visible
 - Replanning timer displayed
+- Original mission retained as `superseded`
+- Original `PKG-104` retained read-only, replacement `PKG-105` active, and recovery packing quantities match the approved replacement
+- Disruption, approval, recovery packing, and replacement mission events advance from `11:18:00` through `11:20:00` without backdated actions
 
 ---
 
-## Backup disruption: Truck breakdown
+## Disabled preview: Truck breakdown
 
 ### Event
 
 Assigned refrigerated vehicle becomes unavailable before pickup.
 
-### Expected options
+### Conceptual options
 
 - Reassign to another refrigerated vehicle
 - Split load across compatible vehicles
 - Ask partner for direct pickup, if seeded
 - Reduce accepted quantity or redirect externally when no capacity exists
 
-The first option should be deterministic and feasible in demo mode.
+This control is disabled in the current MVP. These conceptual options must not be presented as an executable or tested fixture.
 
 ---
 
 ## Additional preview scenarios
 
-These may be shown as disabled or preview buttons unless fully implemented:
+These are shown only as disabled preview buttons:
 
-### Freezer or cold-capacity loss
+### Cold-capacity loss
 
 Warehouse loses 200 lb of available refrigerated capacity.
-
-### Donation quantity doubled
-
-Donor confirms actual quantity is 2,400 lb.
 
 ### Pickup deadline shortened
 
@@ -226,13 +232,13 @@ These are simulated estimates. If formulas or assumptions change, update this fi
 
 ## Demo reset
 
-Before presenting:
+Before presenting, verify the immutable fixture:
 
 ```bash
 npm run demo:reset
 ```
 
-Or use the in-app reset control.
+Then use **Reset scenario** in the app to clear browser `localStorage` and return to `/dashboard`. The terminal command reports fixture readiness but cannot clear browser state.
 
 Reset must restore:
 
@@ -252,9 +258,9 @@ Reset must restore:
 
 Use seeded extraction and show a small “Demo fallback” notice. Continue normally.
 
-### Map tiles unavailable
+### Map rendering problem
 
-Render markers and route on a bundled fallback background or show synchronized location list with route summary.
+Use the synchronized location list and route summary. The MVP has no live tile dependency.
 
 ### Route calculation fails
 

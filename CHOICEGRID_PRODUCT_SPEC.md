@@ -36,6 +36,10 @@ When this file summarizes a topic and a detailed companion contract is more spec
 | [`AGENTS.md`](AGENTS.md) | Mandatory coding-agent rules, source priority, tests, coding standards, and prohibited changes |
 | [`README.md`](README.md) | Stack, setup, commands, routes, environment variables, and local run instructions |
 | `CHOICEGRID_PRODUCT_SPEC.md` | This product north star and coding brief |
+| [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | Three-to-five-minute walkthrough, backup paths, and 90-second cut |
+| [`PITCH_DECK_OUTLINE.md`](PITCH_DECK_OUTLINE.md) | Evidence-safe slide outline and speaker notes |
+| [`BACKUP_DEMO_VIDEO.md`](BACKUP_DEMO_VIDEO.md) | Two-to-four-minute recording plan and shot list |
+| [`FOOD_BANK_INTERVIEW.md`](FOOD_BANK_INTERVIEW.md) | Time-boxed future operator-interview guide; no interview is claimed |
 
 ### Context, research, and governance
 
@@ -333,12 +337,13 @@ Please confirm quickly.
 - Temperature: refrigerated
 - Pickup deadline: **1:00 PM**
 - Modeled risk deadline: **36 hours after offer**
-- Compatible warehouse cold capacity: **420 lb**
+- Long-term warehouse refrigerated-storage headroom: **420 lb**
+- Separate refrigerated short-dwell staging capacity: **500 lb**
 - Refrigerated vehicle capacity: **1,400 lb**
 - Two high-demand partners can receive today
 - One high-need partner has limited cold capacity
-- One meal-kit program can use **400 lb** tomorrow
-- **60 lb** is reserved for inspection hold or expected handling loss
+- One meal-kit program has **500 lb** compatible capacity and confirmed demand for **460 lb**; the primary plan stages **400 lb** and reserves **60 lb** of that demand for recovery flexibility
+- **60 lb** is reserved for supervisor inspection hold in long-term refrigerated storage and modeled as expected handling loss in impact calculations
 
 All values are synthetic.
 
@@ -353,6 +358,7 @@ All values are synthetic.
 - Show lower coordination complexity
 - Show higher modeled spoilage or handling risk
 - Mark the option warning or partially infeasible when appropriate
+- Use the seeded 18.4-mile warehouse route template
 
 ### Option B — Direct Distribution
 
@@ -360,6 +366,7 @@ All values are synthetic.
 - Use less warehouse capacity
 - Increase route miles and receiving-window sensitivity
 - Show stronger immediate access
+- Use the seeded 45.7-mile direct route template
 
 ### Option C — Mixed Plan
 
@@ -374,6 +381,8 @@ Recommended seeded plan:
 | **Total** | **1,200 lb** |
 
 The Mixed Plan should be recommended because it balances urgency, cold capacity, demand, receiving feasibility, route feasibility, service gaps, and refusal risk.
+
+Its seeded route template totals **24.8 miles**.
 
 ---
 
@@ -397,15 +406,18 @@ Partner B cancels after approval because receiving staff are unavailable.
 4. Generate recovery alternatives.
 5. Recalculate capacity, quantity, route, miles, windows, impact, and risk.
 6. Require human approval.
-7. Create a superseding mission.
-8. Preserve the old mission in the audit history.
+7. Create replacement packing plan `PKG-105` and replacement mission `MSN-105`.
+8. Preserve completed route stops only when location and quantities still match.
+9. In `PKG-105`, separate already-packed quantity from any pending recovery-only delta using non-colliding batch IDs.
+10. Preserve `PKG-104` as read-only history and mark the old mission `superseded`.
 
 ### Seeded recovery
 
-A valid fixture may:
+A valid fixture:
 
-- Send **260 lb** to an alternate compatible partner
-- Add **60 lb** to meal-kit staging or inspection hold
+- Sends **260 lb** to an alternate compatible partner
+- Adds **60 lb** to the Community Kitchen meal-kit staging allocation, increasing it from **400 lb** to **460 lb** within its **500 lb** compatible capacity and confirmed **460 lb** demand
+- Keeps the original **60 lb** supervisor inspection hold in long-term refrigerated storage
 
 The replacement must satisfy capacity, temperature, time-window, and quantity-conservation rules.
 
@@ -419,7 +431,7 @@ Show:
 
 - Urgent donation alert
 - Pounds at high expiration risk
-- Cold-capacity utilization
+- Long-term cold-storage and refrigerated-staging utilization
 - Active missions
 - Partner shortage indicators
 - Short shift-start briefing
@@ -460,6 +472,8 @@ Support:
 - Audit event
 - Idempotent approval
 
+Edits may change allocation quantities only. Rebuild identities and allocation metadata from the canonical option; recalculate distributed pounds, households, storage, and staging utilization, then rerun hard constraints. Route miles, expected spoilage, staff minutes, need-match, equity, and refusal risk remain labeled seeded strategy estimates.
+
 ### 12.5 Packing and cross-dock plan
 
 Show:
@@ -472,6 +486,8 @@ Show:
 - Staging location
 - Refrigeration requirement
 - Completion status
+
+Plan approval creates `PKG-104` with `BAT-001`-series rows. Recovery creates `PKG-105` with `BAT-101`-series rows. If completed work grows at the same destination and staging location, show the completed amount as `-C` and the recovery-only delta as pending `-R`; keep `PKG-104` read-only.
 
 ### 12.6 Map and mission
 
@@ -490,12 +506,11 @@ Show:
 
 ### 12.7 Disruption recovery
 
-Fully implement at least one:
-
-- Partner cancellation
-- Refrigerated truck breakdown
+The executable MVP fixture is partner cancellation. Refrigerated truck breakdown and other disruption concepts are shown only as disabled previews.
 
 Recovery must reuse real domain logic rather than switch to an unrelated hard-coded page.
+
+Recovery approval must create both replacement warehouse instructions and a replacement mission. Changed, canceled, and newly added batches begin `pending`; unchanged matching batches may preserve prior completion.
 
 ### 12.8 Impact and audit
 
@@ -506,7 +521,7 @@ Calculate:
 - Estimated households supported
 - Total miles
 - Staff minutes
-- Cold-capacity utilization
+- Long-term cold-storage and refrigerated-staging utilization
 - Modeled spoilage avoidance
 - Approvals and overrides
 - Disruption and recovery events
@@ -549,6 +564,7 @@ Do not build:
 | `/missions/[id]` | Mission Detail | Show vehicle, driver, stops, quantities, and route |
 | `/simulate` | Disruption Simulator | Trigger and approve a recovery |
 | `/impact` | Impact and Audit | Show calculated outcomes and decision history |
+| `/partners/[id]` | Partner Profile | Inspect demand, capacity, windows, status, and decision factors |
 
 Detailed screen requirements live in `docs/SCREEN_SPECIFICATIONS.md`.
 
@@ -568,6 +584,8 @@ Detailed screen requirements live in `docs/SCREEN_SPECIFICATIONS.md`.
 /missions/MSN-104
     ↓
 /simulate?mission=MSN-104
+    ↓
+/packing/PKG-105
     ↓
 /missions/MSN-105
     ↓
@@ -616,6 +634,8 @@ Use:
 - Deterministic distance matrix
 - Precomputed route geometry
 - Map fallback or accessible location list
+
+The implemented layer checkboxes toggle routes, demand partners, warehouse capacity, and vehicles. Each control must update the schematic map and visible legend/list immediately.
 
 ---
 
@@ -708,7 +728,7 @@ Rules:
 
 - Keep score components visible.
 - Version the configuration, such as `score-v1`.
-- Recalculate after edits.
+- Quantity-only edits do not recompute this seeded destination score; keep the score labeled and rerun hard constraints.
 - A score cannot override a hard capacity, temperature, or time-window constraint.
 - Do not describe the score as perfectly objective or perfectly fair.
 
@@ -781,6 +801,8 @@ assigned / in_transit
 → superseded by replacement mission
 ```
 
+`superseded` is a terminal status for the original mission after a human approves its replacement. The replacement mission begins its own `draft → approved → assigned` lifecycle; the demo records these transitions in audit history even when the UI advances them in one reviewed action.
+
 Invalid transitions must return an explicit conflict error.
 
 ---
@@ -823,7 +845,9 @@ PAR-012
 PLN-104
 OPT-003
 PKG-104
+PKG-105
 MSN-104
+MSN-105
 DSP-001
 ```
 
@@ -838,21 +862,21 @@ Core operations should include:
 ```text
 POST /api/donations/parse
 GET  /api/donations/:id
-PATCH /api/donations/:id
 
 POST /api/plans/generate
 GET  /api/plans/:id
-PATCH /api/plans/:planSetId/options/:optionId
 POST /api/plans/:planSetId/approve
 
 GET  /api/partners
 GET  /api/partners/:id
 GET  /api/map/network
-GET  /api/map/routes/:missionId
 
 GET  /api/packing/:id
+POST /api/packing/:id/start
+POST /api/packing/:id/complete
 
 GET  /api/missions/:id
+POST /api/missions/:id/events
 POST /api/missions/:id/disruptions
 POST /api/disruptions/:id/approve-recovery
 
@@ -867,25 +891,26 @@ Rules:
 - Return explicit domain errors.
 - Make approval idempotent.
 - Calculate impact in the canonical domain layer, not only in the browser.
+- Treat `GET /api/packing/:id`, `GET /api/missions/:id`, and `GET /api/impact/:missionId` as explicit seed previews only when `preview=true`; otherwise return `STATE_REQUIRED` because these resources are created by browser workflow state.
+- Label map and stateful GET projections `seed_preview_not_persisted`.
+- Require action callers to submit the current schema-valid resource and lifecycle prerequisites; API actions calculate transitions but do not persist browser state.
+- Accept only quantity changes on canonical plan allocation rows; ignore submitted identities and metrics in favor of canonical values and the documented recalculation boundary.
 
 ---
 
-## 23. Proposed technical stack
-
-Unless an approved repository decision says otherwise:
+## 23. Implemented technical stack
 
 - Next.js App Router
 - TypeScript strict mode
-- Tailwind CSS
-- shadcn/ui or equivalent
-- React Leaflet
-- Zod
-- Zustand or equivalent lightweight state store
-- Local fixtures or an in-memory repository
-- Optional server-side LLM integration
-- Vitest
-- Testing Library
-- Playwright
+- React and Tailwind CSS with repository-owned components
+- Lucide icons
+- Zod schemas
+- React context plus versioned browser `localStorage` for durable demo state
+- A global hydration gate that validates saved state before rendering the shell or enabling actions
+- Local deterministic fixtures and domain services
+- A bundled schematic map and precomputed route geometry
+- Deterministic donation extraction fallback; no live LLM is required or currently invoked
+- Vitest, Testing Library, and Playwright
 
 Required commands:
 
@@ -899,6 +924,8 @@ npm run test:e2e
 npm run build
 npm run demo:reset
 ```
+
+`npm run demo:reset` reports immutable fixture readiness from the terminal. It cannot clear a browser's versioned `localStorage`; use the in-app **Reset scenario** action for that reset.
 
 ---
 
@@ -931,7 +958,7 @@ npm run demo:reset
 - Households-per-pound assumptions
 - Refusal history
 - Communication delivery
-- Map tiles
+- Schematic map background and route geometry
 
 Synthetic and scenario-based values must be labeled.
 
@@ -1084,7 +1111,7 @@ The MVP is complete when:
 
 - The dashboard shows the seeded offer.
 - The message can be parsed or loaded through fallback.
-- Three valid plans are generated.
+- Three complete alternatives are generated; infeasible alternatives are visibly blocked and at least one option is feasible and approvable.
 - Quantity conservation passes.
 - The Mixed Plan can be approved.
 - Packing and mission records are created.
