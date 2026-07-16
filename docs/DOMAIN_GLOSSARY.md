@@ -70,6 +70,12 @@ Temperature-controlled handling and transportation for refrigerated or frozen pr
 ### Cold capacity
 Available refrigerator or freezer space, expressed in pounds, pallets, cubic volume, or another explicit unit.
 
+### Long-term refrigerated storage
+Refrigerated space used to hold product beyond short-dwell handling. In the hero fixture, the warehouse has 420 lb of headroom in this pool, and the 60 lb supervisor inspection hold consumes it.
+
+### Refrigerated staging
+Separate short-dwell refrigerated space used for same-day cross-dock or packing work. In the hero fixture, this pool has 500 lb available and is validated separately from long-term storage.
+
 ### Slotting
 Selecting the warehouse location where product should be stored.
 
@@ -116,7 +122,7 @@ A distribution model allowing households to select among available foods rather 
 ### Constrained choice
 A model that permits a limited number of category selections or substitutions while preserving fairness and throughput.
 
-### Equity score
+### Equity indicator
 A transparent indicator of how a plan addresses access burden, recent service gaps, and distribution fairness. It is not an objective measure of justice and must be shown with its assumptions.
 
 ---
@@ -145,10 +151,13 @@ The time interval during which a destination can accept a delivery.
 A time interval based on when a pantry, program, or community can practically receive or distribute food.
 
 ### Disruption
-An event that makes the approved plan partially or fully infeasible, such as a truck failure, pantry cancellation, capacity loss, or changed quantity.
+An event that makes the approved plan partially or fully infeasible, such as a truck failure, partner cancellation, capacity loss, or changed quantity.
 
 ### Replan
 A revised set of allocations, stops, quantities, or times created after a disruption.
+
+### Superseded mission
+An original mission retained in history after a human approves a replacement mission. `superseded` does not mean deleted or silently overwritten.
 
 ---
 

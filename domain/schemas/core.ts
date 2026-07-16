@@ -52,6 +52,7 @@ export const MissionStatusSchema = z.enum([
   "in_transit",
   "disrupted",
   "replanning",
+  "superseded",
   "delivered",
   "closed",
 ]);
@@ -165,6 +166,7 @@ export const WarehouseSchema = z.object({
   occupiedDryLb: z.number().nonnegative(),
   occupiedRefrigeratedLb: z.number().nonnegative(),
   occupiedFrozenLb: z.number().nonnegative(),
+  refrigeratedStagingCapacityAvailableLb: z.number().nonnegative(),
   dockWindows: z.array(TimeWindowSchema),
   active: z.boolean(),
 });
@@ -256,6 +258,7 @@ export const PlanMetricsSchema = z.object({
   totalMiles: z.number().nonnegative(),
   staffMinutes: z.number().nonnegative(),
   coldCapacityUtilizationPct: z.number().nonnegative(),
+  refrigeratedStagingUtilizationPct: z.number().nonnegative(),
   needMatchScore: z.number().min(0).max(100),
   equityIndicator: z.number().min(0).max(100),
   refusalRiskScore: z.number().min(0).max(100),
@@ -322,6 +325,7 @@ export const PackingBatchSchema = z.object({
   stagingLocation: z.string().min(1),
   temperatureClass: TemperatureClassSchema,
   instruction: z.string().min(1),
+  status: z.enum(["pending", "complete"]),
 });
 
 export const PackingPlanSchema = z.object({

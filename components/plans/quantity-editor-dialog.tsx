@@ -2,8 +2,9 @@
 
 import { AlertTriangle, Scale, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { partners } from "@/data/seed/scenario";
 import { getDestinationName } from "@/domain/planning/generate-plans";
+import { validatePlanOption } from "@/domain/planning/quantity";
+import { scenarioValidationContext } from "@/domain/planning/scenario-context";
 import type { PlanOption } from "@/domain/types";
 
 export function QuantityEditorDialog({
@@ -15,7 +16,7 @@ export function QuantityEditorDialog({
   open: boolean;
   plan: PlanOption;
   onClose: () => void;
-  onApply: (plan: PlanOption) => void;
+  onApply: (plan: PlanOption, reason: string) => void;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>(() =>
@@ -34,21 +35,19 @@ export function QuantityEditorDialog({
   }, [open, plan]);
 
   const validation = useMemo(() => {
-    const errors: string[] = [];
-    let allocated = 0;
-    for (const allocation of plan.allocations) {
-      const quantity = quantities[allocation.id] ?? 0;
-      allocated += quantity;
-      if (quantity < 0) errors.push(`${getDestinationName(allocation.destinationId)} cannot receive a negative quantity.`);
-      const partner = partners.find((item) => item.id === allocation.destinationId);
-      if (partner && quantity > partner.refrigeratedCapacityAvailableLb) {
-        errors.push(`${getDestinationName(allocation.destinationId)} exceeds refrigerated capacity by ${quantity - partner.refrigeratedCapacityAvailableLb} lb.`);
-      }
-    }
-    const total = allocated + plan.inspectionHoldLb + plan.declinedLb;
-    if (Math.abs(total - 1_200) > 0.01) errors.push(`${total.toLocaleString()} lb accounted for; the plan must account for 1,200 lb.`);
+    const allocations = plan.allocations.map((allocation) => ({
+      ...allocation,
+      quantityLb: quantities[allocation.id] ?? 0,
+    }));
+    const candidate = { ...plan, allocations };
+    const planValidation = validatePlanOption(candidate, scenarioValidationContext);
+    const errors = [...planValidation.errors];
+    const total =
+      allocations.reduce((sum, allocation) => sum + allocation.quantityLb, 0) +
+      plan.inspectionHoldLb +
+      plan.declinedLb;
     if (!reason.trim()) errors.push("Enter a reason for the allocation change.");
-    return { errors, total };
+    return { candidate, errors, total };
   }, [plan, quantities, reason]);
 
   function close() {
@@ -61,15 +60,7 @@ export function QuantityEditorDialog({
       <form method="dialog" onSubmit={(event) => {
         event.preventDefault();
         if (validation.errors.length) return;
-        const allocations = plan.allocations.map((allocation) => ({ ...allocation, quantityLb: quantities[allocation.id] ?? 0 }));
-        onApply({
-          ...plan,
-          allocations,
-          metrics: {
-            ...plan.metrics,
-            quantityDistributedInTimeLb: allocations.reduce((total, allocation) => total + allocation.quantityLb, 0),
-          },
-        });
+        onApply(validation.candidate, reason.trim());
         close();
       }}>
         <div className="dialog-header">

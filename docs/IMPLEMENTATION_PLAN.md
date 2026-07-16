@@ -28,6 +28,7 @@ Owns:
 - Zod schemas
 - Seed repository
 - Capacity calculations
+- Separate long-term refrigerated-storage and short-dwell staging calculations
 - Scoring
 - Plan generation
 - Metric calculations
@@ -49,7 +50,7 @@ Owns:
 
 Owns:
 
-- React Leaflet integration
+- Bundled schematic map and synchronized location list
 - Markers and layers
 - Precomputed route geometry
 - Route-stop list
@@ -105,7 +106,7 @@ Agents must coordinate through approved contracts rather than inventing separate
 
 - Implement schemas from `DATA_MODEL.md`
 - Create warehouse, donor, partner, vehicle, driver, and donation fixtures
-- Implement in-memory repository
+- Implement deterministic seed and domain services
 - Implement reset function
 - Implement quantity-conservation helpers
 
@@ -152,7 +153,7 @@ Agents must coordinate through approved contracts rather than inventing separate
 
 ### Exit criteria
 
-- Three valid plans display
+- Three complete alternatives display; infeasible alternatives are visibly blocked and at least one is approvable
 - Quantity conservation passes
 - Approval creates mission and packing plan
 - Invalid edit is blocked
@@ -164,7 +165,10 @@ Agents must coordinate through approved contracts rather than inventing separate
 ### Tasks
 
 - Build packing-plan screen
+- Persist `pending | complete` status per batch
+- Keep historical `PKG-104` read-only after recovery
 - Add map markers and synchronized list
+- Wire route, demand, capacity, and vehicle layer toggles
 - Add precomputed route matrix and polylines
 - Build mission detail and stop list
 - Connect plan approval to route and packing data
@@ -181,12 +185,14 @@ Agents must coordinate through approved contracts rather than inventing separate
 
 ### Tasks
 
-- Implement pantry-cancellation fixture
+- Implement partner-cancellation fixture
 - Implement affected-quantity calculation
 - Implement recovery options
 - Implement replacement approval
+- Create and activate recovery packing plan `PKG-105` while retaining `PKG-104`
+- Preserve completed mission stops only when location and quantities match; split already-packed quantity from any recovery-only packing delta
 - Preserve original mission
-- Update route, packing, metrics, and audit history
+- Update route, mission, metrics, and audit history
 
 ### Exit criteria
 
@@ -194,6 +200,7 @@ Agents must coordinate through approved contracts rather than inventing separate
 - No allocation remains at canceled partner
 - Replanned mission is valid
 - Original mission is retained as superseded
+- Recovery packing uses non-colliding IDs, matches the approved replacement, and leaves only recovery-only quantity pending
 
 ---
 
@@ -221,7 +228,7 @@ Agents must coordinate through approved contracts rather than inventing separate
 
 - Implement reset control
 - Add deterministic fallback paths
-- Add route and tile fallback
+- Keep the bundled schematic route and synchronized location-list fallback independent of map tiles
 - Run accessibility pass
 - Add Playwright primary scenario
 - Fix responsive issues
@@ -281,12 +288,10 @@ Schemas and seed data
 
 ## Integration rules
 
-- Merge domain contracts before feature branches depend on them.
-- Keep feature branches short.
+- Update domain contracts before dependent features.
 - Do not duplicate fixture data in UI code.
 - Use one canonical metric service.
 - Use one canonical status enum.
-- Rebase or merge frequently.
 - Run the primary scenario after every major integration.
 
 ---
@@ -297,7 +302,7 @@ Schemas and seed data
 |---|---|---|
 | Scope expansion | Project lead | Enforce `SCOPE_AND_NON_GOALS.md` |
 | Agent API failure | AI agent | Deterministic fallback |
-| Map service failure | Map agent | Precomputed routes and fallback list |
+| Map rendering failure | Map agent | Bundled schematic routes and synchronized fallback list |
 | Contract drift | QA agent | Schema tests and source-of-truth order |
 | Incorrect metrics | Domain agent | Central formulas and fixtures |
 | Demo-state corruption | Integration agent | Idempotent reset |
@@ -312,7 +317,7 @@ Schemas and seed data
 - [ ] `.env.example` included
 - [ ] Demo reset documented
 - [ ] Seed data committed
-- [ ] Primary and backup scenarios tested
+- [ ] Primary partner-cancellation scenario tested; disabled preview controls labeled honestly
 - [ ] Known limitations documented
 - [ ] Presentation laptop tested offline or with limited network
 - [ ] Source and metric labels reviewed

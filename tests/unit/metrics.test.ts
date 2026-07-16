@@ -4,6 +4,8 @@ import { createMission } from "@/domain/execution/create-execution";
 import {
   coldCapacityUtilizationPct,
   estimatedHouseholdsSupported,
+  plannedColdStorageUtilizationPct,
+  refrigeratedStagingUtilizationPct,
   spoilageAvoidancePct,
   totalRouteMiles,
 } from "@/domain/metrics/calculate";
@@ -14,6 +16,15 @@ describe("scenario metrics", () => {
 
   it("derives warehouse refrigerated utilization", () => {
     expect(coldCapacityUtilizationPct(warehouse)).toBe(79);
+  });
+
+  it("separates planned cold storage from short-dwell staging", () => {
+    const [warehouseFirst, direct, recommended] = generatePlanSet().options;
+
+    expect(plannedColdStorageUtilizationPct(warehouseFirst, warehouse)).toBe(139);
+    expect(plannedColdStorageUtilizationPct(direct, warehouse)).toBe(79);
+    expect(plannedColdStorageUtilizationPct(recommended, warehouse)).toBe(82);
+    expect(refrigeratedStagingUtilizationPct(recommended, warehouse)).toBe(80);
   });
 
   it("derives the documented household estimate", () => {

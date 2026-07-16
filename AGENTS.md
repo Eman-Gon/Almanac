@@ -47,17 +47,17 @@ Research explains **why** the product exists. Approved contracts define **how** 
 
 ---
 
-## Proposed stack
+## Implemented stack
 
-Unless the repository already contains an approved alternative:
+The repository uses:
 
-- Next.js App Router with TypeScript
-- Tailwind CSS
-- A small reusable component library such as shadcn/ui
-- React Leaflet for maps
+- Next.js App Router with strict TypeScript
+- React and Tailwind CSS with repository-owned reusable components
+- Lucide icons
 - Zod for runtime schemas
-- Zustand or a similarly small client-state store
-- Local JSON or an in-memory repository for demo data
+- React context plus versioned browser `localStorage` for durable demo state
+- Local deterministic seed data and domain services
+- A bundled schematic map with precomputed route geometry; no live map or routing service is required
 - Vitest and Testing Library for unit/component tests
 - Playwright for the critical end-to-end demo
 
@@ -130,7 +130,7 @@ At minimum, test:
 - Destination-score calculations
 - Plan totals and conservation of quantity
 - Human-approval state transition
-- Pantry cancellation or truck breakdown replanning
+- Partner cancellation replanning
 - Impact metric calculations
 - Low-confidence and missing-data handling
 - Critical keyboard navigation

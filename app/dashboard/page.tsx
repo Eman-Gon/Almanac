@@ -53,6 +53,7 @@ function KpiCard({
 export default function DashboardPage() {
   const { state } = useDemoState();
   const recovered = state.stage === "recovered";
+  const activeMissionId = recovered ? "MSN-105" : "MSN-104";
 
   return (
     <>
@@ -82,7 +83,7 @@ export default function DashboardPage() {
           <div className="inline-success" role="status">
             <CheckCircle2 size={18} aria-hidden="true" />
             Recovery approved. Mission MSN-105 now carries the Strawberry Rescue plan.
-            <Link href="/impact?mission=MSN-105">View updated impact</Link>
+            <Link href="/impact">View updated impact</Link>
           </div>
         ) : null}
 
@@ -96,7 +97,7 @@ export default function DashboardPage() {
         <div className="dashboard-main-grid">
           <Panel
             title="Active missions"
-            action={<Link className="panel-link" href="/missions/MSN-104">View all missions</Link>}
+            action={<Link className="panel-link" href={`/missions/${activeMissionId}`}>Open strawberry mission</Link>}
             className="missions-panel"
           >
             <div className="table-scroll">
@@ -107,7 +108,7 @@ export default function DashboardPage() {
                 <tbody>
                   {backgroundMissions.map((mission) => (
                     <tr key={mission.id} className={`row-rail-${mission.tone}`}>
-                      <td><Link href="/missions/MSN-104"><strong>{mission.id}</strong><span>{mission.name}</span></Link></td>
+                      <td><strong>{mission.id}</strong><span>{mission.name}</span></td>
                       <td>{mission.route}</td>
                       <td>{mission.load}</td>
                       <td>{mission.window}</td>

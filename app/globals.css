@@ -725,6 +725,7 @@ a {
 .marker-red { color: #d6242b; }
 .marker-purple { color: var(--purple-600); }
 .marker-green { color: var(--green-600); }
+.marker-blue { color: var(--blue-600); }
 
 .map-location-list {
   display: grid;
@@ -767,6 +768,7 @@ a {
 .legend-dot.red { color: var(--red-600); }
 .legend-dot.purple { color: var(--purple-600); }
 .legend-dot.green { color: var(--green-600); }
+.legend-dot.blue { color: var(--blue-600); }
 
 .map-sync-note {
   margin: auto -14px 0;
@@ -1939,6 +1941,7 @@ a {
 
 .inline-green { color: var(--green-700) !important; }
 .inline-blue { color: var(--blue-700) !important; }
+.inline-amber { color: var(--amber-700) !important; }
 
 .packing-grid {
   display: grid;
@@ -2132,6 +2135,21 @@ a {
   border-color: var(--green-600);
   background: var(--green-600);
   color: var(--white);
+}
+
+.stop-canceled {
+  background: #fff3f3;
+  color: var(--slate-500);
+}
+
+.stop-canceled .stop-sequence {
+  border-color: var(--red-600);
+  background: var(--red-600);
+  color: var(--white);
+}
+
+.stop-canceled small {
+  color: var(--red-700);
 }
 
 .mission-lower-grid {

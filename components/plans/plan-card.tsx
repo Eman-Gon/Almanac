@@ -9,6 +9,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { validatePlanOption } from "@/domain/planning/quantity";
+import { scenarioValidationContext } from "@/domain/planning/scenario-context";
 import type { PlanOption } from "@/domain/types";
 
 const descriptions: Record<PlanOption["strategy"], string> = {
@@ -22,21 +23,24 @@ const metricRows = [
   { key: "quantityDistributedInTimeLb", label: "In time", icon: Clock3, format: (value: number) => `${value.toLocaleString()} lb` },
   { key: "expectedSpoilageLb", label: "Hold / loss", icon: AlertTriangle, format: (value: number) => `${value.toLocaleString()} lb` },
   { key: "totalMiles", label: "Miles", icon: MapPin, format: (value: number) => `${value.toFixed(1)} mi` },
-  { key: "staffMinutes", label: "Staff time", icon: UsersRound, format: (value: number) => `${value} min` },
-  { key: "coldCapacityUtilizationPct", label: "Cold use", icon: Snowflake, format: (value: number) => `${value}%` },
-  { key: "needMatchScore", label: "Need match", icon: HeartHandshake, format: (value: number) => `${value} / 100` },
+  { key: "staffMinutes", label: "Staff estimate", icon: UsersRound, format: (value: number) => `${value} min` },
+  { key: "coldCapacityUtilizationPct", label: "Cold storage", icon: Snowflake, format: (value: number) => `${value}%` },
+  { key: "refrigeratedStagingUtilizationPct", label: "Cold staging", icon: Snowflake, format: (value: number) => `${value}%` },
+  { key: "needMatchScore", label: "Need model", icon: HeartHandshake, format: (value: number) => `${value} / 100` },
 ] as const;
 
 export function PlanCard({
   plan,
   selected,
+  disabled = false,
   onSelect,
 }: {
   plan: PlanOption;
   selected: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }) {
-  const validation = validatePlanOption(plan, 1_200);
+  const validation = validatePlanOption(plan, scenarioValidationContext);
   const recommended = plan.strategy === "mixed";
 
   return (
@@ -54,7 +58,7 @@ export function PlanCard({
       <p className="plan-description">{descriptions[plan.strategy]}</p>
       <div className={`plan-risk ${validation.approvable ? "plan-risk-neutral" : "plan-risk-critical"}`}>
         {validation.approvable ? <CheckCircle2 size={15} aria-hidden="true" /> : <AlertTriangle size={15} aria-hidden="true" />}
-        {plan.risks[0]?.message ?? "All hard constraints pass."}
+        {validation.displayMessage ?? "All hard constraints pass."}
       </div>
       <dl className="plan-metric-list">
         {metricRows.map((metric) => {
@@ -72,9 +76,12 @@ export function PlanCard({
         className={`button ${selected ? "button-primary" : "button-secondary"} plan-select-button`}
         type="button"
         onClick={onSelect}
+        disabled={disabled}
         aria-pressed={selected}
       >
-        {selected ? `${plan.name} selected` : plan.strategy === "mixed" ? "Select Mixed Plan" : "Review plan"}
+        {selected
+          ? disabled ? `${plan.name} approved` : `${plan.name} selected`
+          : disabled ? "Selection locked" : plan.strategy === "mixed" ? "Select Mixed Plan" : "Review plan"}
       </button>
     </article>
   );

@@ -55,15 +55,16 @@ The MVP is not a complete food-bank operating system.
 - Derive quantities from the approved plan
 - Show destination, quantity, lot, priority, and staging instructions
 - Indicate refrigerated handling
+- Persist `pending | complete` status for each batch without changing approved quantities
+- Create `PKG-104` on plan approval and `PKG-105` on recovery approval; keep the original read-only and split already-packed quantity from any pending recovery-only delta
 
 ### 7. Disruption and recovery
 
-Implement at least one fully working disruption:
+Implement one fully working disruption:
 
-- Pantry cancellation, or
-- Truck breakdown
+- Partner cancellation
 
-The system must produce a replacement plan and audit record.
+The system must produce a replacement allocation, packing plan, mission, and audit record. Truck breakdown, cold-capacity loss, driver unavailability, and a shortened pickup deadline are disabled preview controls, not executable disruption fixtures.
 
 ### 8. Impact and audit
 
@@ -118,17 +119,17 @@ The MVP will not implement:
 
 ## Data scope
 
-Use a synthetic dataset containing approximately:
+The implemented hero dataset contains:
 
 - 1 warehouse
-- 8–12 partner agencies
-- 5 donors
+- 10 partner agencies
+- 1 donor
 - 3 vehicles
 - 4 drivers
-- 20 product lots
-- 3 active donation offers
-- 4 disruption fixtures
-- Alameda County or San Francisco-area coordinates
+- 1 primary product lot
+- 1 active donation offer
+- 1 executable partner-cancellation fixture plus disabled disruption previews
+- Synthetic Santa Clara County-area coordinates
 - Aggregate partner and community profiles
 
 No real household records are required.
@@ -150,7 +151,7 @@ No real household records are required.
 
 - [ ] Dashboard shows the seeded urgent donation.
 - [ ] Donation details are extracted and reviewable.
-- [ ] Three valid plans are generated.
+- [ ] Three complete alternatives are generated; infeasible alternatives are visibly blocked and at least one is approvable.
 - [ ] Plan metrics are calculated.
 - [ ] Human approval changes state.
 - [ ] Packing instructions derive from approved quantities.

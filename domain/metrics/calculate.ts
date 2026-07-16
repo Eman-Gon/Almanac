@@ -12,6 +12,37 @@ export function coldCapacityUtilizationPct(warehouse: Warehouse): number {
   );
 }
 
+export function plannedColdStorageUtilizationPct(
+  plan: PlanOption,
+  warehouse: Warehouse,
+): number {
+  const storedQuantityLb = plan.allocations
+    .filter(
+      (allocation) =>
+        allocation.destinationId === warehouse.id && allocation.handling === "store",
+    )
+    .reduce((total, allocation) => total + allocation.quantityLb, 0);
+
+  return percentage(
+    warehouse.occupiedRefrigeratedLb + storedQuantityLb + plan.inspectionHoldLb,
+    warehouse.refrigeratedCapacityLb,
+  );
+}
+
+export function refrigeratedStagingUtilizationPct(
+  plan: PlanOption,
+  warehouse: Warehouse,
+): number {
+  const stagedQuantityLb = plan.allocations
+    .filter((allocation) => allocation.handling === "pack")
+    .reduce((total, allocation) => total + allocation.quantityLb, 0);
+
+  return percentage(
+    stagedQuantityLb,
+    warehouse.refrigeratedStagingCapacityAvailableLb,
+  );
+}
+
 export function estimatedHouseholdsSupported(
   distributedQuantityLb: number,
   poundsPerHousehold: number,

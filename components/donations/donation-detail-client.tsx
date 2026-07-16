@@ -33,9 +33,17 @@ const fields = [
   { label: "Modeled risk deadline", value: "Jul 16 at 10:45 PM", confidence: "medium" as const },
 ] as const;
 
+const stageLabels = {
+  initial: "Ready for planning",
+  plans_generated: "Plans generated",
+  approved: "Plan approved",
+  disrupted: "Partner canceled",
+  recovered: "Recovery approved",
+} as const;
+
 export function DonationDetailClient() {
   const router = useRouter();
-  const { generatePlans, state } = useDemoState();
+  const { generatePlans, hydrated, state } = useDemoState();
 
   function generate() {
     generatePlans();
@@ -44,11 +52,15 @@ export function DonationDetailClient() {
 
   const availableCold = warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb;
 
+  if (!hydrated) {
+    return <div className="route-state"><strong>Loading saved donation state…</strong></div>;
+  }
+
   return (
     <div className="page-content donation-detail-page">
       <div className="context-bar">
         <Link href="/dashboard"><ArrowLeft size={16} aria-hidden="true" />Back to dashboard</Link>
-        <div className="context-title"><strong>{donation.id}</strong><span className="plain-status plain-status-green">Ready for planning</span></div>
+        <div className="context-title"><strong>{donation.id}</strong><span className={`plain-status ${state.stage === "disrupted" ? "plain-status-amber" : "plain-status-green"}`}>{stageLabels[state.stage]}</span></div>
         <span className="source-label-inline">Synthetic demo data</span>
       </div>
 
@@ -86,7 +98,7 @@ export function DonationDetailClient() {
         <Panel title="Operational checks">
           <div className="check-list">
             <div><CheckCircle2 aria-hidden="true" /><span><strong>Required fields complete</strong><small>No blocking confirmation questions remain.</small></span></div>
-            <div><WarehouseIcon aria-hidden="true" /><span><strong>{availableCold.toLocaleString()} lb compatible warehouse capacity</strong><small>The full offer will not fit in refrigerated storage.</small></span></div>
+            <div><WarehouseIcon aria-hidden="true" /><span><strong>{availableCold.toLocaleString()} lb refrigerated storage headroom</strong><small>The full offer will not fit in long-term storage; {warehouse.refrigeratedStagingCapacityAvailableLb} lb of separate short-dwell staging is available.</small></span></div>
             <div><Clock3 aria-hidden="true" /><span><strong>36-hour modeled risk window</strong><small>This is an urgency signal, not a food-safety determination.</small></span></div>
           </div>
         </Panel>

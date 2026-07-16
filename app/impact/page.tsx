@@ -13,36 +13,63 @@ import {
 import { useMemo } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Panel } from "@/components/shared/panel";
-import { baselineAuditEvents, donation, scenario } from "@/data/seed/scenario";
-import { createApprovalAuditEvent, createMission } from "@/domain/execution/create-execution";
+import { donation, scenario } from "@/data/seed/scenario";
+import { createMission } from "@/domain/execution/create-execution";
 import { spoilageAvoidancePct, totalRouteMiles } from "@/domain/metrics/calculate";
 import { generatePlanSet, getDestinationName } from "@/domain/planning/generate-plans";
-import { createRecoveryAuditEvents, createRecoveryOption } from "@/domain/recovery/create-recovery";
+import { createRecoveryOption } from "@/domain/recovery/create-recovery";
 import { useDemoState } from "@/state/demo-state";
 
-const stageRank = { initial: 0, plans_generated: 1, approved: 2, disrupted: 3, recovered: 4 } as const;
-
 export default function ImpactPage() {
-  const { state } = useDemoState();
-  const original = useMemo(() => generatePlanSet().options[2], []);
+  const { state, hydrated } = useDemoState();
+  const planSet = useMemo(() => generatePlanSet(), []);
+  const original =
+    state.approvedPlan ??
+    state.planOverrides[state.selectedPlanId] ??
+    planSet.options.find((option) => option.id === state.selectedPlanId) ??
+    planSet.options[2];
   const recovered = state.stage === "recovered";
-  const plan = recovered ? createRecoveryOption(original) : original;
-  const mission = createMission(plan, recovered ? "MSN-105" : "MSN-104");
+  const plan = recovered
+    ? state.disruption?.recoveryOption ?? createRecoveryOption(original)
+    : original;
+  const missionId = recovered ? "MSN-105" : "MSN-104";
+  const mission = state.missions[missionId] ?? createMission(plan, missionId);
+  const originalMission = state.missions["MSN-104"] ?? createMission(original);
   const spoilagePct = spoilageAvoidancePct(scenario.baselineExpectedSpoilageLb, plan.metrics.expectedSpoilageLb) ?? 0;
-  const events = [
-    ...baselineAuditEvents,
-    ...(stageRank[state.stage] >= 2 ? [createApprovalAuditEvent(state.approvalReason)] : []),
-    ...(recovered ? createRecoveryAuditEvents() : []),
-  ];
+  const events = state.auditEvents;
+  const overrideCount = events.filter(
+    (event) => event.eventType === "plan_allocations_edited",
+  ).length;
+  const affectedQuantityLb = state.disruption?.affectedQuantityLb ?? 0;
+  const alternateQuantityLb = plan.allocations.find((allocation) => allocation.destinationId === "PAR-004")?.quantityLb ?? 0;
+  const originalMealKitLb = original.allocations.find((allocation) => allocation.destinationId === "PAR-003")?.quantityLb ?? 0;
+  const recoveredMealKitLb = plan.allocations.find((allocation) => allocation.destinationId === "PAR-003")?.quantityLb ?? originalMealKitLb;
 
   const metrics = [
     { label: "Pounds offered", value: "1,200 lb", detail: "Simulated input", icon: Scale, tone: "blue" },
     { label: "Assigned in time", value: `${plan.metrics.quantityDistributedInTimeLb.toLocaleString()} lb`, detail: "Calculated from scenario", icon: CheckCircle2, tone: "green" },
-    { label: "Households supported", value: String(plan.metrics.estimatedHouseholdsSupported), detail: "Simulated estimate · 3 lb each", icon: UsersRound, tone: "purple" },
+    { label: "Households supported", value: String(plan.metrics.estimatedHouseholdsSupported), detail: `Simulated estimate · ${scenario.householdWeightLb} lb each`, icon: UsersRound, tone: "purple" },
     { label: "Modeled spoilage avoided", value: `${spoilagePct}%`, detail: "Calculated estimate", icon: Gauge, tone: "green" },
     { label: "Route miles", value: `${totalRouteMiles(mission.routeLegs).toFixed(1)} mi`, detail: "Seeded distance matrix", icon: Route, tone: "blue" },
-    { label: "Replanning time", value: recovered ? "11 sec" : "—", detail: recovered ? "Simulated scenario interval" : "No recovery approved", icon: Clock3, tone: "amber" },
+    { label: "Replanning time", value: recovered ? `${scenario.modeledReplanningSeconds} sec` : "—", detail: recovered ? "Modeled scenario interval" : "No recovery approved", icon: Clock3, tone: "amber" },
   ] as const;
+
+  if (!hydrated) {
+    return <div className="route-state"><strong>Loading saved impact state…</strong></div>;
+  }
+
+  if (!state.approvedPlan) {
+    return (
+      <>
+        <PageHeader title="Impact & Audit" subtitle="No approved mission" />
+        <div className="route-state">
+          <strong>Impact is calculated after human approval.</strong>
+          <span>Approve a feasible plan before reviewing mission outcomes.</span>
+          <Link className="button button-primary" href="/plans/PLN-104">Open Decision Room</Link>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -54,7 +81,7 @@ export default function ImpactPage() {
           {metrics.map((metric) => { const Icon = metric.icon; return <article className={`impact-card impact-${metric.tone}`} key={metric.label}><Icon aria-hidden="true" /><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.detail}</small></article>; })}
         </section>
 
-        {recovered ? <Panel title="Before & after recovery"><div className="before-after-grid"><div><span>Original mission · MSN-104</span><strong>Eastside Pantry · 320 lb</strong><small>24.8 mi · Route disrupted</small></div><div className="change-arrow">→</div><div><span>Replacement mission · MSN-105</span><strong>Northside 260 lb · Kitchen +60 lb</strong><small>28.6 mi · All hard constraints pass</small></div></div></Panel> : null}
+        {recovered ? <Panel title="Before & after recovery"><div className="before-after-grid"><div><span>Original mission · MSN-104</span><strong>Eastside partner · {affectedQuantityLb} lb</strong><small>{totalRouteMiles(originalMission.routeLegs).toFixed(1)} mi · Superseded after disruption</small></div><div className="change-arrow">→</div><div><span>Replacement mission · MSN-105</span><strong>Northside {alternateQuantityLb} lb · Kitchen +{recoveredMealKitLb - originalMealKitLb} lb</strong><small>{totalRouteMiles(mission.routeLegs).toFixed(1)} mi · All hard constraints pass</small></div></div></Panel> : null}
 
         <div className="impact-grid">
           <Panel title="Allocation by destination">
@@ -65,10 +92,10 @@ export default function ImpactPage() {
           </Panel>
           <Panel title="Metric assumptions">
             <div className="assumption-list impact-assumptions">
-              <p><strong>Household estimate</strong>1,140 distributed lb ÷ 3 lb per household</p>
-              <p><strong>Spoilage model</strong>(1,000 baseline lb − 60 expected lb) ÷ 1,000</p>
+              <p><strong>Household estimate</strong>{plan.metrics.quantityDistributedInTimeLb.toLocaleString()} assigned lb ÷ {scenario.householdWeightLb} lb per household</p>
+              <p><strong>Spoilage model</strong>({scenario.baselineExpectedSpoilageLb.toLocaleString()} baseline lb − {plan.metrics.expectedSpoilageLb} expected lb) ÷ {scenario.baselineExpectedSpoilageLb.toLocaleString()}</p>
               <p><strong>Route miles</strong>Sum of precomputed route-leg distances</p>
-              <p><strong>Human overrides</strong>0 · Approval is not counted as an override</p>
+              <p><strong>Human overrides</strong>{overrideCount} allocation edit{overrideCount === 1 ? "" : "s"} · Approval is not counted as an override</p>
             </div>
           </Panel>
         </div>

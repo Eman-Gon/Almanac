@@ -132,6 +132,7 @@ export const warehouse: Warehouse = {
   occupiedDryLb: 6_240,
   occupiedRefrigeratedLb: 1_580,
   occupiedFrozenLb: 744,
+  refrigeratedStagingCapacityAvailableLb: 500,
   dockWindows: [
     {
       start: "2026-07-15T08:00:00-07:00",
@@ -248,8 +249,8 @@ export const partners: PartnerAgency[] = [
     city: "San Jose",
     latitude: 37.3189,
     longitude: -121.8861,
-    coldCapacityLb: 400,
-    desiredQuantityLb: 400,
+    coldCapacityLb: 500,
+    desiredQuantityLb: 460,
     urgency: "high",
     refusalRisk: 3,
     recentServiceGap: 64,

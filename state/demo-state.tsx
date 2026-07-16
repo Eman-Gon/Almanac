@@ -9,45 +9,37 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { z } from "zod";
+import {
+  DemoStateSchema,
+  approvePlan as approvePlanState,
+  approveRecovery as approveRecoveryState,
+  completeMissionStop as completeMissionStopState,
+  createInitialDemoState,
+  editPlan as editPlanState,
+  initialDemoState,
+  setPackingBatchComplete as setPackingBatchCompleteState,
+  startPacking as startPackingState,
+  triggerPartnerCancellation,
+  type DemoState,
+} from "@/domain/demo/demo-state";
+import type { PlanOption } from "@/domain/types";
 
-const DemoStageSchema = z.enum([
-  "initial",
-  "plans_generated",
-  "approved",
-  "disrupted",
-  "recovered",
-]);
+export { initialDemoState } from "@/domain/demo/demo-state";
+export type { DemoStage, DemoState } from "@/domain/demo/demo-state";
 
-const DemoStateSchema = z.object({
-  version: z.literal(1),
-  stage: DemoStageSchema,
-  selectedPlanId: z.string(),
-  approvalReason: z.string(),
-  fallbackUsed: z.boolean(),
-  resetCount: z.number().int().nonnegative(),
-});
-
-export type DemoStage = z.infer<typeof DemoStageSchema>;
-export type DemoState = z.infer<typeof DemoStateSchema>;
-
-const STORAGE_KEY = "choicegrid-demo-v1";
-
-export const initialDemoState: DemoState = {
-  version: 1,
-  stage: "initial",
-  selectedPlanId: "OPT-003",
-  approvalReason: "",
-  fallbackUsed: true,
-  resetCount: 0,
-};
+const STORAGE_KEY = "choicegrid-demo-v2";
+const LEGACY_STORAGE_KEY = "choicegrid-demo-v1";
 
 type DemoContextValue = {
   state: DemoState;
   hydrated: boolean;
   selectPlan: (planId: string) => void;
   generatePlans: () => void;
-  approvePlan: (reason: string) => void;
+  editPlan: (plan: PlanOption, reason: string) => void;
+  approvePlan: (plan: PlanOption, reason: string) => void;
+  startPacking: (packingPlanId: string) => void;
+  setPackingBatchComplete: (packingPlanId: string, batchId: string, complete: boolean) => void;
+  completeMissionStop: (missionId: string, stopId: string) => void;
   triggerDisruption: () => void;
   approveRecovery: () => void;
   resetScenario: () => void;
@@ -68,6 +60,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = DemoStateSchema.safeParse(JSON.parse(persisted));
           if (parsed.success) setState(parsed.data);
+          else window.localStorage.removeItem(STORAGE_KEY);
         } catch {
           window.localStorage.removeItem(STORAGE_KEY);
         }
@@ -85,42 +78,56 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
   }, [hydrated, state]);
 
   const selectPlan = useCallback((planId: string) => {
-    setState((current) => ({ ...current, selectedPlanId: planId }));
+    setState((current) => current.approvedPlan
+      ? current
+      : { ...current, selectedPlanId: planId });
   }, []);
 
   const generatePlans = useCallback(() => {
-    setState((current) => ({
-      ...current,
-      stage: "plans_generated",
-      selectedPlanId: "OPT-003",
-      fallbackUsed: true,
-    }));
+    setState((current) =>
+      current.stage === "initial"
+        ? {
+            ...current,
+            stage: "plans_generated",
+            selectedPlanId: "OPT-003",
+            fallbackUsed: true,
+          }
+        : current,
+    );
   }, []);
 
-  const approvePlan = useCallback((reason: string) => {
-    setState((current) => {
-      if (current.stage === "approved") return current;
-      return {
-        ...current,
-        stage: "approved",
-        approvalReason: reason,
-      };
-    });
+  const editPlan = useCallback((plan: PlanOption, reason: string) => {
+    setState((current) => editPlanState(current, plan, reason));
+  }, []);
+
+  const approvePlan = useCallback((plan: PlanOption, reason: string) => {
+    setState((current) => approvePlanState(current, plan, reason));
+  }, []);
+
+  const startPacking = useCallback((packingPlanId: string) => {
+    setState((current) => startPackingState(current, packingPlanId));
+  }, []);
+
+  const setPackingBatchComplete = useCallback((packingPlanId: string, batchId: string, complete: boolean) => {
+    setState((current) => setPackingBatchCompleteState(current, packingPlanId, batchId, complete));
+  }, []);
+
+  const completeMissionStop = useCallback((missionId: string, stopId: string) => {
+    setState((current) => completeMissionStopState(current, missionId, stopId));
   }, []);
 
   const triggerDisruption = useCallback(() => {
-    setState((current) => ({ ...current, stage: "disrupted" }));
+    setState((current) => triggerPartnerCancellation(current));
   }, []);
 
   const approveRecovery = useCallback(() => {
-    setState((current) => ({ ...current, stage: "recovered" }));
+    setState((current) => approveRecoveryState(current));
   }, []);
 
   const resetScenario = useCallback(() => {
-    setState((current) => ({
-      ...initialDemoState,
-      resetCount: current.resetCount + 1,
-    }));
+    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    setState((current) => createInitialDemoState(current.resetCount + 1));
   }, []);
 
   const value = useMemo<DemoContextValue>(
@@ -129,7 +136,11 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       hydrated,
       selectPlan,
       generatePlans,
+      editPlan,
       approvePlan,
+      startPacking,
+      setPackingBatchComplete,
+      completeMissionStop,
       triggerDisruption,
       approveRecovery,
       resetScenario,
@@ -137,16 +148,24 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     [
       approvePlan,
       approveRecovery,
+      completeMissionStop,
+      editPlan,
       generatePlans,
       hydrated,
       resetScenario,
       selectPlan,
+      setPackingBatchComplete,
+      startPacking,
       state,
       triggerDisruption,
     ],
   );
 
-  return <DemoContext.Provider value={value}>{children}</DemoContext.Provider>;
+  return (
+    <DemoContext.Provider value={value}>
+      {hydrated ? children : <div className="route-state"><strong>Loading saved demo state…</strong></div>}
+    </DemoContext.Provider>
+  );
 }
 
 export function useDemoState(): DemoContextValue {
