@@ -61,7 +61,7 @@ Dashboard
 8. User inspects metrics, assumptions, exclusions, and map.
 9. User approves one plan or edits quantities.
 10. System validates quantities and capacities.
-11. System creates an approved mission and packing plan.
+11. System creates a draft mission and packing plan.
 12. User opens the mission map.
 13. User reviews route stops and receiving windows.
 14. User opens impact after the mission or simulated completion.
@@ -135,11 +135,11 @@ Each option must be complete enough to execute.
 
 ---
 
-## Flow 5 — Pantry cancellation
+## Flow 5 — Partner cancellation
 
 1. User opens an approved mission.
-2. User triggers **Pantry canceled**.
-3. System marks the stop unavailable.
+2. User triggers **Partner canceled**.
+3. System marks the stop canceled.
 4. Recovery Agent identifies affected quantity and windows.
 5. Deterministic planner produces replacement options.
 6. User reviews changes.
@@ -148,7 +148,7 @@ Each option must be complete enough to execute.
 
 ### Success state
 
-- No quantity remains assigned to the canceled pantry.
+- No quantity remains assigned to the canceled partner.
 - Replacement destinations stay within capacity.
 - Route and impact metrics are recalculated.
 

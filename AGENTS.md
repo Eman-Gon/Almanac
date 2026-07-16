@@ -130,7 +130,7 @@ At minimum, test:
 - Destination-score calculations
 - Plan totals and conservation of quantity
 - Human-approval state transition
-- Pantry cancellation or truck breakdown replanning
+- Partner cancellation or truck breakdown replanning
 - Impact metric calculations
 - Low-confidence and missing-data handling
 - Critical keyboard navigation

@@ -341,9 +341,9 @@ Create a controlled live-demo failure.
 
 ### Required scenario buttons
 
-- Pantry canceled
+- Partner canceled
 - Truck breakdown
-- Freezer capacity lost
+- Cold capacity lost
 - Driver unavailable
 - Donation quantity doubled
 - Pickup deadline shortened

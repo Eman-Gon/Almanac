@@ -319,6 +319,7 @@ interface PackingBatch {
   stagingLocation: string;
   temperatureClass: TemperatureClass;
   instruction: string;
+  status: "pending" | "complete";
 }
 ```
 
@@ -334,6 +335,7 @@ type MissionStatus =
   | "in_transit"
   | "disrupted"
   | "replanning"
+  | "superseded"
   | "delivered"
   | "closed";
 
@@ -463,5 +465,5 @@ interface OperationalNote {
 - `DRV-001` through `DRV-004`: synthetic drivers
 - Three plan options
 - One approved mission
-- One pantry-cancellation fixture
+- One partner-cancellation fixture
 - One truck-breakdown fixture

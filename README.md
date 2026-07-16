@@ -22,7 +22,7 @@ ChoiceGrid:
 3. Compares three distribution plans.
 4. Lets a staff member approve or edit one plan.
 5. Creates packing or cross-dock instructions and a route map.
-6. Replans when a pantry cancels or a truck becomes unavailable.
+6. Replans when a partner cancels or a truck becomes unavailable.
 7. Calculates the scenario's operational and community impact.
 
 ---
@@ -159,6 +159,7 @@ agents/
 ├── capacity/
 ├── matching/
 ├── planning/
+├── routing/
 ├── recovery/
 └── communication/
 

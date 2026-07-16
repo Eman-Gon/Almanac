@@ -181,7 +181,7 @@ Agents must coordinate through approved contracts rather than inventing separate
 
 ### Tasks
 
-- Implement pantry-cancellation fixture
+- Implement partner-cancellation fixture
 - Implement affected-quantity calculation
 - Implement recovery options
 - Implement replacement approval

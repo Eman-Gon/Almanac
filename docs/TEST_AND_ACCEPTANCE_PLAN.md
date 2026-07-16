@@ -98,7 +98,7 @@ No known critical or high-severity defect may remain in the primary scenario.
 - Approve.
 - Verify mission and packing plan share allocation values.
 
-### Pantry cancellation
+### Partner cancellation
 
 - Create disruption.
 - Verify affected quantity.
@@ -161,7 +161,7 @@ No known critical or high-severity defect may remain in the primary scenario.
 4. Generate plans.
 5. Approve Mixed Plan.
 6. Open mission.
-7. Trigger pantry cancellation.
+7. Trigger partner cancellation.
 8. Approve recovery.
 9. Open impact.
 10. Verify target metrics and audit events.

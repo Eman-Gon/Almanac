@@ -25,8 +25,8 @@ SCN-STRAWBERRY-001
 - Modeled risk deadline: 36 hours after offer
 - Main warehouse refrigerated capacity available: 420 lb
 - Vehicle 1 refrigerated capacity: 1,400 lb
-- Two high-demand pantries can receive today
-- One pantry has high need but limited cold capacity
+- Two high-demand partners can receive today
+- One partner has high need but limited cold capacity
 - One meal-kit program can use 400 lb tomorrow
 - 60 lb is reserved for inspection hold or expected handling loss
 
@@ -128,7 +128,7 @@ Option C should be recommended because it balances urgency, cold capacity, deman
 
 ### 65–80 seconds
 
-1. Trigger **Pantry canceled**.
+1. Trigger **Partner canceled**.
 2. Show affected quantity.
 3. Approve recovery option.
 4. Show changed route.
@@ -141,7 +141,7 @@ Option C should be recommended because it balances urgency, cold capacity, deman
 
 ---
 
-## Primary disruption: Pantry cancellation
+## Primary disruption: Partner cancellation
 
 ### Event
 
@@ -149,11 +149,11 @@ Partner B cancels after plan approval because receiving staff are unavailable.
 
 ### Expected system behavior
 
-1. Mark Partner B unavailable.
+1. Mark Partner B canceled.
 2. Identify 320 affected pounds.
 3. Preserve all completed or unaffected work.
 4. Generate replacement options.
-5. Recommend distributing 260 lb to an alternate partner and adding 60 lb to meal-kit staging or inspection hold, depending on seeded capacity.
+5. Recommend distributing 260 lb to an alternate partner and adding 60 lb to meal-kit staging.
 6. Recalculate route, miles, households, and spoilage risk.
 7. Require human approval.
 8. Record audit events.
@@ -189,7 +189,7 @@ The first option should be deterministic and feasible in demo mode.
 
 These may be shown as disabled or preview buttons unless fully implemented:
 
-### Freezer or cold-capacity loss
+### Cold-capacity loss
 
 Warehouse loses 200 lb of available refrigerated capacity.
 

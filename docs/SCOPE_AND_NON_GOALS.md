@@ -60,7 +60,7 @@ The MVP is not a complete food-bank operating system.
 
 Implement at least one fully working disruption:
 
-- Pantry cancellation, or
+- Partner cancellation, or
 - Truck breakdown
 
 The system must produce a replacement plan and audit record.
@@ -127,7 +127,7 @@ Use a synthetic dataset containing approximately:
 - 4 drivers
 - 20 product lots
 - 3 active donation offers
-- 4 disruption fixtures
+- 2 disruption fixtures
 - Alameda County or San Francisco-area coordinates
 - Aggregate partner and community profiles
 

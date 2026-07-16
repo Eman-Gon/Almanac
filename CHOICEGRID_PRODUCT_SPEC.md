@@ -405,7 +405,7 @@ Partner B cancels after approval because receiving staff are unavailable.
 A valid fixture may:
 
 - Send **260 lb** to an alternate compatible partner
-- Add **60 lb** to meal-kit staging or inspection hold
+- Add **60 lb** to meal-kit staging
 
 The replacement must satisfy capacity, temperature, time-window, and quantity-conservation rules.
 
@@ -549,6 +549,7 @@ Do not build:
 | `/missions/[id]` | Mission Detail | Show vehicle, driver, stops, quantities, and route |
 | `/simulate` | Disruption Simulator | Trigger and approve a recovery |
 | `/impact` | Impact and Audit | Show calculated outcomes and decision history |
+| `/partners/[id]` | Partner Profile | Inspect a partner agency profile |
 
 Detailed screen requirements live in `docs/SCREEN_SPECIFICATIONS.md`.
 
