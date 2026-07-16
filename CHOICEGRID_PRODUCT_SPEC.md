@@ -1,0 +1,1306 @@
+# ChoiceGrid Product Specification and Coding Brief
+
+**Status:** Approved hackathon direction  
+**Audience:** Coding agents, designers, QA agents, technical leads, and presentation agents  
+**Product type:** AI-assisted food-bank supply-chain decision and disruption-recovery prototype  
+**Primary scenario:** Urgent perishable donation allocation  
+**Data:** Synthetic demo data only  
+**Last updated:** July 16, 2026
+
+---
+
+## 1. How coding agents should use this file
+
+This is the single product-level starting document for **ChoiceGrid**. It explains what the product is, why it exists, the workflow that must be built, and how the complete demo should behave.
+
+It does **not** replace the detailed Markdown files already provided in the ChoiceGrid documentation pack.
+
+Before changing code:
+
+1. Read [`AGENTS.md`](AGENTS.md).
+2. Read this file.
+3. Read the companion documents relevant to the task.
+4. Follow the source-of-truth hierarchy in `AGENTS.md`.
+5. Do not invent behavior that conflicts with approved contracts.
+
+When this file summarizes a topic and a detailed companion contract is more specific, follow the detailed contract.
+
+---
+
+## 2. Companion Markdown files already provided
+
+### Root files
+
+| File | Purpose |
+|---|---|
+| [`AGENTS.md`](AGENTS.md) | Mandatory coding-agent rules, source priority, tests, coding standards, and prohibited changes |
+| [`README.md`](README.md) | Stack, setup, commands, routes, environment variables, and local run instructions |
+| `CHOICEGRID_PRODUCT_SPEC.md` | This product north star and coding brief |
+
+### Context, research, and governance
+
+| File | Purpose |
+|---|---|
+| [`docs/HACKATHON_CONTEXT.md`](docs/HACKATHON_CONTEXT.md) | Official challenge prompt and success expectations |
+| [`docs/RESEARCH_INSIGHTS.md`](docs/RESEARCH_INSIGHTS.md) | Concise implementation-focused research findings |
+| [`docs/SOURCE_INDEX.md`](docs/SOURCE_INDEX.md) | Source priority and evidence-labeling rules |
+| [`docs/DOMAIN_GLOSSARY.md`](docs/DOMAIN_GLOSSARY.md) | Food-bank and supply-chain terminology |
+| [`docs/PRIVACY_AND_SAFETY.md`](docs/PRIVACY_AND_SAFETY.md) | Privacy, food-safety, dietary, fairness, and approval guardrails |
+| [`docs/METRICS_AND_EVIDENCE.md`](docs/METRICS_AND_EVIDENCE.md) | Metric formulas, assumptions, and permitted claims |
+
+### Product and technical contracts
+
+| File | Purpose |
+|---|---|
+| [`docs/SCOPE_AND_NON_GOALS.md`](docs/SCOPE_AND_NON_GOALS.md) | MVP boundary, stretch scope, and explicit exclusions |
+| [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) | Primary workflow, alternate paths, approval points, and disruptions |
+| [`docs/SCREEN_SPECIFICATIONS.md`](docs/SCREEN_SPECIFICATIONS.md) | Route-by-route UI requirements and acceptance criteria |
+| [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) | Visual rules, components, statuses, map semantics, and accessibility |
+| [`docs/DATA_MODEL.md`](docs/DATA_MODEL.md) | Shared entities, fields, identifiers, enums, and relationships |
+| [`docs/AI_AGENT_CONTRACTS.md`](docs/AI_AGENT_CONTRACTS.md) | Narrow agent responsibilities, inputs, outputs, fallbacks, and prohibited behavior |
+| [`docs/API_AND_STATE_CONTRACTS.md`](docs/API_AND_STATE_CONTRACTS.md) | Endpoints, schemas, state transitions, errors, and idempotency |
+| [`docs/DEMO_SCENARIOS.md`](docs/DEMO_SCENARIOS.md) | Exact seeded scenario, disruption behavior, target metrics, and reset |
+| [`docs/TEST_AND_ACCEPTANCE_PLAN.md`](docs/TEST_AND_ACCEPTANCE_PLAN.md) | Required unit, integration, accessibility, and end-to-end checks |
+| [`docs/IMPLEMENTATION_PLAN.md`](docs/IMPLEMENTATION_PLAN.md) | Build order, milestones, dependencies, and parallel work |
+| [`docs/DECISIONS.md`](docs/DECISIONS.md) | Accepted decisions that should not be reopened casually |
+
+### Full research appendix
+
+| File | Purpose |
+|---|---|
+| [`research/food_bank_hackathon_research_summary.md`](research/food_bank_hackathon_research_summary.md) | Full research report, analytics, competitor review, product opportunities, and sources |
+
+---
+
+## 3. Product in one sentence
+
+> **ChoiceGrid helps food-bank staff decide where an urgent perishable donation should go, turns the approved decision into a packing and delivery plan, and replans when conditions change.**
+
+### Tagline
+
+> **When food or plans change, every usable pound still finds a destination.**
+
+---
+
+## 4. What ChoiceGrid is—and is not
+
+### ChoiceGrid is
+
+- A food-bank operations decision tool
+- A human-approved AI-agent workflow
+- A perishable-food allocation planner
+- A demand and capacity map
+- A packing and cross-dock planner
+- A delivery mission planner
+- A disruption-recovery tool
+- An explainable plan-comparison experience
+- A calculated impact and audit view
+
+### ChoiceGrid is not
+
+- A generic chatbot
+- A recipe generator
+- A public pantry locator
+- A client case-management system
+- A full warehouse-management system
+- A production routing platform
+- A food-safety authority
+- An autonomous dispatcher
+- A repository of real recipient medical data
+
+---
+
+## 5. Why this idea is supported by the research
+
+The research considered:
+
+- **12 relevant subreddits**
+- **30 newly reviewed Reddit thread pages**
+- **2 complete Reddit thread exports**
+- **32 Reddit thread pages total**
+- Approximately **500 comments and replies considered**
+- **269 items systematically parsed and coded**
+- **20 formal articles, reports, and research papers**
+- **6 existing food-bank technology products**
+
+Only the 269-item parsed subset supports exact repetition counts.
+
+### Exact repeated themes in the coded subset
+
+| Theme | Mentions |
+|---|---:|
+| Repetitive, unbalanced, or insufficiently varied food | **59** |
+| Storage, warehouse, funding, labor, or volunteer constraints | **42** |
+| Fresh-food quality, spoilage, mold, or expiration | **42** |
+| Shame, stigma, or eligibility confusion | **30** |
+| Recipes, cooking knowledge, spices, or cultural fit | **27** |
+| Client choice versus prepacked boxes | **23** |
+| Allergies, dietary restrictions, or medical-food needs | **19** |
+| Missing ingredients needed to create a complete meal | **16** |
+| Toiletries and other non-food needs | **15** |
+| Hours, transportation, delivery, or geographic access | **9** |
+| Cooking-equipment or home-storage limitations | **9** |
+
+One item may match several themes.
+
+### Main product insight
+
+The repeated problem is not merely a lack of food. Food must also be:
+
+- Moved before it spoils
+- Compatible with cold-storage capacity
+- Compatible with partner receiving windows
+- Appropriate for the destination or program
+- Usable by the community
+- Packed in an operationally realistic way
+- Delivered through a feasible route
+- Reallocated when circumstances change
+
+ChoiceGrid connects these concerns into one workflow.
+
+---
+
+## 6. Official hackathon fit
+
+The official prompt asks teams to use AI agents to improve food-bank supply chains involving:
+
+- Donation acceptance
+- Purchasing
+- Warehousing
+- Allocation
+- Packing
+- Distribution
+- Delivery
+
+ChoiceGrid directly demonstrates:
+
+- Donation intake
+- Shelf-life urgency
+- Cold-capacity checks
+- Partner allocation
+- Packing and cross-docking
+- Route creation
+- Disruption recovery
+- Community-demand matching
+- Human decision support
+
+The challenge materials emphasize that technology should make workers better at their jobs rather than replace them. Human approval is therefore mandatory before consequential actions.
+
+---
+
+## 7. Primary users
+
+The MVP may use one `demo_user`, but the experience should preserve these role labels.
+
+### Operations manager
+
+- Reviews urgent alerts
+- Compares plans
+- Understands assumptions and risks
+- Approves or overrides recommendations
+- Reviews impact
+
+### Donation coordinator
+
+- Reviews the incoming offer
+- Confirms extracted fields
+- Resolves missing information
+- Initiates planning
+
+### Warehouse lead
+
+- Reviews cold capacity
+- Reviews packing and staging instructions
+- Verifies quantities and handling requirements
+
+### Dispatcher
+
+- Reviews vehicles, drivers, receiving windows, and route
+- Handles disruptions
+
+### Partner-agency coordinator
+
+- Maintains agency capacity and availability
+- Reviews demand, product fit, and refusal history
+
+---
+
+## 8. Product principles
+
+### 8.1 Human approval
+
+Agents may:
+
+- Extract
+- Rank
+- Recommend
+- Explain
+- Draft
+- Simulate
+- Replan
+
+Agents may not silently:
+
+- Accept or decline donations
+- Certify food as safe
+- Dispatch vehicles
+- Contact partners
+- Change approved allocations
+- Use real recipient medical records
+
+### 8.2 Deterministic operations
+
+Use an LLM for:
+
+- Natural-language extraction
+- Follow-up questions
+- Plain-language explanations
+- Draft communications
+- Note categorization
+
+Use deterministic code for:
+
+- Unit conversion
+- Capacity checks
+- Quantity allocation
+- Time-window validation
+- Destination scores
+- Plan metrics
+- Route distances used in the demo
+- Impact calculations
+- State transitions
+
+### 8.3 Explainability
+
+Every recommendation should expose:
+
+- Positive factors
+- Penalties
+- Capacity constraints
+- Time constraints
+- Assumptions
+- Missing information
+- Excluded destinations
+- Alternatives
+- Confidence or fallback status
+
+### 8.4 Data minimization
+
+Use only:
+
+- Synthetic donors
+- Synthetic partners
+- Synthetic vehicles and drivers
+- Aggregate demand profiles
+- Non-identifying usability tags
+- Seeded operational notes
+
+### 8.5 Honest metrics
+
+Clearly distinguish:
+
+- Official challenge facts
+- Exact coded research
+- Qualitative research
+- External research
+- Synthetic inputs
+- Calculated demo metrics
+- Team assumptions
+
+---
+
+## 9. Hero scenario
+
+### Scenario ID
+
+```text
+SCN-STRAWBERRY-001
+```
+
+### Starting donor message
+
+```text
+Hi, Market Street Grocery has about 80 cases of strawberries available today,
+roughly 1,200 pounds. They need to be picked up before 1 PM and kept refrigerated.
+Please confirm quickly.
+```
+
+### Seeded facts
+
+- Donor: Market Street Grocery
+- Product: strawberries
+- Quantity: **1,200 lb**
+- Temperature: refrigerated
+- Pickup deadline: **1:00 PM**
+- Modeled risk deadline: **36 hours after offer**
+- Compatible warehouse cold capacity: **420 lb**
+- Refrigerated vehicle capacity: **1,400 lb**
+- Two high-demand partners can receive today
+- One high-need partner has limited cold capacity
+- One meal-kit program can use **400 lb** tomorrow
+- **60 lb** is reserved for inspection hold or expected handling loss
+
+All values are synthetic.
+
+---
+
+## 10. Required plan alternatives
+
+### Option A — Warehouse First
+
+- Attempt to receive most or all food at the warehouse
+- Surface the cold-capacity conflict
+- Show lower coordination complexity
+- Show higher modeled spoilage or handling risk
+- Mark the option warning or partially infeasible when appropriate
+
+### Option B — Direct Distribution
+
+- Send most food directly to partner agencies
+- Use less warehouse capacity
+- Increase route miles and receiving-window sensitivity
+- Show stronger immediate access
+
+### Option C — Mixed Plan
+
+Recommended seeded plan:
+
+| Destination or handling path | Quantity |
+|---|---:|
+| Partner A | **420 lb** |
+| Partner B | **320 lb** |
+| Meal-kit program through refrigerated staging | **400 lb** |
+| Inspection hold or modeled handling loss | **60 lb** |
+| **Total** | **1,200 lb** |
+
+The Mixed Plan should be recommended because it balances urgency, cold capacity, demand, receiving feasibility, route feasibility, service gaps, and refusal risk.
+
+---
+
+## 11. Primary disruption
+
+### Event
+
+Partner B cancels after approval because receiving staff are unavailable.
+
+### Affected quantity
+
+```text
+320 lb
+```
+
+### Required behavior
+
+1. Mark Partner B canceled.
+2. Identify affected allocations and route stops.
+3. Preserve unaffected or completed work.
+4. Generate recovery alternatives.
+5. Recalculate capacity, quantity, route, miles, windows, impact, and risk.
+6. Require human approval.
+7. Create a superseding mission.
+8. Preserve the old mission in the audit history.
+
+### Seeded recovery
+
+A valid fixture may:
+
+- Send **260 lb** to an alternate compatible partner
+- Add **60 lb** to meal-kit staging or inspection hold
+
+The replacement must satisfy capacity, temperature, time-window, and quantity-conservation rules.
+
+---
+
+## 12. Required MVP capabilities
+
+### 12.1 Dashboard
+
+Show:
+
+- Urgent donation alert
+- Pounds at high expiration risk
+- Cold-capacity utilization
+- Active missions
+- Partner shortage indicators
+- Short shift-start briefing
+
+### 12.2 Donation intake and review
+
+Support:
+
+- Pasting a donor message
+- Loading the seeded offer
+- Structured extraction
+- Field-level confidence
+- Missing questions
+- Manual confirmation
+- Deterministic fallback when no LLM is configured
+
+### 12.3 Plan generation
+
+Support:
+
+- Capacity assessment
+- Partner ranking
+- Three complete alternatives
+- Quantity conservation
+- Temperature compatibility
+- Time-window feasibility
+- Transparent metrics
+- Excluded-destination reasons
+
+### 12.4 Human approval
+
+Support:
+
+- Plan selection
+- Validated quantity edits
+- Approver identity
+- Optional reason
+- Audit event
+- Idempotent approval
+
+### 12.5 Packing and cross-dock plan
+
+Show:
+
+- Product lot
+- Destination
+- Quantity
+- Handling type
+- Priority
+- Staging location
+- Refrigeration requirement
+- Completion status
+
+### 12.6 Map and mission
+
+Show:
+
+- Donor
+- Warehouse
+- Partner agencies
+- Vehicle
+- Candidate or approved route
+- Demand
+- Compatible cold capacity
+- Receiving windows
+- Partner status
+- Accessible synchronized location list
+
+### 12.7 Disruption recovery
+
+Fully implement at least one:
+
+- Partner cancellation
+- Refrigerated truck breakdown
+
+Recovery must reuse real domain logic rather than switch to an unrelated hard-coded page.
+
+### 12.8 Impact and audit
+
+Calculate:
+
+- Pounds assigned in time
+- Inspection hold or modeled loss
+- Estimated households supported
+- Total miles
+- Staff minutes
+- Cold-capacity utilization
+- Modeled spoilage avoidance
+- Approvals and overrides
+- Disruption and recovery events
+
+---
+
+## 13. Explicit non-goals
+
+Do not build:
+
+- Production authentication
+- Real recipient accounts
+- Real medical records
+- Live food-bank integrations
+- Live GPS
+- Production route optimization
+- Automated food-safety approval
+- Full WMS or CRM functionality
+- Billing or donor tax receipts
+- Full volunteer scheduling
+- Public pantry reservations
+- Real-time public eligibility determination
+- Multi-tenant regional deployment
+- A generic chatbot as the main experience
+- A consumer recipe app
+- A basic pantry locator as the primary product
+
+---
+
+## 14. Screens and routes
+
+| Route | Screen | Purpose |
+|---|---|---|
+| `/dashboard` | Operations Control Tower | See urgent issues and enter the scenario |
+| `/donations/new` | Donation Intake | Paste, enter, or load an offer |
+| `/donations/[id]` | Donation Details | Review source text, extracted fields, confidence, and missing data |
+| `/plans/[id]` | AI Decision Room | Compare, edit, select, and approve plans |
+| `/map` | Demand and Capacity Map | Understand demand, capacity, windows, vehicles, and routes |
+| `/packing/[id]` | Packing and Cross-Dock Plan | Translate approval into warehouse instructions |
+| `/missions/[id]` | Mission Detail | Show vehicle, driver, stops, quantities, and route |
+| `/simulate` | Disruption Simulator | Trigger and approve a recovery |
+| `/impact` | Impact and Audit | Show calculated outcomes and decision history |
+
+Detailed screen requirements live in `docs/SCREEN_SPECIFICATIONS.md`.
+
+---
+
+## 15. Primary navigation flow
+
+```text
+/dashboard
+    ↓
+/donations/DON-104
+    ↓
+/plans/PLN-104
+    ↓
+/packing/PKG-104
+    ↓
+/missions/MSN-104
+    ↓
+/simulate?mission=MSN-104
+    ↓
+/missions/MSN-105
+    ↓
+/impact?mission=MSN-105
+```
+
+Product story:
+
+```text
+Urgent alert
+→ understand the offer
+→ compare alternatives
+→ approve a plan
+→ create warehouse and route instructions
+→ recover from disruption
+→ measure the outcome
+```
+
+---
+
+## 16. Map requirements
+
+The map is a decision surface, not decoration.
+
+### Required data
+
+- Donor location
+- Warehouse
+- Partner agencies
+- Vehicle
+- Candidate and approved routes
+- Demand level
+- Compatible cold capacity
+- Receiving windows
+- Status: available, limited, unavailable, or canceled
+- Product-fit indicator
+- Optional service-gap layer
+
+### Reliability
+
+The demo must not depend on a live routing service.
+
+Use:
+
+- Seeded coordinates
+- Deterministic distance matrix
+- Precomputed route geometry
+- Map fallback or accessible location list
+
+---
+
+## 17. Agent architecture
+
+ChoiceGrid uses narrow agents with structured contracts.
+
+### Intake Agent
+
+- Parses the donor message
+- Extracts explicit details
+- Identifies ambiguity
+- Drafts follow-up questions
+- Must not invent missing facts or accept the donation
+
+### Capacity Agent
+
+- Checks warehouse capacity
+- Checks partner capacity
+- Checks vehicle compatibility
+- Checks dock and receiving windows
+- Fully deterministic
+
+### Need-Matching Agent
+
+Ranks destinations using:
+
+- Documented demand
+- Product usability
+- Receiving-window fit
+- Compatible capacity
+- Recent service gap
+- Travel
+- Access burden
+- Refusal risk
+
+### Planning Agent
+
+- Creates three complete plans
+- Conserves quantity
+- Calculates metrics
+- Explains assumptions and risks
+- Identifies excluded destinations
+
+### Routing Agent
+
+- Creates or loads the stop sequence
+- Uses deterministic seeded distance data
+- Respects vehicle and time constraints
+
+### Recovery Agent
+
+- Identifies affected work
+- Preserves unaffected work
+- Generates replacement plans
+- Requires human approval
+- Supersedes the old mission
+
+### Communication Agent
+
+May draft:
+
+- Donor confirmation
+- Partner notice
+- Driver instructions
+- Disruption update
+
+All messages remain drafts until approved.
+
+---
+
+## 18. Destination score
+
+A possible MVP score:
+
+```text
+Destination Score =
+30% documented need
++ 20% product usability match
++ 15% receiving-window compatibility
++ 15% compatible available capacity
++ 10% recent service gap
++ 10% equity priority
+- travel penalty
+- spoilage penalty
+- refusal-risk penalty
+```
+
+Rules:
+
+- Keep score components visible.
+- Version the configuration, such as `score-v1`.
+- Recalculate after edits.
+- A score cannot override a hard capacity, temperature, or time-window constraint.
+- Do not describe the score as perfectly objective or perfectly fair.
+
+---
+
+## 19. Quantity conservation
+
+Every plan must satisfy:
+
+```text
+offered quantity
+=
+allocated quantity
++ staging or warehouse quantity
++ inspection hold
++ redirected quantity
++ declined quantity
++ explicitly modeled loss
+```
+
+Primary plan:
+
+```text
+1,200 = 420 + 320 + 400 + 60
+```
+
+A plan is not approvable when:
+
+- Quantities do not reconcile
+- Capacity is exceeded
+- Temperature is incompatible
+- A required time window is infeasible
+- Blocking information is missing
+- A canceled or unavailable destination remains assigned
+
+---
+
+## 20. State model
+
+### Donation
+
+```text
+draft
+→ needs_confirmation
+→ ready_for_planning
+→ plans_generated
+→ awaiting_approval
+→ approved / partially_accepted / declined / redirected
+→ in_execution
+→ closed
+```
+
+### Mission
+
+```text
+draft
+→ approved
+→ assigned
+→ in_transit
+→ delivered
+→ closed
+```
+
+### Disruption branch
+
+```text
+assigned / in_transit
+→ disrupted
+→ replanning
+→ superseded by replacement mission
+```
+
+Invalid transitions must return an explicit conflict error.
+
+---
+
+## 21. Core data entities
+
+Detailed schemas are in `docs/DATA_MODEL.md`.
+
+At minimum, share typed representations for:
+
+- `DonationOffer`
+- `ProductLot`
+- `Donor`
+- `Warehouse`
+- `PartnerAgency`
+- `DemandSignal`
+- `Vehicle`
+- `Driver`
+- `PlanSet`
+- `PlanOption`
+- `Allocation`
+- `DestinationScore`
+- `PlanMetrics`
+- `PackingPlan`
+- `PackingBatch`
+- `Mission`
+- `RouteStop`
+- `RouteLeg`
+- `Disruption`
+- `AgentRun`
+- `AuditEvent`
+
+Use stable prefixed IDs such as:
+
+```text
+DON-104
+DNR-001
+LOT-104
+PAR-012
+PLN-104
+OPT-003
+PKG-104
+MSN-104
+DSP-001
+```
+
+Use ISO 8601 timestamps and explicit units.
+
+---
+
+## 22. API expectations
+
+Core operations should include:
+
+```text
+POST /api/donations/parse
+GET  /api/donations/:id
+PATCH /api/donations/:id
+
+POST /api/plans/generate
+GET  /api/plans/:id
+PATCH /api/plans/:planSetId/options/:optionId
+POST /api/plans/:planSetId/approve
+
+GET  /api/partners
+GET  /api/partners/:id
+GET  /api/map/network
+GET  /api/map/routes/:missionId
+
+GET  /api/packing/:id
+
+GET  /api/missions/:id
+POST /api/missions/:id/disruptions
+POST /api/disruptions/:id/approve-recovery
+
+GET  /api/impact/:missionId
+POST /api/demo/reset
+```
+
+Rules:
+
+- Validate inputs and outputs.
+- Use a consistent response envelope.
+- Return explicit domain errors.
+- Make approval idempotent.
+- Calculate impact in the canonical domain layer, not only in the browser.
+
+---
+
+## 23. Proposed technical stack
+
+Unless an approved repository decision says otherwise:
+
+- Next.js App Router
+- TypeScript strict mode
+- Tailwind CSS
+- shadcn/ui or equivalent
+- React Leaflet
+- Zod
+- Zustand or equivalent lightweight state store
+- Local fixtures or an in-memory repository
+- Optional server-side LLM integration
+- Vitest
+- Testing Library
+- Playwright
+
+Required commands:
+
+```bash
+npm install
+npm run dev
+npm run lint
+npm run typecheck
+npm run test
+npm run test:e2e
+npm run build
+npm run demo:reset
+```
+
+---
+
+## 24. What must genuinely work
+
+- Donation parsing into a validated schema
+- Confidence and missing-data handling
+- Capacity checks
+- Destination-score calculation
+- Three plan alternatives
+- Quantity conservation
+- Plan edits and validation
+- Human approval
+- Packing-plan derivation
+- Map and route rendering
+- One disruption and recovery
+- Impact calculations
+- Audit events
+- Demo reset
+- Deterministic fallback when the LLM is unavailable
+
+## 25. What may be simulated
+
+- Donor and partner records
+- Inventory and demand
+- Service-gap indicators
+- Vehicles and drivers
+- Route geometry
+- Shelf-life risk assumptions
+- Households-per-pound assumptions
+- Refusal history
+- Communication delivery
+- Map tiles
+
+Synthetic and scenario-based values must be labeled.
+
+---
+
+## 26. Target demo metrics
+
+| Metric | Target |
+|---|---:|
+| Pounds offered | **1,200 lb** |
+| Pounds assigned or distributed in time | **1,140 lb** |
+| Inspection hold or modeled loss | **60 lb** |
+| Estimated households supported | **380** |
+| Modeled spoilage avoidance | **94%** |
+| Replanning time | **11 seconds** |
+
+These are simulated estimates calculated from the seeded scenario.
+
+---
+
+## 27. Ninety-second demo
+
+### 0–15 seconds
+
+Open `/dashboard`.
+
+> “A grocery store has offered 1,200 pounds of strawberries. Pickup must happen before 1:00 PM, and the food must stay refrigerated.”
+
+### 15–30 seconds
+
+Show:
+
+- Original donor message
+- Extracted quantity
+- Deadline
+- Refrigeration
+- Confidence
+- Missing-data behavior
+
+Generate plans.
+
+### 30–50 seconds
+
+Compare:
+
+- Warehouse First
+- Direct Distribution
+- Mixed Plan
+
+Show:
+
+- Warehouse cold-capacity warning
+- Partner demand
+- Receiving windows
+- Metrics
+- Excluded destinations
+
+Approve Mixed Plan.
+
+### 50–65 seconds
+
+Show:
+
+- Packing or cross-dock batches
+- Route
+- Vehicle
+- Receiving windows
+- Approval in audit history
+
+### 65–80 seconds
+
+Trigger Partner Canceled.
+
+Show:
+
+- 320 affected pounds
+- Recovery plan
+- New route
+- Human recovery approval
+
+### 80–90 seconds
+
+Show:
+
+- 1,140 pounds assigned in time
+- 380 estimated households supported
+- 94% modeled spoilage avoidance
+- 11-second replan
+- Simulated-data label
+
+---
+
+## 28. Required tests
+
+### Schemas and data
+
+- Donation parser output
+- Required fields
+- Unit conversion
+- Agent envelope
+- API validation
+
+### Planning
+
+- Hard capacity constraints
+- Temperature compatibility
+- Time-window feasibility
+- Quantity conservation
+- Score components
+- Metrics
+- Invalid edits
+- Approval idempotency
+
+### Recovery
+
+- Canceled partner removed
+- No canceled route stop remains
+- Replacement conserves quantity
+- Replacement respects capacity
+- Old mission is superseded
+- Audit events are added
+
+### UI and accessibility
+
+- Critical navigation
+- Loading, empty, error, and low-confidence states
+- Keyboard access
+- Map/list synchronization
+- Approval modal
+- Demo reset
+
+### End to end
+
+```text
+dashboard
+→ donation
+→ plans
+→ approval
+→ mission
+→ disruption
+→ recovery
+→ impact
+```
+
+---
+
+## 29. Definition of done
+
+The MVP is complete when:
+
+- The dashboard shows the seeded offer.
+- The message can be parsed or loaded through fallback.
+- Three valid plans are generated.
+- Quantity conservation passes.
+- The Mixed Plan can be approved.
+- Packing and mission records are created.
+- The map reflects the approved mission.
+- One disruption produces a valid recovery.
+- Recovery requires approval.
+- Impact metrics update.
+- Audit events are visible.
+- Demo reset works.
+- No real PII is present.
+- Lint, types, tests, end-to-end checks, and production build pass.
+- The full presentation can be completed in approximately 90 seconds.
+
+---
+
+## 30. Work order for coding agents
+
+### Phase 1 — Foundation
+
+Read:
+
+```text
+AGENTS.md
+CHOICEGRID_PRODUCT_SPEC.md
+docs/SCOPE_AND_NON_GOALS.md
+docs/DATA_MODEL.md
+docs/API_AND_STATE_CONTRACTS.md
+```
+
+Build:
+
+- Repository setup
+- Shared schemas
+- Fixture repository
+- Demo reset
+- Domain errors
+
+### Phase 2 — Donation and planning
+
+Read:
+
+```text
+docs/AI_AGENT_CONTRACTS.md
+docs/USER_FLOWS.md
+docs/METRICS_AND_EVIDENCE.md
+```
+
+Build:
+
+- Intake parser and fallback
+- Capacity service
+- Destination score
+- Three plans
+- Plan metrics
+- Quantity conservation
+
+### Phase 3 — Approval and execution
+
+Read:
+
+```text
+docs/SCREEN_SPECIFICATIONS.md
+docs/DESIGN_SYSTEM.md
+```
+
+Build:
+
+- Decision Room
+- Approval
+- Packing plan
+- Mission
+- Audit events
+
+### Phase 4 — Map and recovery
+
+Build:
+
+- Markers and route
+- Accessible location list
+- Partner cancellation
+- Replacement plan
+- Superseding mission
+
+### Phase 5 — Impact and hardening
+
+Read:
+
+```text
+docs/DEMO_SCENARIOS.md
+docs/TEST_AND_ACCEPTANCE_PLAN.md
+```
+
+Build:
+
+- Impact page
+- Reset and fallback
+- End-to-end tests
+- Accessibility
+- Demo polish
+
+---
+
+## 31. Task-specific reading guide
+
+### Frontend agent
+
+```text
+AGENTS.md
+CHOICEGRID_PRODUCT_SPEC.md
+docs/SCOPE_AND_NON_GOALS.md
+docs/USER_FLOWS.md
+docs/SCREEN_SPECIFICATIONS.md
+docs/DESIGN_SYSTEM.md
+docs/API_AND_STATE_CONTRACTS.md
+```
+
+### Backend or domain agent
+
+```text
+AGENTS.md
+CHOICEGRID_PRODUCT_SPEC.md
+docs/DATA_MODEL.md
+docs/API_AND_STATE_CONTRACTS.md
+docs/METRICS_AND_EVIDENCE.md
+docs/PRIVACY_AND_SAFETY.md
+docs/TEST_AND_ACCEPTANCE_PLAN.md
+```
+
+### AI-agent engineer
+
+```text
+AGENTS.md
+CHOICEGRID_PRODUCT_SPEC.md
+docs/AI_AGENT_CONTRACTS.md
+docs/DATA_MODEL.md
+docs/METRICS_AND_EVIDENCE.md
+docs/PRIVACY_AND_SAFETY.md
+docs/RESEARCH_INSIGHTS.md
+```
+
+### QA agent
+
+```text
+AGENTS.md
+CHOICEGRID_PRODUCT_SPEC.md
+docs/SCOPE_AND_NON_GOALS.md
+docs/DEMO_SCENARIOS.md
+docs/TEST_AND_ACCEPTANCE_PLAN.md
+docs/METRICS_AND_EVIDENCE.md
+```
+
+---
+
+## 32. Prohibited shortcuts
+
+Do not:
+
+- Replace calculations with LLM prose
+- Hard-code contradictory values on different screens
+- Skip quantity conservation
+- Auto-approve plans
+- Mark food safe
+- Use real recipient PII
+- Require a live external routing service
+- Hide infeasible windows
+- Treat straight-line distance as full logistics
+- Mutate approved missions without an audit event
+- Remove disruptions from history
+- Display unsupported impact claims
+- Turn the product into a general chatbot
+- Build stretch features before the hero scenario is reliable
+
+---
+
+## 33. Pitch language
+
+### Recommended
+
+> “ChoiceGrid is a human-approved AI decision and recovery layer for urgent food donations. It interprets an offer, checks capacity and community need, compares operational plans, creates packing and delivery instructions, and replans when conditions change.”
+
+### Avoid
+
+- “The AI knows the food is safe.”
+- “These are real households.”
+- “This is connected to live food-bank systems.”
+- “Our fairness score is objective.”
+- “No other product does this.”
+- “The AI autonomously runs the supply chain.”
+
+### Prefer
+
+- “The prototype estimates urgency and requests staff review.”
+- “The metrics are calculated from a simulated scenario.”
+- “The system uses transparent constraints and human approval.”
+- “Existing products cover pieces of the workflow; ChoiceGrid demonstrates the closed operational loop.”
+
+---
+
+## 34. Final directive
+
+Build the smallest reliable product that proves this story:
+
+> **An urgent perishable donation arrives. ChoiceGrid structures it, compares feasible destinations and plans, obtains human approval, creates packing and route instructions, recovers from one disruption, and shows calculated impact.**
+
+Do not optimize for the number of features.
+
+Optimize for:
+
+- Coherence
+- Reliability
+- Explainability
+- Human control
+- Visual clarity
+- Map usefulness
+- Demonstrable AI value
+- Honest metrics
+- A successful 90-second presentation
+
+The strawberry scenario is the product until it works end to end.
