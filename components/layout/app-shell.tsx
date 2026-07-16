@@ -8,7 +8,6 @@ import {
   ChevronDown,
   ClipboardList,
   Gauge,
-  MapPinned,
   Menu,
   RefreshCcw,
   Truck,
@@ -23,7 +22,6 @@ const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
   { href: "/donations/DON-104", label: "Donations", icon: Box },
   { href: "/plans/PLN-104", label: "Plans", icon: ClipboardList },
-  { href: "/map", label: "Map", icon: MapPinned },
   { href: "/missions/MSN-104", label: "Missions", icon: Truck },
   { href: "/impact", label: "Impact", icon: BarChart3 },
 ] as const;
@@ -87,21 +85,24 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
 
         <div className="sidebar-demo">
-          <div className="demo-mode-row">
-            <span>Demo mode</span>
-            <span className="toggle-on" aria-label="Demo mode enabled">
-              <span />
-            </span>
-          </div>
-          <div className="scenario-label">Scenario</div>
-          <div className="scenario-select" aria-label="Current scenario">
-            <span>Strawberry Rescue</span>
-            <ChevronDown size={16} aria-hidden="true" />
-          </div>
-          <button className="reset-button" type="button" onClick={reset}>
-            <RefreshCcw size={16} aria-hidden="true" />
-            Reset scenario
-          </button>
+          <details className="demo-controls">
+            <summary><span>Demo controls</span><ChevronDown size={16} aria-hidden="true" /></summary>
+            <div className="demo-controls-body">
+              <div className="demo-mode-row">
+                <span>Demo mode</span>
+                <span className="toggle-on" aria-label="Demo mode enabled"><span /></span>
+              </div>
+              <div className="scenario-label">Scenario</div>
+              <div className="scenario-select" aria-label="Current scenario">
+                <span>Strawberry Rescue</span>
+                <ChevronDown size={16} aria-hidden="true" />
+              </div>
+              <button className="reset-button" type="button" onClick={reset}>
+                <RefreshCcw size={16} aria-hidden="true" />
+                Reset scenario
+              </button>
+            </div>
+          </details>
           <div className="demo-user">
             <span className="avatar-outline">
               <UserRound size={20} aria-hidden="true" />

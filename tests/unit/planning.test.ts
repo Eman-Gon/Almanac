@@ -9,6 +9,7 @@ import {
 import { generatePlanSet } from "@/domain/planning/generate-plans";
 import {
   accountedQuantityLb,
+  reconcilePlanQuantities,
   quantityConserves,
   validatePlanOption,
   type PlanValidation,
@@ -74,6 +75,32 @@ describe("deterministic planning", () => {
       excessQuantityLb: 780,
       source: "calculated",
     });
+  });
+
+  it("reconciles every seeded plan without double-counting expected loss", () => {
+    const reconciliation = set.options.map((option) => reconcilePlanQuantities(option, donation.quantityLb));
+
+    expect(reconciliation.map((result) => result.reconciles)).toEqual([true, true, true]);
+    expect(reconciliation.map((result) => result.totalAccountedLb)).toEqual([1_200, 1_200, 1_200]);
+    expect(reconciliation[2]).toMatchObject({
+      deliveredBeforeRiskLb: 1_140,
+      inspectionHoldLb: 60,
+      expectedLossLb: 0,
+      holdOrLossLb: 60,
+    });
+  });
+
+  it("blocks a plan whose displayed outcome buckets exceed the offer", () => {
+    const invalidMetrics: PlanOption = {
+      ...mixed,
+      metrics: { ...mixed.metrics, quantityDistributedInTimeLb: 1_200 },
+    };
+    const result = reconcilePlanQuantities(invalidMetrics, donation.quantityLb);
+    const validation = validatePlanOption(invalidMetrics, context);
+
+    expect(result.reconciles).toBe(false);
+    expect(issueCodes(validation)).toContain("METRIC_QUANTITY_MISMATCH");
+    expect(validation.approvable).toBe(false);
   });
 
   it("reports an approvable mixed allocation with derived capacity usage", () => {

@@ -93,9 +93,9 @@ No environment variable is required for the current MVP. To enable optional Veni
 LLM_PROVIDER=venice
 LLM_BASE_URL=https://api.venice.ai/api/v1
 LLM_API_KEY=
-LLM_MODEL=mistral-small-3-2-24b-instruct
-LLM_BACKUP_MODEL=qwen3-235b-a22b-instruct-2507
-LLM_TIMEOUT_MS=8000
+LLM_MODEL=openai-gpt-4o-mini-2024-07-18
+LLM_BACKUP_MODEL=minimax-m25
+LLM_TIMEOUT_MS=12000
 NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_MAP_TILE_URL=
 ```
@@ -110,7 +110,7 @@ NEXT_PUBLIC_MAP_TILE_URL=
 |---|---|
 | `/` | Redirect to `/dashboard` |
 | `/dashboard` | Operations control tower |
-| `/donations` | List the seeded active offer |
+| `/donations` | List the seeded active offer plus display-only synthetic history |
 | `/donations/new` | Enter or paste a donation offer |
 | `/donations/[id]` | Review extracted donation details |
 | `/plans` | Redirect to seeded plan set `PLN-104` |

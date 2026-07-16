@@ -178,6 +178,10 @@ No known critical or high-severity defect may remain in the primary scenario.
 ### Map
 
 - Marker list matches map locations
+- Current route markers show full names and stop order; nearby context labels appear only after selection
+- No detail panel is open until a marker or synchronized row is selected
+- Route rows distinguish planned mission quantity from requested demand
+- Zoom in, zoom out, reset, keyboard pan, and drag pan change presentation only and preserve route geometry and metrics
 - Route, demand, capacity, and vehicle layer toggles update the map and visible legend/list
 - Partner popup opens details
 - Color is not the only status indicator
@@ -276,6 +280,7 @@ For the seeded demo on a typical laptop:
 
 ### Donation
 
+- [ ] Donations list distinguishes the single active offer from display-only synthetic history
 - [ ] Original and extracted data visible
 - [ ] Confidence visible
 - [ ] Missing information handled

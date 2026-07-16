@@ -8,8 +8,11 @@ import {
   WarehouseSchema,
 } from "@/domain/schemas/core";
 import {
+  backgroundMissions,
   donation,
   donor,
+  expirationRiskItems,
+  historicalDonationOffers,
   partners,
   productLot,
   vehicles,
@@ -37,5 +40,24 @@ describe("seed schemas", () => {
   it("rejects a negative donation quantity", () => {
     const invalid = DonationOfferSchema.safeParse({ ...donation, quantityLb: -1 });
     expect(invalid.success).toBe(false);
+  });
+
+  it("keeps mock donation history positive, unique, and non-operational", () => {
+    const ids = historicalDonationOffers.map((offer) => offer.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(historicalDonationOffers.every((offer) => offer.quantityLb > 0)).toBe(true);
+    expect(
+      historicalDonationOffers.every((offer) =>
+        ["closed", "redirected", "declined"].includes(offer.status),
+      ),
+    ).toBe(true);
+    expect(ids).not.toContain(donation.id);
+  });
+
+  it("keeps dashboard context fixtures populated and display-only", () => {
+    expect(backgroundMissions).toHaveLength(5);
+    expect(new Set(backgroundMissions.map((mission) => mission.id)).size).toBe(backgroundMissions.length);
+    expect(expirationRiskItems).toHaveLength(6);
+    expect(expirationRiskItems.every((item) => item.quantityLb > 0)).toBe(true);
   });
 });

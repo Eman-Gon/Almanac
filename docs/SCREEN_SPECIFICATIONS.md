@@ -82,6 +82,30 @@ Estimated urgency: high
 
 ---
 
+## Donation Offer List
+
+**Route:** `/donations`
+
+### Purpose
+
+Keep the single operational hero offer prominent while providing believable synthetic context.
+
+### Required components
+
+- One active `DON-104` row linked to the donation-review workflow
+- Eight recent synthetic history rows with quantity, temperature class, outcome, and terminal status
+- A visible `Mock history · display only` label
+
+Historical rows are not interactive operational records and must not affect dashboard KPIs, planning, impact, or demo state.
+
+### Acceptance criteria
+
+- Exactly one offer is labeled operational.
+- Historical quantities use pounds and approved donation statuses.
+- The active strawberry row remains keyboard accessible and navigates to `/donations/DON-104`.
+
+---
+
 ## 2. Donation Intake
 
 **Route:** `/donations/new`
@@ -243,10 +267,13 @@ Provide the spatial context behind allocation decisions.
 
 Do not rely on color alone; include icons, labels, or patterns.
 
+On the full map, every current route stop shows its sequence and full location name. At phone widths, numbered pins replace on-canvas name labels to avoid collisions, while the synchronized list immediately below preserves every full route-stop name and quantity. Nearby context remains icon-only until selected so the default map stays legible. No location detail is open on initial render.
+
 ### Popup contents
 
 - Name
 - Type
+- Planned pickup, warehouse transfer, or partner delivery when the location is on the mission route
 - Demand level
 - Storage capacity
 - Receiving window
@@ -259,12 +286,18 @@ Do not rely on color alone; include icons, labels, or patterns.
 - Toggle demand partners
 - Toggle warehouse capacity
 - Toggle vehicles
+- Zoom in, zoom out, and reset to the fitted route
+- Pan by dragging after zoom or with arrow keys while the map has focus
 - Open partner profile
 
 ### Acceptance criteria
 
 - Map renders with local seed data.
 - Route display does not require a live routing API.
+- Zoom and pan are presentation-only; they do not change route geometry, distance, stop order, quantities, or metrics.
+- A replacement route is never synthesized from URL state; `MSN-105` remains unavailable on the map until human approval creates the persisted mission.
+- The default desktop view keeps all current route-stop names and sequence visible while withholding detailed facts until selection; the phone layout keeps sequence on the map and full names in the adjacent synchronized list.
+- The synchronized route list shows planned mission quantities separately from requested demand.
 - Every layer checkbox immediately updates both the schematic map and its visible legend/list.
 - Keyboard users can access a synchronized location list.
 

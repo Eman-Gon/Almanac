@@ -483,6 +483,7 @@ interface OperationalNote {
 ## Minimum seed dataset
 
 - `DON-104`: 1,200 lb strawberries
+- `DON-096` through `DON-103`: display-only synthetic donation-history summaries with terminal outcomes; these are not executable offers and do not enter calculations
 - `WH-001`: primary warehouse near refrigerated capacity
 - `PAR-001` through `PAR-010`: partner agencies with varied windows and capacity
 - `VEH-001` through `VEH-003`: vehicle fleet

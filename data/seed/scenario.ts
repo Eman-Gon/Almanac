@@ -463,10 +463,141 @@ export const backgroundMissions = [
     status: "Scheduled",
     tone: "amber",
   },
+  {
+    id: "MSN-1018",
+    name: "Pantry Restock",
+    route: "San Jose → Harbor Light Pantry",
+    load: "720 lb canned goods",
+    window: "11:00 AM – 2:00 PM",
+    status: "Scheduled",
+    tone: "blue",
+  },
+  {
+    id: "MSN-1017",
+    name: "Mobile Market Loop",
+    route: "Warehouse → Sunnyvale Mobile Market",
+    load: "280 lb fresh produce",
+    window: "2:00 PM – 4:00 PM",
+    status: "Planned",
+    tone: "green",
+  },
 ] as const;
 
 export const expirationRiskItems = [
   { product: "Strawberries", quantityLb: 1_200, timing: "Today by 1:00 PM", risk: "High" },
   { product: "Leafy greens", quantityLb: 450, timing: "Tomorrow by 10:00 AM", risk: "Medium" },
   { product: "Yogurt cups", quantityLb: 300, timing: "Jul 17 by 11:59 PM", risk: "Low" },
+  { product: "Cut melon", quantityLb: 180, timing: "Today by 3:30 PM", risk: "Medium" },
+  { product: "Soft cheese", quantityLb: 240, timing: "Jul 16 by 2:00 PM", risk: "Medium" },
+  { product: "Bell peppers", quantityLb: 380, timing: "Jul 17 by 9:00 AM", risk: "Low" },
 ] as const;
+
+type HistoricalDonationSummary = Pick<
+  DonationOffer,
+  "id" | "productDescription" | "quantityLb" | "temperatureClass" | "status"
+> & {
+  donorName: string;
+  receivedLabel: string;
+  outcomeLabel: string;
+  statusLabel: string;
+  tone: "green" | "blue" | "red";
+};
+
+export const historicalDonationOffers = [
+  {
+    id: "DON-103",
+    productDescription: "Leafy greens",
+    quantityLb: 450,
+    temperatureClass: "refrigerated",
+    status: "closed",
+    donorName: donor.name,
+    receivedLabel: "Jul 14 · 4:20 PM",
+    outcomeLabel: "Distributed within receiving window",
+    statusLabel: "Closed",
+    tone: "green",
+  },
+  {
+    id: "DON-102",
+    productDescription: "Yogurt cups",
+    quantityLb: 300,
+    temperatureClass: "refrigerated",
+    status: "redirected",
+    donorName: donor.name,
+    receivedLabel: "Jul 14 · 9:10 AM",
+    outcomeLabel: "Redirected to regional cold storage",
+    statusLabel: "Redirected",
+    tone: "blue",
+  },
+  {
+    id: "DON-101",
+    productDescription: "Brown rice",
+    quantityLb: 1_600,
+    temperatureClass: "ambient",
+    status: "closed",
+    donorName: donor.name,
+    receivedLabel: "Jul 13 · 2:35 PM",
+    outcomeLabel: "Completed ambient allocation",
+    statusLabel: "Closed",
+    tone: "green",
+  },
+  {
+    id: "DON-100",
+    productDescription: "Bakery bread",
+    quantityLb: 275,
+    temperatureClass: "ambient",
+    status: "declined",
+    donorName: donor.name,
+    receivedLabel: "Jul 12 · 5:40 PM",
+    outcomeLabel: "Pickup window unavailable",
+    statusLabel: "Declined",
+    tone: "red",
+  },
+  {
+    id: "DON-099",
+    productDescription: "Frozen vegetables",
+    quantityLb: 680,
+    temperatureClass: "frozen",
+    status: "closed",
+    donorName: donor.name,
+    receivedLabel: "Jul 11 · 11:15 AM",
+    outcomeLabel: "Cross-docked to meal programs",
+    statusLabel: "Closed",
+    tone: "green",
+  },
+  {
+    id: "DON-098",
+    productDescription: "Canned beans",
+    quantityLb: 980,
+    temperatureClass: "ambient",
+    status: "closed",
+    donorName: donor.name,
+    receivedLabel: "Jul 10 · 3:05 PM",
+    outcomeLabel: "Distributed across pantry network",
+    statusLabel: "Closed",
+    tone: "green",
+  },
+  {
+    id: "DON-097",
+    productDescription: "Whole milk",
+    quantityLb: 560,
+    temperatureClass: "refrigerated",
+    status: "redirected",
+    donorName: donor.name,
+    receivedLabel: "Jul 9 · 8:50 AM",
+    outcomeLabel: "Redirected after cold-window conflict",
+    statusLabel: "Redirected",
+    tone: "blue",
+  },
+  {
+    id: "DON-096",
+    productDescription: "Apples",
+    quantityLb: 520,
+    temperatureClass: "refrigerated",
+    status: "declined",
+    donorName: donor.name,
+    receivedLabel: "Jul 8 · 6:10 PM",
+    outcomeLabel: "Declined after condition review",
+    statusLabel: "Declined",
+    tone: "red",
+  },
+] as const satisfies readonly HistoricalDonationSummary[];

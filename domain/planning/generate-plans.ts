@@ -191,7 +191,7 @@ function createWarehousePlan(): PlanOption {
     inspectionHoldLb: 0,
     declinedLb: 0,
     metrics: {
-      quantityDistributedInTimeLb: 1_200,
+      quantityDistributedInTimeLb: 990,
       expectedSpoilageLb: 210,
       estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_200, 3),
       totalMiles: 18.4,
@@ -230,7 +230,7 @@ function createDirectPlan(): PlanOption {
     inspectionHoldLb: 0,
     declinedLb: 0,
     metrics: {
-      quantityDistributedInTimeLb: 1_200,
+      quantityDistributedInTimeLb: 1_110,
       expectedSpoilageLb: 90,
       estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_200, 3),
       totalMiles: 45.7,

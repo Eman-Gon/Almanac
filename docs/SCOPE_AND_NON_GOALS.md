@@ -128,6 +128,7 @@ The implemented hero dataset contains:
 - 4 drivers
 - 1 primary product lot
 - 1 active donation offer
+- 8 display-only historical donation summaries excluded from planning, KPIs, and impact calculations
 - 1 executable partner-cancellation fixture plus disabled disruption previews
 - Synthetic Santa Clara County-area coordinates
 - Aggregate partner and community profiles

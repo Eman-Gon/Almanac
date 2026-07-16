@@ -23,11 +23,83 @@ export function quantityConserves(
   return Math.abs(accountedQuantityLb(plan) - offeredQuantityLb) <= QUANTITY_TOLERANCE_LB;
 }
 
+export type QuantityReconciliation = {
+  offeredQuantityLb: number;
+  deliveredBeforeRiskLb: number;
+  inspectionHoldLb: number;
+  expectedLossLb: number;
+  declinedQuantityLb: number;
+  redirectedQuantityLb: number;
+  unassignedQuantityLb: number;
+  totalAccountedLb: number;
+  holdOrLossLb: number;
+  reconciles: boolean;
+};
+
+/** Reconciles outcome buckets without double-counting an inspection hold. */
+export function reconcilePlanQuantities(
+  plan: PlanOption,
+  offeredQuantityLb: number,
+): QuantityReconciliation {
+  const redirectedQuantityLb = plan.allocations
+    .filter(
+      (allocation) =>
+        allocation.destinationType === "external_redirect" ||
+        allocation.handling === "redirect",
+    )
+    .reduce((total, allocation) => total + Math.max(0, allocation.quantityLb), 0);
+  const deliveredBeforeRiskLb = Math.max(
+    0,
+    plan.metrics.quantityDistributedInTimeLb - redirectedQuantityLb,
+  );
+  const inspectionHoldLb = Math.max(0, plan.inspectionHoldLb);
+  const declinedQuantityLb = Math.max(0, plan.declinedLb);
+  const residualAfterKnownBuckets =
+    offeredQuantityLb -
+    deliveredBeforeRiskLb -
+    inspectionHoldLb -
+    declinedQuantityLb -
+    redirectedQuantityLb;
+  const expectedLossLb = Math.max(0, residualAfterKnownBuckets);
+  const unassignedQuantityLb = Math.max(
+    0,
+    offeredQuantityLb -
+      deliveredBeforeRiskLb -
+      inspectionHoldLb -
+      expectedLossLb -
+      declinedQuantityLb -
+      redirectedQuantityLb,
+  );
+  const totalAccountedLb =
+    deliveredBeforeRiskLb +
+    inspectionHoldLb +
+    expectedLossLb +
+    declinedQuantityLb +
+    redirectedQuantityLb +
+    unassignedQuantityLb;
+
+  return {
+    offeredQuantityLb,
+    deliveredBeforeRiskLb,
+    inspectionHoldLb,
+    expectedLossLb,
+    declinedQuantityLb,
+    redirectedQuantityLb,
+    unassignedQuantityLb,
+    totalAccountedLb,
+    holdOrLossLb: inspectionHoldLb + expectedLossLb,
+    reconciles:
+      residualAfterKnownBuckets >= -QUANTITY_TOLERANCE_LB &&
+      Math.abs(totalAccountedLb - offeredQuantityLb) <= QUANTITY_TOLERANCE_LB,
+  };
+}
+
 export type QuantityValidationIssue = {
   code:
     | "INVALID_QUANTITY"
     | "DUPLICATE_ALLOCATION_ID"
-    | "QUANTITY_MISMATCH";
+    | "QUANTITY_MISMATCH"
+    | "METRIC_QUANTITY_MISMATCH";
   constraint: "quantity";
   message: string;
   entityId?: string;
@@ -124,6 +196,25 @@ export function validatePlanOption(
           ? Math.max(0, accountedLb - context.offeredQuantityLb)
           : undefined,
         message: `Quantity mismatch: ${accountedLb} lb accounted for of ${context.offeredQuantityLb} lb offered.`,
+      }),
+    );
+  }
+
+  const reconciliation = reconcilePlanQuantities(
+    plan,
+    context.offeredQuantityLb,
+  );
+  if (!reconciliation.reconciles) {
+    issues.push(
+      quantityIssue({
+        code: "METRIC_QUANTITY_MISMATCH",
+        plannedQuantityLb: reconciliation.totalAccountedLb,
+        limitQuantityLb: context.offeredQuantityLb,
+        excessQuantityLb: Math.max(
+          0,
+          reconciliation.totalAccountedLb - context.offeredQuantityLb,
+        ),
+        message: `Outcome quantities do not reconcile: ${reconciliation.totalAccountedLb} lb accounted for of ${context.offeredQuantityLb} lb offered.`,
       }),
     );
   }

@@ -276,6 +276,12 @@ These are **scenario values**, not validated real-world outcomes. The exact fixt
 
 ## Prohibited metric behavior
 
+Plan outcome buckets reconcile to the offered quantity as `delivered before
+risk deadline + inspection hold + expected loss + declined + redirected +
+unassigned`. The `expectedSpoilageLb` field remains a strategy-level impact
+estimate; it is not added a second time when those pounds are already in an
+inspection hold.
+
 - No randomly generated impact values.
 - No untraceable counters.
 - No use of “saved” when only “assigned” is known.

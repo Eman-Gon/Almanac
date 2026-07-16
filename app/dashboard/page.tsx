@@ -1,155 +1,85 @@
 "use client";
 
 import Link from "next/link";
-import {
-  AlertTriangle,
-  ArrowRight,
-  CalendarDays,
-  CheckCircle2,
-  PackageOpen,
-  Clock3,
-  ExternalLink,
-  Snowflake,
-  Truck,
-} from "lucide-react";
-import {
-  backgroundMissions,
-  expirationRiskItems,
-  scenario,
-} from "@/data/seed/scenario";
+import { ArrowRight, CheckCircle2, PackageOpen } from "lucide-react";
+import { expirationRiskItems, partners, vehicles, warehouse } from "@/data/seed/scenario";
 import { PageHeader } from "@/components/layout/page-header";
-import { NetworkMap } from "@/components/shared/network-map";
+import { EmptyState } from "@/components/shared/empty-state";
+import { DetailsAccordion } from "@/components/shared/details-accordion";
+import { NetworkSnapshot } from "@/components/shared/network-snapshot";
 import { Panel } from "@/components/shared/panel";
-import { StatusTag } from "@/components/shared/status-tag";
 import { getDashboardSummary } from "@/domain/dashboard/summary";
+import { generatePlanSet } from "@/domain/planning/generate-plans";
 import { useDemoState } from "@/state/demo-state";
 
 const summary = getDashboardSummary();
 
-function KpiCard({
-  label,
-  value,
-  tone,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  tone: "red" | "amber" | "blue" | "green";
-  icon: typeof AlertTriangle;
-}) {
-  return (
-    <article className="kpi-card">
-      <span className={`kpi-icon kpi-${tone}`}>
-        <Icon size={23} strokeWidth={1.9} aria-hidden="true" />
-      </span>
-      <div>
-        <span className="kpi-label">{label}</span>
-        <strong className={`kpi-value text-${tone}`}>{value}</strong>
-      </div>
-    </article>
-  );
+function KpiCard({ label, value, tone }: { label: string; value: string; tone: "red" | "amber" | "blue" }) {
+  return <article className="kpi-card refactor-kpi-card"><span className={`kpi-label kpi-label-${tone}`}>{label}</span><strong className={`kpi-value text-${tone}`}>{value}</strong></article>;
 }
 
 export default function DashboardPage() {
   const { state } = useDemoState();
-  const recovered = state.stage === "recovered";
-  const activeMissionId = recovered ? "MSN-105" : "MSN-104";
+  const planSet = generatePlanSet();
+  const snapshotPlan = state.approvedPlan
+    ?? state.planOverrides[state.selectedPlanId]
+    ?? planSet.options.find((option) => option.id === state.selectedPlanId)
+    ?? planSet.options[2];
+  const decisionContextIds = new Set([
+    ...snapshotPlan.allocations.map((allocation) => allocation.destinationId),
+    ...snapshotPlan.excludedDestinations.map((exclusion) => exclusion.destinationId),
+  ]);
+  const partnerLocations = partners.filter((partner) => decisionContextIds.has(partner.id)).length;
+  const refrigeratedVehicles = vehicles.filter((vehicle) => vehicle.status === "available" && vehicle.temperatureCapability.includes("refrigerated")).length;
+  const capacityWarnings = warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb < 1_200 ? 1 : 0;
+  const activeMissionId = state.stage === "recovered" ? "MSN-105" : "MSN-104";
+  const activeMission = state.missions[activeMissionId];
 
   return (
     <>
-      <PageHeader
-        title="Operations Control Tower"
-        actions={
-          <div className="header-meta">
-            <span><CalendarDays size={17} aria-hidden="true" />{scenario.currentDateLabel}</span>
-            <span className="service-available"><CheckCircle2 size={17} aria-hidden="true" />All planning services available</span>
-          </div>
-        }
-      />
-
-      <div className="page-content dashboard-page">
-        <section className="urgent-alert" aria-labelledby="urgent-alert-title">
-          <div className="urgent-alert-icon"><PackageOpen size={27} aria-hidden="true" /></div>
-          <div className="urgent-alert-title" id="urgent-alert-title">Urgent donation offer</div>
-          <div className="urgent-alert-detail"><strong>1,200 lb</strong> strawberries</div>
-          <div className="urgent-alert-detail">Pickup required before <strong>1:00 PM</strong></div>
-          <Link className="button button-danger" href="/donations/DON-104">
-            Open donation
-          </Link>
-          <ArrowRight size={20} aria-hidden="true" />
+      <PageHeader title="Operations Control Tower" subtitle="Review urgent offers and active food movements." />
+      <div className="page-content dashboard-page refactor-dashboard">
+        <section className="urgent-offer-card" aria-labelledby="urgent-offer-title">
+          <div className="urgent-offer-icon"><PackageOpen size={24} aria-hidden="true" /></div>
+          <div className="urgent-offer-copy"><span className="section-eyebrow">Urgent donation</span><h2 id="urgent-offer-title">Strawberries</h2><p>1,200 lb · pickup before 1:00 PM · refrigerated</p></div>
+          <Link className="button button-primary" href="/donations/DON-104">Review donation<ArrowRight size={16} aria-hidden="true" /></Link>
         </section>
 
-        {recovered ? (
-          <div className="inline-success" role="status">
-            <CheckCircle2 size={18} aria-hidden="true" />
-            Recovery approved. Mission MSN-105 now carries the Strawberry Rescue plan.
-            <Link href="/impact">View updated impact</Link>
-          </div>
-        ) : null}
+        {state.stage === "recovered" ? <div className="inline-success" role="status"><CheckCircle2 size={18} aria-hidden="true" />Recovery approved. The replacement route is active.<Link href="/impact">View impact</Link></div> : null}
 
-        <section className="kpi-grid" aria-label="Operational summary">
-          <KpiCard label="Urgent offers" value={String(summary.urgentOffers)} tone="red" icon={AlertTriangle} />
-          <KpiCard label="At high expiration risk" value={`${summary.poundsAtHighExpirationRisk.toLocaleString()} lb`} tone="amber" icon={Clock3} />
-          <KpiCard label="Refrigerated capacity used" value={`${summary.refrigeratedCapacityUsedPct}%`} tone="blue" icon={Snowflake} />
-          <KpiCard label="Open missions" value={String(summary.openMissions)} tone="green" icon={Truck} />
+        <section className="kpi-grid refactor-kpi-grid" aria-label="Urgent operational summary">
+          <KpiCard label="Urgent offers" value={String(summary.urgentOffers)} tone="red" />
+          <KpiCard label="Pounds at expiration risk" value={`${summary.poundsAtHighExpirationRisk.toLocaleString()} lb`} tone="amber" />
+          <KpiCard label="Available refrigerated capacity" value={`${(warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb).toLocaleString()} lb`} tone="blue" />
         </section>
 
-        <div className="dashboard-main-grid">
-          <Panel
-            title="Active missions"
-            action={<Link className="panel-link" href={`/missions/${activeMissionId}`}>Open strawberry mission</Link>}
-            className="missions-panel"
-          >
-            <div className="table-scroll">
-              <table className="data-table missions-table">
-                <thead>
-                  <tr><th>Mission</th><th>Route</th><th>Load</th><th>Window</th><th>Status</th><th><span className="sr-only">Open</span></th></tr>
-                </thead>
-                <tbody>
-                  {backgroundMissions.map((mission) => (
-                    <tr key={mission.id} className={`row-rail-${mission.tone}`}>
-                      <td><strong>{mission.id}</strong><span>{mission.name}</span></td>
-                      <td>{mission.route}</td>
-                      <td>{mission.load}</td>
-                      <td>{mission.window}</td>
-                      <td><StatusTag tone={mission.tone}>{mission.status}</StatusTag></td>
-                      <td><ArrowRight size={16} aria-hidden="true" /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <div className="dashboard-refactor-grid">
+          <Panel title="Active mission" action={<Link className="panel-link" href="/missions">View all missions</Link>} className="missions-panel">
+            {activeMission ? (
+              <Link className="mission-summary-card" href={`/missions/${activeMissionId}`}>
+                <div><span className="section-eyebrow">Strawberry Rescue</span><h3>{activeMissionId === "MSN-105" ? "Recovery route" : "Approved route"}</h3><p>1,200 lb · {activeMission.stops.length} stops · {activeMission.status.replaceAll("_", " ")}</p></div>
+                <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+            ) : <EmptyState title="No mission has been created for this donation yet."><Link className="button button-secondary" href="/donations/DON-104">Review donation</Link></EmptyState>}
           </Panel>
-
-          <Panel
-            title="Network status"
-            action={<Link className="panel-link" href="/map">View full map <ExternalLink size={14} aria-hidden="true" /></Link>}
-            className="network-panel"
-          >
-            <NetworkMap />
-          </Panel>
+          <NetworkSnapshot partnerLocations={partnerLocations} refrigeratedVehicles={refrigeratedVehicles} capacityWarnings={capacityWarnings} />
         </div>
 
-        <div className="dashboard-lower-grid">
+        <div className="dashboard-refactor-lower">
           <Panel title="Overnight briefing" className="briefing-panel">
             <ul className="briefing-list">
-              <li>High-risk strawberries expire today—prioritize DON-104 and confirm on-time pickup.</li>
-              <li>Refrigerated capacity is tight—avoid new cold pickups after 11:00 AM unless urgent.</li>
+              <li>Prioritize the strawberry offer before the 1:00 PM pickup deadline.</li>
+              <li>Cold storage is tight; compare direct delivery with the inspection-hold option.</li>
             </ul>
-            <div className="source-label">Seeded scenario briefing</div>
+            <DetailsAccordion title="View full briefing">
+              <div className="briefing-detail"><strong>Why it matters</strong><span>The risk window is an urgency signal; staff still inspect condition at pickup.</span></div>
+              <div className="briefing-detail"><strong>Planning guardrail</strong><span>The full offer exceeds long-term refrigerated headroom, so capacity and staging are checked before approval.</span></div>
+            </DetailsAccordion>
           </Panel>
 
-          <Panel title="Expiration risk" className="risk-panel">
+          <Panel title="Expiration risk" className="risk-panel" action={<Link className="panel-link" href="/donations">View all inventory</Link>}>
             <div className="risk-list">
-              {expirationRiskItems.map((item) => (
-                <div className={`risk-row risk-${item.risk.toLowerCase()}`} key={item.product}>
-                  <strong>{item.product}</strong>
-                  <span>{item.quantityLb.toLocaleString()} lb</span>
-                  <span>{item.timing}</span>
-                  <span>{item.risk}</span>
-                  <ArrowRight size={16} aria-hidden="true" />
-                </div>
-              ))}
+              {expirationRiskItems.slice(0, 3).map((item) => <div className={`risk-row risk-${item.risk.toLowerCase()}`} key={item.product}><strong>{item.product}</strong><span>{item.quantityLb.toLocaleString()} lb</span><span>{item.timing}</span><span className="risk-badge">{item.risk}</span></div>)}
             </div>
           </Panel>
         </div>
