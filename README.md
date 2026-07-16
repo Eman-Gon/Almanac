@@ -91,15 +91,16 @@ No environment variable is required for the current MVP. To enable optional Veni
 
 ```text
 LLM_PROVIDER=venice
-VENICE_BASE_URL=https://api.venice.ai/api/v1
-VENICE_API_KEY=
-LLM_MODEL=venice-uncensored
+LLM_BASE_URL=https://api.venice.ai/api/v1
+LLM_API_KEY=
+LLM_MODEL=mistral-small-3-2-24b-instruct
+LLM_BACKUP_MODEL=qwen3-235b-a22b-instruct-2507
 LLM_TIMEOUT_MS=8000
 NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_MAP_TILE_URL=
 ```
 
-`VENICE_API_KEY` is read only in the server route and must never use a `NEXT_PUBLIC_` prefix. `LLM_API_KEY` and `LLM_BASE_URL` remain supported as legacy aliases. If configuration is absent or Venice fails, times out, omits required facts, or returns invalid JSON twice, the exact seeded hero offer uses the validated deterministic fallback. Unrelated offers fail safely instead of inheriting synthetic strawberry facts. The map always uses bundled local rendering.
+`LLM_API_KEY` is read only in the server route and must never use a `NEXT_PUBLIC_` prefix. `VENICE_API_KEY` and `VENICE_BASE_URL` remain supported as aliases, and `LLM_BACKUP_MODEL` is used for the single retry after invalid structured output. If configuration is absent or Venice fails, times out, omits required facts, or returns invalid JSON twice, the exact seeded hero offer uses the validated deterministic fallback. Unrelated offers fail safely instead of inheriting synthetic strawberry facts. The map always uses bundled local rendering.
 
 ---
 

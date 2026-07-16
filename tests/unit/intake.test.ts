@@ -36,9 +36,10 @@ function veniceResponse(content: string): Response {
 
 function configureVenice() {
   vi.stubEnv("LLM_PROVIDER", "venice");
-  vi.stubEnv("VENICE_BASE_URL", "https://api.venice.ai/api/v1");
-  vi.stubEnv("VENICE_API_KEY", "test-key");
+  vi.stubEnv("LLM_BASE_URL", "https://api.venice.ai/api/v1");
+  vi.stubEnv("LLM_API_KEY", "test-key");
   vi.stubEnv("LLM_MODEL", "venice-test-model");
+  vi.stubEnv("LLM_BACKUP_MODEL", "backup-test-model");
   vi.stubEnv("LLM_TIMEOUT_MS", "8000");
 }
 
@@ -102,6 +103,7 @@ describe("donation intake agent", () => {
     const result = await parseDonationOffer(input);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string).model).toBe("backup-test-model");
     expect(result.fallbackUsed).toBe(true);
     expect(result.agentRun.errorCode).toBe("INVALID_AGENT_OUTPUT");
   });

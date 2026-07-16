@@ -18,6 +18,7 @@ const VeniceConfigSchema = z.object({
   apiKey: z.string().min(1),
   baseUrl: z.string().url(),
   model: z.string().min(1),
+  backupModel: z.string().min(1).optional(),
   timeoutMs: z.number().int().min(1_000).max(30_000),
 });
 
@@ -72,9 +73,10 @@ function readVeniceConfig(): VeniceConfig | null {
   const timeoutMs = Number(process.env.LLM_TIMEOUT_MS ?? DEFAULT_TIMEOUT_MS);
   const parsed = VeniceConfigSchema.safeParse({
     provider: process.env.LLM_PROVIDER ?? "venice",
-    apiKey: process.env.VENICE_API_KEY ?? process.env.LLM_API_KEY,
-    baseUrl: process.env.VENICE_BASE_URL ?? process.env.LLM_BASE_URL ?? DEFAULT_BASE_URL,
+    apiKey: process.env.LLM_API_KEY || process.env.VENICE_API_KEY,
+    baseUrl: process.env.LLM_BASE_URL || process.env.VENICE_BASE_URL || DEFAULT_BASE_URL,
     model: process.env.LLM_MODEL,
+    backupModel: process.env.LLM_BACKUP_MODEL || undefined,
     timeoutMs,
   });
 
@@ -140,6 +142,7 @@ async function requestExtraction(
   config: VeniceConfig,
   sourceText: string,
   schemaReminder: boolean,
+  model = config.model,
 ): Promise<z.infer<typeof IntakeExtractionSchema>> {
   const response = await fetch(`${config.baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
@@ -148,7 +151,7 @@ async function requestExtraction(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: config.model,
+      model,
       temperature: 0,
       messages: [
         {
@@ -228,13 +231,15 @@ export async function parseDonationOffer(input: IntakeRequest): Promise<IntakeRe
 
   const startedAt = new Date().toISOString();
   let extraction: z.infer<typeof IntakeExtractionSchema> | null = null;
+  let modelUsed = config.model;
 
   try {
     extraction = await requestExtraction(config, input.sourceText, false);
   } catch (error) {
     if (error instanceof z.ZodError || error instanceof SyntaxError) {
+      modelUsed = config.backupModel ?? config.model;
       try {
-        extraction = await requestExtraction(config, input.sourceText, true);
+        extraction = await requestExtraction(config, input.sourceText, true, modelUsed);
       } catch {
         return fallbackResult(
           input,
@@ -274,7 +279,7 @@ export async function parseDonationOffer(input: IntakeRequest): Promise<IntakeRe
       completedAt: new Date().toISOString(),
       status: "success",
       confidence,
-      modelOrRuleset: `venice:${config.model}`,
+      modelOrRuleset: `venice:${modelUsed}`,
     },
     fallbackUsed: false,
     warnings: [],
