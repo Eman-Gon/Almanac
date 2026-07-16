@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { baselineAgentRun, donation } from "@/data/seed/scenario";
+import { IntakeAgentError, parseDonationOffer } from "@/domain/agents/intake";
 import { apiFailure, apiSuccess } from "@/domain/api/response";
 
 const RequestSchema = z.object({
@@ -17,11 +17,20 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json(
-    apiSuccess({
-      donation: { ...donation, sourceText: parsed.data.sourceText, donorId: parsed.data.donorId },
-      agentRun: baselineAgentRun,
-      fallbackUsed: true,
-    }),
-  );
+  try {
+    const result = await parseDonationOffer(parsed.data);
+    return NextResponse.json(apiSuccess(result));
+  } catch (error) {
+    if (error instanceof IntakeAgentError) {
+      const status = error.code === "MISSING_REQUIRED_FIELD" ? 422 : 503;
+      return NextResponse.json(
+        apiFailure(error.code, error.message, status === 503),
+        { status },
+      );
+    }
+    return NextResponse.json(
+      apiFailure("AGENT_UNAVAILABLE", "Donation extraction failed.", true),
+      { status: 503 },
+    );
+  }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
@@ -43,7 +43,9 @@ const stageLabels = {
 
 export function DonationDetailClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { generatePlans, hydrated, state } = useDemoState();
+  const usedVenice = searchParams.get("intake") === "venice";
 
   function generate() {
     generatePlans();
@@ -77,7 +79,9 @@ export function DonationDetailClient() {
           <div className="source-message-meta">Received 10:45 AM · Market Street Grocery</div>
           <div className="fallback-notice" role="status">
             <Bot size={18} aria-hidden="true" />
-            <div><strong>Demo fallback used</strong><span>No model is required. A validated seeded extraction is active.</span></div>
+            {usedVenice
+              ? <div><strong>Venice extraction validated</strong><span>Model output passed the intake schema; staff review is still required.</span></div>
+              : <div><strong>Demo fallback used</strong><span>No model is required. A validated seeded extraction is active.</span></div>}
           </div>
         </Panel>
 
@@ -115,7 +119,7 @@ export function DonationDetailClient() {
         <Panel title="Agent and audit activity">
           <ol className="activity-list">
             <li><span className="activity-dot blue" /><div><strong>Offer received</strong><small>{baselineAuditEvents[0].occurredAt.slice(11, 16)} · System</small></div></li>
-            <li><span className="activity-dot purple" /><div><strong>Validated fallback extraction</strong><small>{baselineAgentRun.modelOrRuleset} · High confidence</small></div></li>
+            <li><span className="activity-dot purple" /><div><strong>{usedVenice ? "Validated Venice extraction" : "Validated fallback extraction"}</strong><small>{usedVenice ? "Configured Venice model" : baselineAgentRun.modelOrRuleset} · High confidence</small></div></li>
           </ol>
         </Panel>
       </div>

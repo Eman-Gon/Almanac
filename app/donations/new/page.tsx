@@ -3,9 +3,14 @@
 import { useRouter } from "next/navigation";
 import { ArrowLeft, FileText, Sparkles } from "lucide-react";
 import { useState } from "react";
+import { z } from "zod";
 import { PageHeader } from "@/components/layout/page-header";
 import { Panel } from "@/components/shared/panel";
 import { donation, donor } from "@/data/seed/scenario";
+
+const ParseResponseSchema = z.object({
+  data: z.object({ fallbackUsed: z.boolean() }),
+});
 
 const emptyForm = {
   donor: "",
@@ -22,6 +27,7 @@ export default function DonationIntakePage() {
   const router = useRouter();
   const [form, setForm] = useState(emptyForm);
   const [error, setError] = useState("");
+  const [parsing, setParsing] = useState(false);
 
   function update(field: keyof typeof emptyForm, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -42,12 +48,35 @@ export default function DonationIntakePage() {
     setError("");
   }
 
-  function parseOffer() {
+  async function parseOffer() {
     if (!form.message.trim() && (!form.product.trim() || Number(form.quantity) <= 0)) {
       setError("Enter a donor message or complete the product and positive quantity fields.");
       return;
     }
-    router.push("/donations/DON-104");
+
+    const sourceText = form.message.trim() || [
+      `${form.product.trim()}, ${form.quantity} pounds.`,
+      form.pickupWindow.trim(),
+      form.storage.trim(),
+      form.conditionNotes.trim(),
+    ].filter(Boolean).join(" ");
+
+    setParsing(true);
+    setError("");
+    try {
+      const response = await fetch("/api/donations/parse", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sourceText, donorId: donor.id }),
+      });
+      const payload = ParseResponseSchema.safeParse(await response.json());
+      if (!response.ok) throw new Error("Donation parsing failed.");
+      if (!payload.success) throw new Error("Donation parsing returned an invalid response.");
+      router.push(`/donations/DON-104?intake=${payload.data.data.fallbackUsed ? "fallback" : "venice"}`);
+    } catch {
+      setError("The offer could not be parsed. Check the server and try again.");
+      setParsing(false);
+    }
   }
 
   return (
@@ -106,7 +135,9 @@ export default function DonationIntakePage() {
             <div className="form-actions field-span-2">
               <button className="button button-ghost" type="button" onClick={() => setForm(emptyForm)}>Clear</button>
               <button className="button button-secondary" type="button">Save draft</button>
-              <button className="button button-primary" type="submit">Parse offer</button>
+              <button className="button button-primary" type="submit" disabled={parsing}>
+                {parsing ? "Parsing offer…" : "Parse offer"}
+              </button>
             </div>
           </form>
         </Panel>

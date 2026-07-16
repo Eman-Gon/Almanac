@@ -909,7 +909,7 @@ Rules:
 - A global hydration gate that validates saved state before rendering the shell or enabling actions
 - Local deterministic fixtures and domain services
 - A bundled schematic map and precomputed route geometry
-- Deterministic donation extraction fallback; no live LLM is required or currently invoked
+- Optional Venice donation extraction with runtime validation; no live LLM is required because the deterministic seeded fallback remains available
 - Vitest, Testing Library, and Playwright
 
 Required commands:

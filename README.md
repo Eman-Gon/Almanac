@@ -2,7 +2,7 @@
 
 ChoiceGrid is an AI-assisted food-bank operations prototype for deciding where urgent food should go, how it should be packed, and how to recover when the plan changes.
 
-The product is designed for food-bank allocation, warehouse, and transportation teams. The current build uses a deterministic structured-extraction fallback for the demo while keeping quantities, capacity, scoring, routing assumptions, and impact metrics deterministic and auditable.
+The product is designed for food-bank allocation, warehouse, and transportation teams. The current build can use Venice for validated natural-language extraction and retains a deterministic extraction fallback, while keeping capacity, scoring, routing assumptions, and impact metrics deterministic and auditable.
 
 ## Start here
 
@@ -51,7 +51,7 @@ ChoiceGrid:
 - Bundled schematic map and precomputed route geometry
 - Vitest, Testing Library, and Playwright
 
-The demo uses no production database, live routing service, map-tile service, or live LLM call.
+The demo requires no production database, live routing service, map-tile service, or live LLM call. A Venice call is optional and cannot block the seeded workflow.
 
 ---
 
@@ -87,16 +87,19 @@ After `npm run build`, use `npm run start` to serve the production build. `npm r
 
 ## Environment variables
 
-No environment variable is required for the current MVP. `.env.example` reserves these names for possible future integrations:
+No environment variable is required for the current MVP. To enable optional Venice extraction, copy `.env.example` to `.env.local` and set a newly generated server-side key:
 
 ```text
-LLM_API_KEY=
-LLM_MODEL=
+LLM_PROVIDER=venice
+VENICE_BASE_URL=https://api.venice.ai/api/v1
+VENICE_API_KEY=
+LLM_MODEL=venice-uncensored
+LLM_TIMEOUT_MS=8000
 NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_MAP_TILE_URL=
 ```
 
-The current application does not read these variables. Donation parsing always uses the validated deterministic fallback, and the map uses bundled local rendering.
+`VENICE_API_KEY` is read only in the server route and must never use a `NEXT_PUBLIC_` prefix. `LLM_API_KEY` and `LLM_BASE_URL` remain supported as legacy aliases. If configuration is absent or Venice fails, times out, omits required facts, or returns invalid JSON twice, the exact seeded hero offer uses the validated deterministic fallback. Unrelated offers fail safely instead of inheriting synthetic strawberry facts. The map always uses bundled local rendering.
 
 ---
 
