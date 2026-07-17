@@ -28,6 +28,7 @@ import {
 } from "react";
 import type { MapLayers, MapRouteStop, MapRouteSummary } from "@/components/shared/network-map";
 import { partners, productLot, vehicles, warehouse } from "@/data/seed/scenario";
+import type { DemoStage } from "@/domain/demo/demo-state";
 import { scenarioContext } from "@/domain/planning/scenario-context";
 import type { Mission, PartnerAgency, PlanOption } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
@@ -50,6 +51,21 @@ import styles from "@/components/map/decision-map.module.css";
 
 const SVG_HALF = 32768;
 const FLEET_ID = "FLEET";
+
+// CARTO's public Positron tiles are fine for this prototype (attribution is
+// rendered on-canvas); production traffic requires a tile-provider agreement.
+// Point NEXT_PUBLIC_MAP_TILE_URL at a licensed {z}/{x}/{y} raster source to
+// swap providers without a code change ({r} becomes "@2x" on retina).
+const TILE_URL_TEMPLATE = process.env.NEXT_PUBLIC_MAP_TILE_URL
+  ?? "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
+function tileUrl(z: number, x: number, y: number, retina: string): string {
+  return TILE_URL_TEMPLATE
+    .replace("{z}", String(z))
+    .replace("{x}", String(x))
+    .replace("{y}", String(y))
+    .replace("{r}", retina);
+}
 
 // Kept in lockstep with the shared NetworkMap copy so cross-page flows read
 // identically; NetworkMap does not export its internal note map.
@@ -109,14 +125,20 @@ function titleCase(value: string): string {
 
 /**
  * Deterministic scenario clock: every stage of the demo has a seeded
- * timestamp, so "now" is auditable instead of wall-clock dependent.
+ * timestamp, so "now" is auditable instead of wall-clock dependent. The
+ * Record is exhaustive over DemoStage — adding a stage fails typecheck here
+ * until it gets an anchor.
  */
-function scenarioNowIso(stage: string): string {
+function scenarioNowIso(stage: DemoStage): string {
   const timeline = scenarioContext.timeline;
-  if (stage === "recovered") return timeline.recoveryMissionEventAt;
-  if (stage === "disrupted") return timeline.disruptionAt;
-  if (stage === "approved") return timeline.missionAssignedAt;
-  return timeline.planGeneratedAt;
+  const anchors: Record<DemoStage, string> = {
+    initial: timeline.planGeneratedAt,
+    plans_generated: timeline.planGeneratedAt,
+    approved: timeline.missionAssignedAt,
+    disrupted: timeline.disruptionAt,
+    recovered: timeline.recoveryMissionEventAt,
+  };
+  return anchors[stage];
 }
 
 function deadlineRemainingLabel(nowIso: string): string {
@@ -187,7 +209,29 @@ function legMidpoint(from: WorldPoint, to: WorldPoint): WorldPoint {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const length = Math.hypot(dx, dy) || 1;
-  return { x: onCurve.x - (dy / length) * 15, y: onCurve.y + (dx / length) * 15 };
+  return { x: onCurve.x - (dy / length) * 19, y: onCurve.y + (dx / length) * 19 };
+}
+
+/**
+ * Draw-in transition for solid route strokes. Measures the real path length
+ * instead of relying on SVG pathLength normalization, which renders
+ * inconsistently across engines. Skipped under prefers-reduced-motion.
+ */
+function animateRouteDraw(node: SVGPathElement) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const length = node.getTotalLength();
+  if (!Number.isFinite(length) || length <= 0) return;
+  node.style.strokeDasharray = `${length}`;
+  node.style.strokeDashoffset = `${length}`;
+  node.style.transition = "stroke-dashoffset 850ms ease-out";
+  window.requestAnimationFrame(() => {
+    node.style.strokeDashoffset = "0";
+  });
+  window.setTimeout(() => {
+    node.style.strokeDasharray = "";
+    node.style.strokeDashoffset = "";
+    node.style.transition = "";
+  }, 950);
 }
 
 function PartnerGlyph({ view }: { view: PartnerView }) {
@@ -345,6 +389,8 @@ export function DecisionMap({
   const [viewport, setViewport] = useState<Viewport | null>(null);
   const [dragging, setDragging] = useState(false);
   const [basemapFailed, setBasemapFailed] = useState(false);
+  const [tileErrorCount, setTileErrorCount] = useState(0);
+  const [tileEpoch, setTileEpoch] = useState(0);
   const [contextExpanded, setContextExpanded] = useState(false);
   const anyTileLoaded = useRef(false);
   const lastPinchZoomAt = useRef(0);
@@ -430,6 +476,16 @@ export function DecisionMap({
     if (!size) return;
     setViewport(fitViewport(size.width, size.height));
   }, [fitViewport, size]);
+
+  const dashedRoute = routeSummary.status === "candidate"
+    || routeSummary.status === "superseded"
+    || routeSummary.status === "closed";
+  const routeDrawRef = useCallback((node: SVGPathElement | null) => {
+    if (node) animateRouteDraw(node);
+    // Re-attach (and re-animate) when the route status transitions — the
+    // draw-in marks a plan-state change, not decoration.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeSummary.status]);
 
   const selectLocation = useCallback((id: string, source: SelectionSource) => {
     setSelectedLocationId(id);
@@ -632,9 +688,9 @@ export function DecisionMap({
             tiles.map((tile) => (
               // eslint-disable-next-line @next/next/no-img-element -- raw 256px tiles from the basemap API; next/image optimization does not apply
               <img
-                key={`${tile.z}/${tile.x}/${tile.y}`}
+                key={`${tileEpoch}/${tile.z}/${tile.x}/${tile.y}`}
                 className={styles.tile}
-                src={`https://basemaps.cartocdn.com/light_all/${tile.z}/${tile.x}/${tile.y}${retina}.png`}
+                src={tileUrl(tile.z, tile.x, tile.y, retina)}
                 alt=""
                 draggable={false}
                 decoding="async"
@@ -644,7 +700,11 @@ export function DecisionMap({
                   event.currentTarget.classList.add(styles.tileLoaded);
                 }}
                 onError={() => {
+                  // No tile has ever loaded → the basemap is unreachable; fall
+                  // back to the schematic. Isolated failures on a live basemap
+                  // are surfaced as a partial-tiles notice instead.
                   if (!anyTileLoaded.current) setBasemapFailed(true);
+                  else setTileErrorCount((count) => count + 1);
                 }}
               />
             ))
@@ -662,15 +722,11 @@ export function DecisionMap({
               <>
                 <path className={styles.routeCasing} d={quadraticPath(routePoints)} />
                 <path
+                  ref={dashedRoute ? undefined : routeDrawRef}
                   className={`${styles.route} ${styles[`route_${routeSummary.status}`] ?? ""}`}
                   data-testid="map-route-layer"
                   data-route-status={routeSummary.status}
                   d={quadraticPath(routePoints)}
-                  pathLength={
-                    routeSummary.status === "candidate" || routeSummary.status === "superseded" || routeSummary.status === "closed"
-                      ? undefined
-                      : 1
-                  }
                 />
               </>
             ) : null}
@@ -738,15 +794,6 @@ export function DecisionMap({
                 <Clock3 size={12} aria-hidden="true" />
                 {deadlineRemainingLabel(nowIso)}
               </span>
-              {layers.routes && warehouseStop ? (
-                <span
-                  className={`${styles.markerLabel} ${styles.markerLabelLeft}`}
-                  data-testid={`map-route-label-${warehouse.id}`}
-                  aria-hidden="true"
-                >
-                  {warehouse.name}
-                </span>
-              ) : null}
             </div>
           ) : null}
 
@@ -817,9 +864,23 @@ export function DecisionMap({
 
         <div className={styles.identity} data-map-chrome>
           <MapPin size={13} aria-hidden="true" />
-          <span>{basemapFailed ? "Offline schematic · live basemap unavailable" : "Live basemap · seeded operational data"}</span>
-          {basemapFailed ? (
-            <button type="button" className={styles.retryButton} onClick={() => setBasemapFailed(false)}>
+          <span>
+            {basemapFailed
+              ? "Offline schematic · live basemap unavailable"
+              : tileErrorCount > 0
+                ? "Live basemap · some tiles unavailable"
+                : "Live basemap · seeded operational data"}
+          </span>
+          {basemapFailed || tileErrorCount > 0 ? (
+            <button
+              type="button"
+              className={styles.retryButton}
+              onClick={() => {
+                setBasemapFailed(false);
+                setTileErrorCount(0);
+                setTileEpoch((epoch) => epoch + 1);
+              }}
+            >
               Retry
             </button>
           ) : null}

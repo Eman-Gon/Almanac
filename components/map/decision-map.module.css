@@ -97,21 +97,11 @@
   stroke-width: 3.2;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 1 1;
-  stroke-dashoffset: 0;
-  animation: routeDraw 850ms ease-out;
-}
-
-@keyframes routeDraw {
-  from {
-    stroke-dashoffset: 1;
-  }
 }
 
 .route_candidate {
   stroke: var(--blue-600);
   stroke-dasharray: 8 7;
-  animation: none;
 }
 
 .route_approved,
@@ -127,7 +117,6 @@
 .route_closed {
   stroke: var(--slate-500);
   stroke-dasharray: 8 7;
-  animation: none;
 }
 
 .route_delivered {
@@ -1107,10 +1096,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .route {
-    animation: none;
-  }
-
   .tile {
     transition: none;
   }
