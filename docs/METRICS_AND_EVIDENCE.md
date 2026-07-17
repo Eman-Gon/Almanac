@@ -14,7 +14,7 @@ This file defines every metric displayed in the prototype and the evidence langu
 | Exact coded research | Count from the 269-item Reddit subset |
 | Qualitative research | Directional finding from the broader review |
 | Formal external research | Finding tied to a named source |
-| Simulated input | Synthetic donor, inventory, agency, vehicle, or demand data |
+| Simulated input | Synthetic inventory, agency, vehicle, or demand data |
 | Calculated demo metric | Formula applied to simulated input |
 | Team assumption | Explicit modeling choice requiring disclosure |
 
@@ -27,7 +27,7 @@ Each metric tooltip or detail panel should identify whether it is simulated, cal
 ### Decision time
 
 ```text
-decision_time_seconds = plan_approved_at - donation_created_at
+decision_time_seconds = plan_approved_at - inventory_alert_created_at
 ```
 
 For demo mode, the timer may represent elapsed application time or a seeded comparison baseline. Label the baseline.
@@ -50,9 +50,9 @@ The implemented strategy templates sum exactly to:
 
 | Strategy | Seeded route total |
 |---|---:|
-| Warehouse First | 18.4 mi |
-| Direct Distribution | 45.7 mi |
-| Mixed Plan | 24.8 mi |
+| Hold for Later | 0 mi; blocked, no outbound mission |
+| Fastest Agency Release | 45.7 mi |
+| Balanced Release | 24.8 mi |
 
 ### Vehicle utilization
 
@@ -77,14 +77,14 @@ refrigerated_staging_utilization_pct =
   staged_packing_allocation_lb / refrigerated_staging_capacity_available_lb * 100
 ```
 
-For the seeded Mixed Plan, 400 lb uses 80% of the 500 lb staging pool. Recovery stages 460 lb, or 92%. The 60 lb inspection hold consumes long-term refrigerated-storage headroom, not staging. Report warehouse storage, warehouse staging, and partner capacity separately.
+For seeded Balanced Release, 400 lb uses 80% of the 500 lb staging pool. Recovery stages 460 lb, or 92%. The 60 lb inspection hold consumes long-term refrigerated-storage headroom, not staging. Report warehouse storage, warehouse staging, and partner capacity separately.
 
 ### Quantity-edit recalculation boundary
 
 Before approval, allocation edits may change only pounds on canonical allocation rows. Recalculate:
 
-- Pounds distributed in time
-- Estimated households supported
+- Pounds planned outbound before the risk deadline
+- Modeled household-equivalents
 - Long-term refrigerated-storage utilization
 - Refrigerated-staging utilization
 - Conservation and partner, vehicle, temperature, and receiving-window validity
@@ -105,16 +105,16 @@ The baseline must be documented in the scenario fixture.
 
 ## Food-impact metrics
 
-### Pounds offered
+### Existing inventory available
 
 ```text
-pounds_offered = donation_offer.quantity_lb
+pounds_available = product_lot.available_quantity_lb
 ```
 
-### Pounds accepted
+### Pounds planned outbound
 
 ```text
-pounds_accepted = sum(approved_allocations.quantity_lb) + approved_hold_quantity_lb
+pounds_planned_outbound = sum(approved_partner_allocations.quantity_lb)
 ```
 
 ### Pounds assigned
@@ -126,16 +126,11 @@ pounds_assigned = sum(mission_allocations.quantity_lb)
 ### Quantity conservation
 
 ```text
-pounds_offered = accepted + declined + redirected_externally + unresolved
+pounds_available = outbound_allocations + retained_long_term + inspection_hold
+                 + approved_external_transfer + unallocated
 ```
 
-and
-
-```text
-pounds_accepted = assigned + inspection_hold + expected_handling_loss
-```
-
-Every plan must pass conservation checks within a documented rounding tolerance.
+`expectedSpoilageLb` is a non-exclusive risk estimate and never another conservation bucket. The seeded 60 lb inspection hold may be treated as modeled loss for impact but is counted physically once. Every plan must pass conservation within a documented rounding tolerance.
 
 ### Pounds distributed before risk deadline
 
@@ -179,7 +174,7 @@ Label as modeled.
 
 ## Community-impact metrics
 
-### Households supported
+### Modeled household-equivalents
 
 Use a scenario conversion factor:
 
@@ -262,13 +257,13 @@ Count and display overrides with reasons. An override is not automatically an er
 
 The seeded strawberry scenario may be configured to produce approximately:
 
-- 1,200 lb offered
-- 1,140 lb assigned or distributed in time
+- 1,200 lb existing inventory available
+- 1,140 lb planned before the seeded risk deadline
 - 60 lb inspection hold or expected handling loss
 - 80% initial and 92% recovered refrigerated-staging utilization
-- 380 estimated households supported
+- 380 modeled household-equivalents using the seeded 3 lb assumption
 - 94% modeled spoilage avoidance
-- 11-second replanning time
+- 11-second seeded disruption-to-recovery event interval, not compute time or observed staff time
 
 These are **scenario values**, not validated real-world outcomes. The exact fixture and formulas must reproduce them.
 
@@ -276,11 +271,10 @@ These are **scenario values**, not validated real-world outcomes. The exact fixt
 
 ## Prohibited metric behavior
 
-Plan outcome buckets reconcile to the offered quantity as `delivered before
-risk deadline + inspection hold + expected loss + declined + redirected +
-unassigned`. The `expectedSpoilageLb` field remains a strategy-level impact
-estimate; it is not added a second time when those pounds are already in an
-inspection hold.
+Plan outcome buckets reconcile to available inventory as `planned outbound +
+retained long-term + inspection hold + approved external transfer + unallocated`.
+The `expectedSpoilageLb` field remains a strategy-level impact estimate and is
+not added a second time when those pounds are already in an inspection hold.
 
 - No randomly generated impact values.
 - No untraceable counters.

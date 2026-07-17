@@ -12,7 +12,7 @@ import type {
 
 export const scenario = {
   id: "SCN-STRAWBERRY-001",
-  name: "Strawberry Rescue",
+  name: "Strawberry Inventory Release",
   currentDateLabel: "Wednesday, July 15",
   scoreConfigVersion: "score-v1",
   householdWeightLb: 3,
@@ -103,16 +103,19 @@ export const donation: DonationOffer = {
 
 export const productLot: ProductLot = {
   id: "LOT-104",
-  donationId: donation.id,
+  sourceType: "existing_inventory",
   productName: "Strawberries",
   category: "produce",
-  quantityLb: donation.quantityLb,
+  quantityLb: 1_200,
+  availableQuantityLb: 1_200,
   temperatureClass: "refrigerated",
-  riskDeadline: donation.estimatedRiskDeadline ?? undefined,
+  receivedAt: "2026-07-15T08:45:00-07:00",
+  riskDeadline: "2026-07-16T22:45:00-07:00",
   riskLevel: "high",
+  conditionStatus: "staff_cleared",
   usabilityTags: ["no_cook", "requires_refrigeration", "culturally_preferred"],
-  currentLocationId: donor.id,
-  status: "offered",
+  currentLocationId: "WH-001",
+  status: "available",
 };
 
 export const warehouse: Warehouse = {
@@ -158,6 +161,14 @@ type PartnerSeed = {
   status?: PartnerAgency["status"];
   receivingStart?: string;
   receivingEnd?: string;
+  acceptance: {
+    offeredCount: number;
+    acceptedCount: number;
+    refusedCount: number;
+    shortReceiptCount: number;
+    acceptedQuantityLb: number;
+    lastOutcomeAt: string;
+  };
 };
 
 function createPartner(seed: PartnerSeed): PartnerAgency {
@@ -196,6 +207,16 @@ function createPartner(seed: PartnerSeed): PartnerAgency {
     ],
     acceptedCategories: ["produce", "shelf_stable"],
     preferredTags: ["no_cook", "culturally_preferred"],
+    acceptanceHistory: [
+      {
+        category: "produce",
+        ...seed.acceptance,
+        acceptanceRatePct: Math.round(
+          (seed.acceptance.acceptedCount / seed.acceptance.offeredCount) * 100,
+        ),
+        sampleSize: seed.acceptance.offeredCount,
+      },
+    ],
     refusalRisk: seed.refusalRisk,
     recentServiceGap: seed.recentServiceGap,
     accessBurden: seed.accessBurden,
@@ -226,6 +247,14 @@ export const partners: PartnerAgency[] = [
     recentServiceGap: 86,
     accessBurden: 74,
     receivingEnd: "2026-07-15T12:00:00-07:00",
+    acceptance: {
+      offeredCount: 20,
+      acceptedCount: 18,
+      refusedCount: 1,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 8_640,
+      lastOutcomeAt: "2026-07-12T11:20:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-002",
@@ -241,6 +270,14 @@ export const partners: PartnerAgency[] = [
     accessBurden: 68,
     receivingStart: "2026-07-15T10:00:00-07:00",
     receivingEnd: "2026-07-15T12:30:00-07:00",
+    acceptance: {
+      offeredCount: 18,
+      acceptedCount: 14,
+      refusedCount: 2,
+      shortReceiptCount: 2,
+      acceptedQuantityLb: 6_780,
+      lastOutcomeAt: "2026-07-13T10:40:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-003",
@@ -255,6 +292,14 @@ export const partners: PartnerAgency[] = [
     refusalRisk: 3,
     recentServiceGap: 64,
     accessBurden: 59,
+    acceptance: {
+      offeredCount: 15,
+      acceptedCount: 14,
+      refusedCount: 0,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 7_260,
+      lastOutcomeAt: "2026-07-14T12:05:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-004",
@@ -269,6 +314,14 @@ export const partners: PartnerAgency[] = [
     recentServiceGap: 82,
     accessBurden: 71,
     receivingEnd: "2026-07-15T14:00:00-07:00",
+    acceptance: {
+      offeredCount: 12,
+      acceptedCount: 9,
+      refusedCount: 2,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 4_180,
+      lastOutcomeAt: "2026-07-11T13:10:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-005",
@@ -283,6 +336,14 @@ export const partners: PartnerAgency[] = [
     recentServiceGap: 73,
     accessBurden: 80,
     status: "limited",
+    acceptance: {
+      offeredCount: 10,
+      acceptedCount: 6,
+      refusedCount: 3,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 2_340,
+      lastOutcomeAt: "2026-07-10T10:15:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-006",
@@ -297,6 +358,14 @@ export const partners: PartnerAgency[] = [
     refusalRisk: 6,
     recentServiceGap: 38,
     accessBurden: 42,
+    acceptance: {
+      offeredCount: 8,
+      acceptedCount: 7,
+      refusedCount: 0,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 2_980,
+      lastOutcomeAt: "2026-07-09T12:35:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-007",
@@ -312,6 +381,14 @@ export const partners: PartnerAgency[] = [
     recentServiceGap: 55,
     accessBurden: 63,
     status: "limited",
+    acceptance: {
+      offeredCount: 9,
+      acceptedCount: 5,
+      refusedCount: 3,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 1_760,
+      lastOutcomeAt: "2026-07-08T15:10:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-008",
@@ -326,6 +403,14 @@ export const partners: PartnerAgency[] = [
     refusalRisk: 9,
     recentServiceGap: 44,
     accessBurden: 51,
+    acceptance: {
+      offeredCount: 11,
+      acceptedCount: 8,
+      refusedCount: 2,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 3_420,
+      lastOutcomeAt: "2026-07-13T09:30:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-009",
@@ -341,6 +426,14 @@ export const partners: PartnerAgency[] = [
     recentServiceGap: 34,
     accessBurden: 45,
     status: "limited",
+    acceptance: {
+      offeredCount: 6,
+      acceptedCount: 3,
+      refusedCount: 2,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 980,
+      lastOutcomeAt: "2026-07-07T11:45:00-07:00",
+    },
   }),
   createPartner({
     id: "PAR-010",
@@ -356,6 +449,14 @@ export const partners: PartnerAgency[] = [
     recentServiceGap: 20,
     accessBurden: 33,
     status: "unavailable",
+    acceptance: {
+      offeredCount: 7,
+      acceptedCount: 2,
+      refusedCount: 4,
+      shortReceiptCount: 1,
+      acceptedQuantityLb: 740,
+      lastOutcomeAt: "2026-07-06T14:20:00-07:00",
+    },
   }),
 ];
 
@@ -410,28 +511,48 @@ export const baselineAgentRun: AgentRun = {
   errorCode: "AGENT_UNAVAILABLE",
 };
 
+export const baselineInventoryAgentRun: AgentRun = {
+  id: "RUN-INV-104",
+  agentType: "capacity",
+  entityId: productLot.id,
+  startedAt: "2026-07-15T10:45:30-07:00",
+  completedAt: "2026-07-15T10:45:31-07:00",
+  status: "fallback_used",
+  confidence: "high",
+  modelOrRuleset: "seeded-inventory-risk-v1",
+  errorCode: "AGENT_UNAVAILABLE",
+};
+
 export const baselineAuditEvents: AuditEvent[] = [
   {
     id: "AUD-100",
-    eventType: "donation_offer_received",
-    entityType: "DonationOffer",
-    entityId: donation.id,
+    eventType: "inventory_lot_available",
+    entityType: "ProductLot",
+    entityId: productLot.id,
     actorType: "system",
     actorId: "demo_seed",
-    occurredAt: donation.createdAt,
-    newState: { status: "draft" },
+    occurredAt: productLot.receivedAt,
+    newState: {
+      status: "available",
+      currentLocationId: warehouse.id,
+      availableQuantityLb: productLot.availableQuantityLb,
+    },
   },
   {
     id: "AUD-101",
-    eventType: "deterministic_fallback_loaded",
-    entityType: "DonationOffer",
-    entityId: donation.id,
+    eventType: "inventory_risk_reviewed",
+    entityType: "ProductLot",
+    entityId: productLot.id,
     actorType: "agent",
-    actorId: "intake_agent",
+    actorId: "inventory_risk_review",
     occurredAt: "2026-07-15T10:45:31-07:00",
-    newState: { status: "ready_for_planning" },
-    reason: "No LLM configured; validated seeded extraction used.",
-    agentRunId: baselineAgentRun.id,
+    newState: {
+      riskLevel: productLot.riskLevel,
+      riskDeadline: productLot.riskDeadline,
+      conditionStatus: productLot.conditionStatus,
+    },
+    reason: "Validated existing-inventory facts loaded with deterministic explanation.",
+    agentRunId: baselineInventoryAgentRun.id,
   },
 ];
 
@@ -491,6 +612,116 @@ export const expirationRiskItems = [
   { product: "Soft cheese", quantityLb: 240, timing: "Jul 16 by 2:00 PM", risk: "Medium" },
   { product: "Bell peppers", quantityLb: 380, timing: "Jul 17 by 9:00 AM", risk: "Low" },
 ] as const;
+
+type HistoricalInventoryLotSummary = Pick<
+  ProductLot,
+  "id" | "productName" | "quantityLb" | "temperatureClass" | "status"
+> & {
+  warehouseName: string;
+  receivedLabel: string;
+  outcomeLabel: string;
+  statusLabel: string;
+  tone: "green" | "blue" | "red";
+};
+
+export const historicalInventoryLots = [
+  {
+    id: "LOT-103",
+    productName: "Leafy greens",
+    quantityLb: 450,
+    temperatureClass: "refrigerated",
+    status: "distributed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 14 · 4:20 PM",
+    outcomeLabel: "Released within agency receiving window",
+    statusLabel: "Distributed",
+    tone: "green",
+  },
+  {
+    id: "LOT-102",
+    productName: "Yogurt cups",
+    quantityLb: 300,
+    temperatureClass: "refrigerated",
+    status: "distributed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 14 · 9:10 AM",
+    outcomeLabel: "Transferred to regional cold storage",
+    statusLabel: "Transferred",
+    tone: "blue",
+  },
+  {
+    id: "LOT-101",
+    productName: "Brown rice",
+    quantityLb: 1_600,
+    temperatureClass: "ambient",
+    status: "distributed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 13 · 2:35 PM",
+    outcomeLabel: "Completed ambient allocation",
+    statusLabel: "Distributed",
+    tone: "green",
+  },
+  {
+    id: "LOT-100",
+    productName: "Bakery bread",
+    quantityLb: 275,
+    temperatureClass: "ambient",
+    status: "disposed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 12 · 5:40 PM",
+    outcomeLabel: "Held after agency window conflict",
+    statusLabel: "Disposed",
+    tone: "red",
+  },
+  {
+    id: "LOT-099",
+    productName: "Frozen vegetables",
+    quantityLb: 680,
+    temperatureClass: "frozen",
+    status: "distributed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 11 · 11:15 AM",
+    outcomeLabel: "Cross-docked to meal programs",
+    statusLabel: "Distributed",
+    tone: "green",
+  },
+  {
+    id: "LOT-098",
+    productName: "Canned beans",
+    quantityLb: 980,
+    temperatureClass: "ambient",
+    status: "distributed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 10 · 3:05 PM",
+    outcomeLabel: "Released across pantry network",
+    statusLabel: "Distributed",
+    tone: "green",
+  },
+  {
+    id: "LOT-097",
+    productName: "Whole milk",
+    quantityLb: 560,
+    temperatureClass: "refrigerated",
+    status: "distributed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 9 · 8:50 AM",
+    outcomeLabel: "Transferred after cold-window conflict",
+    statusLabel: "Transferred",
+    tone: "blue",
+  },
+  {
+    id: "LOT-096",
+    productName: "Apples",
+    quantityLb: 520,
+    temperatureClass: "refrigerated",
+    status: "disposed",
+    warehouseName: warehouse.name,
+    receivedLabel: "Jul 8 · 6:10 PM",
+    outcomeLabel: "Held after staff condition review",
+    statusLabel: "Disposed",
+    tone: "red",
+  },
+] as const satisfies readonly HistoricalInventoryLotSummary[];
 
 type HistoricalDonationSummary = Pick<
   DonationOffer,

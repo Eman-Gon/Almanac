@@ -27,14 +27,26 @@ export const DonationStatusSchema = z.enum([
 ]);
 
 export const ProductLotStatusSchema = z.enum([
-  "offered",
-  "inbound",
-  "receiving",
   "available",
+  "partially_allocated",
   "allocated",
   "inspection_hold",
   "distributed",
   "disposed",
+]);
+
+export const ProductLotSourceTypeSchema = z.enum([
+  "existing_inventory",
+  "donation",
+  "purchase",
+  "transfer",
+  "other",
+]);
+
+export const ProductLotConditionStatusSchema = z.enum([
+  "staff_cleared",
+  "needs_confirmation",
+  "inspection_hold",
 ]);
 
 export const PlanStatusSchema = z.enum([
@@ -144,16 +156,27 @@ export const DonationOfferSchema = z.object({
 export const ProductLotSchema = z.object({
   id: EntityIdSchema,
   donationId: EntityIdSchema.optional(),
+  sourceType: ProductLotSourceTypeSchema,
   productName: z.string().min(1),
   category: ProductCategorySchema,
   quantityLb: z.number().nonnegative(),
+  availableQuantityLb: z.number().nonnegative(),
   temperatureClass: TemperatureClassSchema,
-  receivedAt: ISODateTimeSchema.optional(),
-  riskDeadline: ISODateTimeSchema.optional(),
+  receivedAt: ISODateTimeSchema,
+  riskDeadline: ISODateTimeSchema,
   riskLevel: RiskLevelSchema,
+  conditionStatus: ProductLotConditionStatusSchema,
   usabilityTags: z.array(UsabilityTagSchema),
   currentLocationId: EntityIdSchema,
   status: ProductLotStatusSchema,
+}).superRefine(({ availableQuantityLb, quantityLb }, context) => {
+  if (availableQuantityLb > quantityLb) {
+    context.addIssue({
+      code: "custom",
+      message: "Available quantity cannot exceed the physical lot quantity.",
+      path: ["availableQuantityLb"],
+    });
+  }
 });
 
 export const WarehouseSchema = z.object({
@@ -196,6 +219,45 @@ export const OperationalNoteSchema = z.object({
   tags: z.array(z.string()),
 });
 
+export const AgencyAcceptanceHistorySchema = z.object({
+  category: ProductCategorySchema,
+  offeredCount: z.number().int().nonnegative(),
+  acceptedCount: z.number().int().nonnegative(),
+  refusedCount: z.number().int().nonnegative(),
+  shortReceiptCount: z.number().int().nonnegative(),
+  acceptedQuantityLb: z.number().nonnegative(),
+  acceptanceRatePct: z.number().min(0).max(100),
+  sampleSize: z.number().int().nonnegative(),
+  lastOutcomeAt: ISODateTimeSchema.optional(),
+}).superRefine((history, context) => {
+  const reconciledCount =
+    history.acceptedCount + history.refusedCount + history.shortReceiptCount;
+  if (history.offeredCount !== reconciledCount) {
+    context.addIssue({
+      code: "custom",
+      message: "Accepted, refused, and short-receipt counts must equal offered count.",
+      path: ["offeredCount"],
+    });
+  }
+  if (history.sampleSize !== history.offeredCount) {
+    context.addIssue({
+      code: "custom",
+      message: "Acceptance-history sample size must equal offered count.",
+      path: ["sampleSize"],
+    });
+  }
+  const calculatedRate = history.sampleSize === 0
+    ? 0
+    : Math.round((history.acceptedCount / history.sampleSize) * 100);
+  if (history.acceptanceRatePct !== calculatedRate) {
+    context.addIssue({
+      code: "custom",
+      message: "Acceptance rate must be calculated from full acceptances and sample size.",
+      path: ["acceptanceRatePct"],
+    });
+  }
+});
+
 export const PartnerAgencySchema = z.object({
   id: EntityIdSchema,
   name: z.string().min(1),
@@ -215,6 +277,7 @@ export const PartnerAgencySchema = z.object({
   demandSignals: z.array(DemandSignalSchema),
   acceptedCategories: z.array(ProductCategorySchema),
   preferredTags: z.array(UsabilityTagSchema),
+  acceptanceHistory: z.array(AgencyAcceptanceHistorySchema),
   refusalRisk: z.number().min(0).max(100),
   recentServiceGap: z.number().min(0).max(100),
   accessBurden: z.number().min(0).max(100),
@@ -246,15 +309,16 @@ export const DestinationScoreSchema = z.object({
   availableCapacity: z.number(),
   recentServiceGap: z.number(),
   equityPriority: z.number(),
+  historicalAcceptance: z.number(),
   travelPenalty: z.number(),
   spoilagePenalty: z.number(),
   refusalRiskPenalty: z.number(),
 });
 
 export const PlanMetricsSchema = z.object({
-  quantityDistributedInTimeLb: z.number().nonnegative(),
+  quantityPlannedOutboundInTimeLb: z.number().nonnegative(),
   expectedSpoilageLb: z.number().nonnegative(),
-  estimatedHouseholdsSupported: z.number().nonnegative(),
+  modeledHouseholdEquivalents: z.number().nonnegative(),
   totalMiles: z.number().nonnegative(),
   staffMinutes: z.number().nonnegative(),
   coldCapacityUtilizationPct: z.number().nonnegative(),
@@ -296,11 +360,16 @@ export const PlanOptionSchema = z.object({
   id: EntityIdSchema,
   planSetId: EntityIdSchema,
   name: z.string().min(1),
-  strategy: z.enum(["warehouse_first", "direct_distribution", "mixed", "custom"]),
+  strategy: z.enum([
+    "hold_for_later",
+    "fastest_release",
+    "balanced_release",
+    "custom",
+  ]),
   status: PlanStatusSchema,
   allocations: z.array(AllocationSchema),
   inspectionHoldLb: z.number().nonnegative(),
-  declinedLb: z.number().nonnegative(),
+  unallocatedLb: z.number().nonnegative(),
   metrics: PlanMetricsSchema,
   assumptions: z.array(z.string()),
   risks: z.array(PlanRiskSchema),
@@ -309,7 +378,7 @@ export const PlanOptionSchema = z.object({
 
 export const PlanSetSchema = z.object({
   id: EntityIdSchema,
-  donationId: EntityIdSchema,
+  inventoryLotId: EntityIdSchema,
   options: z.array(PlanOptionSchema).length(3),
   generatedAt: ISODateTimeSchema,
   selectedOptionId: EntityIdSchema.optional(),
@@ -339,7 +408,7 @@ export const RouteStopSchema = z.object({
   id: EntityIdSchema,
   sequence: z.number().int().positive(),
   locationId: EntityIdSchema,
-  locationType: z.enum(["donor", "warehouse", "partner"]),
+  locationType: z.enum(["warehouse", "partner"]),
   arrivalWindow: TimeWindowSchema,
   quantityPickupLb: z.number().nonnegative(),
   quantityDropoffLb: z.number().nonnegative(),
@@ -357,7 +426,7 @@ export const RouteLegSchema = z.object({
 
 export const MissionSchema = z.object({
   id: EntityIdSchema,
-  donationId: EntityIdSchema,
+  inventoryLotId: EntityIdSchema,
   approvedPlanOptionId: EntityIdSchema,
   vehicleId: EntityIdSchema,
   driverId: EntityIdSchema,
@@ -407,10 +476,16 @@ export type Confidence = z.infer<typeof ConfidenceSchema>;
 export type DonationStatus = z.infer<typeof DonationStatusSchema>;
 export type TemperatureClass = z.infer<typeof TemperatureClassSchema>;
 export type RiskLevel = z.infer<typeof RiskLevelSchema>;
+export type ProductCategory = z.infer<typeof ProductCategorySchema>;
+export type ProductLotSourceType = z.infer<typeof ProductLotSourceTypeSchema>;
+export type ProductLotConditionStatus = z.infer<
+  typeof ProductLotConditionStatusSchema
+>;
 export type Donor = z.infer<typeof DonorSchema>;
 export type DonationOffer = z.infer<typeof DonationOfferSchema>;
 export type ProductLot = z.infer<typeof ProductLotSchema>;
 export type Warehouse = z.infer<typeof WarehouseSchema>;
+export type AgencyAcceptanceHistory = z.infer<typeof AgencyAcceptanceHistorySchema>;
 export type PartnerAgency = z.infer<typeof PartnerAgencySchema>;
 export type Vehicle = z.infer<typeof VehicleSchema>;
 export type Driver = z.infer<typeof DriverSchema>;

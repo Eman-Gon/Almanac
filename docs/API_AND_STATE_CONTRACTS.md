@@ -27,11 +27,19 @@ interface ApiError {
 
 ---
 
-## Donation endpoints
+## Inventory endpoints
 
-### `POST /api/donations/parse`
+### `GET /api/inventory/:id`
 
-Input:
+Returns the existing warehouse `ProductLot`, its risk facts, current location, required confirmations, related agent runs, and audit events. The hero ID is `LOT-104`; it is already at `WH-001` and has no donor-pickup dependency.
+
+### `PATCH /api/inventory/:id` (browser-state equivalent in the local MVP)
+
+Only staff-confirmable operational fields may change: available quantity, risk deadline, temperature class, condition status, and notes. The action records an audit event. It must not let a model certify safety.
+
+The legacy extraction route may remain for an isolated upstream experiment:
+
+### `POST /api/donations/parse` (non-hero compatibility route)
 
 ```json
 {
@@ -40,9 +48,9 @@ Input:
 }
 ```
 
-Output: a runtime-validated `DonationOffer`, its `AgentRun`, `fallbackUsed`, warnings, follow-up questions, and an `execution` record containing `source`, `provider`, `model`, and `attemptedModels`. When Venice is configured, the route uses it only for bounded natural-language extraction and deterministically loads a known donor location. It attempts the configured primary model, then makes at most one second call: the distinct backup model after a timeout, provider error, invalid structured output, or missing required facts; or the primary model with a schema reminder when malformed output occurs and no backup is configured. For the exact seeded hero offer, missing configuration or failure of all attempts returns the validated seeded extraction with `fallbackUsed: true`. Other offers fail with `AGENT_UNAVAILABLE`, `AGENT_TIMEOUT`, `INVALID_AGENT_OUTPUT`, or `MISSING_REQUIRED_FIELD` rather than inheriting fabricated seed facts.
+This route is not called by the judged workflow and may not create the hero inventory lot or add a donor pickup to its route. Any model output remains schema-validated and non-authoritative.
 
-### `GET /api/donations/:id`
+### `GET /api/donations/:id` (non-hero compatibility route)
 
 Returns full donation, extraction fields, related agent runs, and audit events.
 
@@ -56,7 +64,7 @@ Input:
 
 ```json
 {
-  "donationId": "DON-104",
+  "inventoryLotId": "LOT-104",
   "scoreConfigVersion": "score-v1"
 }
 ```
@@ -82,9 +90,9 @@ Input:
 }
 ```
 
-When `option` is supplied, it must match `optionId` and belong to the route's plan set. Allocation IDs, destinations, types, product lots, handling, arrival times, strategy, hold, and declined quantity must match the canonical option; only row quantities are accepted from the submitted object. The handler rebuilds authoritative identity and strategy fields from that canonical option, recalculates distributed pounds, households, long-term storage use, and refrigerated-staging use, then reruns conservation, partner, vehicle, temperature, and window validation.
+When `option` is supplied, it must match `optionId` and belong to the route's plan set. Allocation IDs, destinations, types, product lots, handling, arrival times, strategy, inspection hold, and unallocated quantity must match the canonical option; only row quantities are accepted. The handler rebuilds authoritative fields, recalculates planned outbound pounds, modeled household-equivalents, long-term storage use, and staging use, then reruns conservation, partner, vehicle, temperature, and window validation.
 
-Submitted metrics are not authoritative. Expected spoilage, staff minutes, need-match, equity, refusal risk, and route miles remain labeled seeded strategy-level scenario estimates because no quantity-sensitive formula is implemented for them. The seeded mission templates total 18.4 miles for Warehouse First, 45.7 miles for Direct Distribution, and 24.8 miles for Mixed Plan.
+Submitted metrics are not authoritative. Planned outbound pounds, modeled household-equivalents, storage, and staging are recalculated from approved quantities. Expected spoilage, staff minutes, need-match, equity, refusal risk, and route miles remain labeled seeded strategy-level scenario estimates because no quantity-sensitive formula is implemented for them. Hold for Later is blocked and has 0 outbound miles; the seeded executable route templates total 45.7 miles for Fastest Agency Release and 24.8 miles for Balanced Release.
 
 Output:
 
@@ -105,11 +113,11 @@ Returns the complete synthetic partner list. Query filters are not implemented i
 
 ### `GET /api/partners/:id`
 
-Returns profile, demand, capacity, windows, service gap, and notes.
+Returns profile, demand, capacity, windows, service gap, category-specific acceptance history, refusal and short-receipt counts, sample sizes, and notes.
 
 ### `GET /api/map/network`
 
-Returns the synthetic donor, warehouse, partners, vehicles, and precomputed primary route. The response is always labeled `projection: "seed_preview_not_persisted"`; this route does not read the browser's evolving approval or recovery state.
+Returns the synthetic warehouse origin, partners, vehicle context, and precomputed outbound route. The hero response contains no donor marker or pickup stop. It is always labeled `projection: "seed_preview_not_persisted"`; this route does not read the browser's evolving approval or recovery state.
 
 ---
 
@@ -158,21 +166,21 @@ The HTTP action accepts `PKG-104` or `PKG-105` and requires the current schema-v
 
 ### `GET /api/missions/:id`
 
-`MSN-104` and `MSN-105` are available only as explicit non-persisted seed projections through `?preview=true`. Without that flag, the endpoint returns `409 STATE_REQUIRED`; a mission must be created by plan or recovery approval. Preview responses carry `projection: "seed_preview_not_persisted"`. The browser demo state owns the real evolving mission, timeline, completion, and disruption state. Mission route legs are deterministic templates scaled to the approved strategy total: Warehouse First 18.4 miles, Direct Distribution 45.7 miles, and Mixed Plan 24.8 miles.
+`MSN-104` and `MSN-105` are available only as explicit non-persisted seed projections through `?preview=true`. Without that flag, the endpoint returns `409 STATE_REQUIRED`; a mission must be created by plan or recovery approval. Preview responses carry `projection: "seed_preview_not_persisted"`. The browser demo state owns the real evolving mission, timeline, completion, and disruption state. The route begins at `WH-001`, contains no donor pickup, and uses the approved executable strategy total: 45.7 miles for Fastest Agency Release or 24.8 miles for Balanced Release.
 
 ### `POST /api/missions/:id/events`
 
 Examples:
 
 ```json
-{"type": "pickup_complete", "stopId": "STP-001", "mission": "current Mission resource"}
+{"type": "warehouse_load_complete", "stopId": "STP-001", "mission": "current Mission resource"}
 ```
 
 ```json
 {"type": "delivery_complete", "stopId": "STP-003", "mission": "current Mission resource"}
 ```
 
-The action requires the full current mission resource, a matching route ID, an existing stop, and mission status `assigned` or `in_transit`. Only the first pending stop may complete; out-of-order requests return `409 INVALID_STATE_TRANSITION`. `pickup_complete` must target a pickup stop and `delivery_complete` a drop-off stop.
+The action requires the full current mission resource, a matching route ID, an existing stop, and mission status `assigned` or `in_transit`. Only the first pending stop may complete; out-of-order requests return `409 INVALID_STATE_TRANSITION`. `warehouse_load_complete` must target the warehouse origin and `delivery_complete` a partner drop-off.
 
 ### `POST /api/missions/:id/disruptions`
 
@@ -222,11 +230,11 @@ The shared deterministic domain calculations—not rendered UI components or an 
 
 ---
 
-## Communication endpoints
+## Communication endpoints (isolated experiment, not hero scope)
 
 ### `POST /api/communications/test`
 
-Creates a human-confirmed test communication request. The input must contain an E.164 test number, a channel (`voice` or `sms`), an approved message, and `confirmed: true`.
+These routes may remain for development evaluation but are excluded from primary navigation, seed-state transitions, and the judged workflow. They never schedule a donor, partner, vehicle, or driver. A test request still requires an E.164 test number, an approved message, and `confirmed: true`.
 
 Voice requests use the configured Vapi assistant and phone number, enable Vapi voicemail detection, and provide the approved `voicemailMessage`. SMS requests use Vapi's outbound SMS transport with the exact approved message.
 
@@ -238,7 +246,7 @@ Live requests are intentionally gated by all of the following server-only enviro
 - `VAPI_TEST_TO_NUMBER`
 - `VAPI_TEST_CALLS_ENABLED=true`
 
-When the live gate is not complete, the endpoint returns a labeled `preview` result and makes no external request. When enabled, only the exact configured test number is accepted. The endpoint never changes donation, plan, mission, partner, or food-safety state.
+When the live gate is not complete, the endpoint returns a labeled `preview` result and makes no external request. When enabled, only the exact configured test number is accepted. The endpoint never changes inventory, plan, mission, partner, or food-safety state.
 
 ### `GET /api/communications/status/:id`
 
@@ -250,7 +258,7 @@ Returns the current Vapi status for a live voice test request. It returns a prev
 
 ### `POST /api/demo/reset`
 
-- Returns the starting scenario, donation, and dashboard summary.
+- Returns the starting scenario, inventory lot, and dashboard summary.
 - Is idempotent.
 - Does not mutate a browser's local state. The in-app reset control clears the versioned browser demo state; `npm run demo:reset` reports immutable seed readiness from the terminal.
 
@@ -280,6 +288,8 @@ interface DemoState {
 }
 ```
 
+The seeded hero resource is `LOT-104`; all plan, mission, impact, and audit relationships use `inventoryLotId`. `fallbackUsed` is retained only for optional explanation/model fallbacks and is not an intake prerequisite.
+
 The provider validates persisted state before rendering the application shell; until hydration finishes it shows one loading state, so actions cannot mutate the seed state before browser storage is read. Edited allocations, both packing plans, mission progress, disruption, supersession, and audit history then survive navigation and reload until reset. Recovery activates `PKG-105`, keeps `PKG-104` read-only, and makes `/missions`, sidebar, dashboard, and map mission links resolve to active replacement `MSN-105`. Server routes remain stateless transition functions and seed projections; callers must pass current prerequisite resources explicitly.
 
 ### Seeded recovery chronology
@@ -294,17 +304,12 @@ The provider validates persisted state before rendering the application shell; u
 
 ## Status transitions
 
-### Donation
+### Inventory lot
 
 ```text
-draft
-→ needs_confirmation
-→ ready_for_planning
-→ plans_generated
-→ awaiting_approval
-→ approved / partially_accepted / declined / redirected
-→ in_execution
-→ closed
+available
+→ partially_allocated / allocated / inspection_hold
+→ distributed / disposed
 ```
 
 ### Mission
@@ -341,7 +346,7 @@ Invalid transitions must return `409 CONFLICT` or equivalent domain error.
 | `MISSING_REQUIRED_DATA` | Planning cannot proceed |
 | `QUANTITY_MISMATCH` | Conservation failed |
 | `CAPACITY_EXCEEDED` | Warehouse, partner, or vehicle capacity exceeded |
-| `WINDOW_INFEASIBLE` | Pickup or receiving time cannot be met |
+| `WINDOW_INFEASIBLE` | Warehouse departure, risk deadline, or agency receiving window cannot be met |
 | `TEMPERATURE_INCOMPATIBLE` | Product and storage/vehicle mismatch |
 | `PLAN_NOT_APPROVABLE` | Plan contains unresolved blocking warnings |
 | `STATE_REQUIRED` | Stateful resource must be created by approval; GET preview requires `preview=true` |

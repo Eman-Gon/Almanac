@@ -8,9 +8,11 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
   }
   await initialReset.click();
 
-  await page.locator(".urgent-offer-card").getByRole("link", { name: "Review donation" }).click();
-  await expect(page.getByRole("blockquote").first()).toContainText("Hi, Market Street Grocery has about 80 cases");
-  await page.getByRole("button", { name: "Generate plans" }).click();
+  await page.locator(".urgent-offer-card").getByRole("link", { name: "Review inventory lot" }).click();
+  await expect(page.getByRole("heading", { name: "Inventory lot detail" })).toBeVisible();
+  await expect(page.getByText("Historical agency acceptance", { exact: true })).toBeVisible();
+  await expect(page.getByText("No donor pickup is part of this workflow.")).toBeVisible();
+  await page.getByRole("button", { name: "Generate outbound plans" }).click();
 
   await expect(page.getByRole("heading", { name: "Plan comparison" })).toBeVisible();
   await expect(page.getByText("Exceeds refrigerated capacity by 780 lb.")).toBeVisible();
@@ -23,7 +25,7 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
 
   await page.getByRole("button", { name: "Review and approve" }).click();
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Approve & create mission" }).click();
+  await page.getByRole("button", { name: "Approve & create outbound mission" }).click();
 
   await expect(page.getByRole("heading", { name: "Packing plan" })).toBeVisible();
   await expect(page.getByRole("cell", { name: "440 lb" })).toBeVisible();
@@ -72,9 +74,9 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
   await expect(page.getByText("94%")).toBeVisible();
   await expect(page.getByText("380")).toBeVisible();
 
-  await page.goto("/donations/DON-104");
+  await page.goto("/inventory/LOT-104");
   await expect(page.getByText("Recovery approved", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Open plans" }).click();
+  await page.getByRole("button", { name: "Open outbound plans" }).click();
   await page.getByRole("link", { name: "Missions" }).click();
   await expect(page.getByText("Recovery route").first()).toBeVisible();
 
@@ -83,6 +85,6 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
     await page.getByText("Demo controls", { exact: true }).click();
   }
   await finalReset.click();
-  await expect(page.getByText("Urgent donation")).toBeVisible();
+  await expect(page.getByText("At-risk inventory", { exact: true })).toBeVisible();
   await expect(page.getByText("Recovery approved.")).not.toBeVisible();
 });

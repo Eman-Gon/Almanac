@@ -1,4 +1,4 @@
-import { donation, donor, drivers, productLot, vehicles, warehouse } from "@/data/seed/scenario";
+import { drivers, partners, productLot, vehicles, warehouse } from "@/data/seed/scenario";
 import { getDestinationName } from "@/domain/planning/generate-plans";
 import type { AuditEvent, Mission, PackingPlan, PlanOption } from "@/domain/types";
 
@@ -6,6 +6,15 @@ function stagingFor(plan: PlanOption, destinationId: string): string {
   const allocation = plan.allocations.find((item) => item.destinationId === destinationId);
   if (allocation?.destinationType === "packing_program") return "Refrigerated staging · Lane C";
   return "Cross-dock outbound · Lane B";
+}
+
+function receivingWindowFor(destinationId: string) {
+  const partner = partners.find((candidate) => candidate.id === destinationId);
+  const window = partner?.receivingWindows[0];
+  if (!window) {
+    throw new Error(`Receiving window for partner ${destinationId} was not found.`);
+  }
+  return window;
 }
 
 export function createPackingPlan(
@@ -105,16 +114,6 @@ function initialRouteLegs(targetMiles: number): Mission["routeLegs"] {
     {
       fromStopId: "STP-001",
       toStopId: "STP-002",
-      distanceMiles: 6.4,
-      durationMinutes: 16,
-      polyline: [
-        [donor.location.latitude, donor.location.longitude],
-        [warehouse.location.latitude, warehouse.location.longitude],
-      ],
-    },
-    {
-      fromStopId: "STP-002",
-      toStopId: "STP-003",
       distanceMiles: 7.8,
       durationMinutes: 18,
       polyline: [
@@ -123,8 +122,8 @@ function initialRouteLegs(targetMiles: number): Mission["routeLegs"] {
       ],
     },
     {
-      fromStopId: "STP-003",
-      toStopId: "STP-004",
+      fromStopId: "STP-002",
+      toStopId: "STP-003",
       distanceMiles: 5.2,
       durationMinutes: 14,
       polyline: [
@@ -133,8 +132,8 @@ function initialRouteLegs(targetMiles: number): Mission["routeLegs"] {
       ],
     },
     {
-      fromStopId: "STP-004",
-      toStopId: "STP-005",
+      fromStopId: "STP-003",
+      toStopId: "STP-004",
       distanceMiles: 5.4,
       durationMinutes: 15,
       polyline: [
@@ -150,16 +149,6 @@ function recoveryRouteLegs(targetMiles: number): Mission["routeLegs"] {
     {
       fromStopId: "STP-101",
       toStopId: "STP-102",
-      distanceMiles: 6.4,
-      durationMinutes: 16,
-      polyline: [
-        [donor.location.latitude, donor.location.longitude],
-        [warehouse.location.latitude, warehouse.location.longitude],
-      ],
-    },
-    {
-      fromStopId: "STP-102",
-      toStopId: "STP-103",
       distanceMiles: 7.8,
       durationMinutes: 18,
       polyline: [
@@ -168,8 +157,8 @@ function recoveryRouteLegs(targetMiles: number): Mission["routeLegs"] {
       ],
     },
     {
-      fromStopId: "STP-103",
-      toStopId: "STP-104",
+      fromStopId: "STP-102",
+      toStopId: "STP-103",
       distanceMiles: 8.1,
       durationMinutes: 21,
       polyline: [
@@ -178,8 +167,8 @@ function recoveryRouteLegs(targetMiles: number): Mission["routeLegs"] {
       ],
     },
     {
-      fromStopId: "STP-104",
-      toStopId: "STP-105",
+      fromStopId: "STP-103",
+      toStopId: "STP-104",
       distanceMiles: 6.3,
       durationMinutes: 17,
       polyline: [
@@ -188,19 +177,6 @@ function recoveryRouteLegs(targetMiles: number): Mission["routeLegs"] {
       ],
     },
   ], targetMiles);
-}
-
-function warehouseRouteLegs(targetMiles: number): Mission["routeLegs"] {
-  return [{
-    fromStopId: "STP-001",
-    toStopId: "STP-002",
-    distanceMiles: targetMiles,
-    durationMinutes: 24,
-    polyline: [
-      [donor.location.latitude, donor.location.longitude],
-      [warehouse.location.latitude, warehouse.location.longitude],
-    ],
-  }];
 }
 
 export function createMission(
@@ -214,45 +190,35 @@ export function createMission(
   const deliveryAllocations = plan.allocations.filter(
     (allocation) => allocation.destinationId !== warehouse.id,
   );
+  const outboundLoadLb = deliveryAllocations.reduce(
+    (total, allocation) => total + allocation.quantityLb,
+    0,
+  );
   const stops: Mission["stops"] = [
     {
       id: recovery ? "STP-101" : "STP-001",
       sequence: 1,
-      locationId: donor.id,
-      locationType: "donor",
-      arrivalWindow: donation.pickupWindow ?? {
-        start: "2026-07-15T11:00:00-07:00",
-        end: "2026-07-15T13:00:00-07:00",
-      },
-      quantityPickupLb: donation.quantityLb,
-      quantityDropoffLb: 0,
-      status: "pending",
-      instructions: ["Confirm refrigerated handling", "Record staff condition check"],
-    },
-    {
-      id: recovery ? "STP-102" : "STP-002",
-      sequence: 2,
       locationId: warehouse.id,
       locationType: "warehouse",
       arrivalWindow: warehouse.dockWindows[0],
-      quantityPickupLb: 0,
-      quantityDropoffLb: plan.inspectionHoldLb + warehouseAllocationLb,
+      quantityPickupLb: outboundLoadLb,
+      quantityDropoffLb: 0,
       status: "pending",
       instructions: warehouseAllocationLb > 0
-        ? ["Receive warehouse allocation", "Move refrigerated quantity to assigned storage"]
-        : ["Cross-dock partner batches", "Move inspection hold to Hold 2"],
+        ? ["Retain the blocked quantity in assigned refrigerated storage; no mission may depart."]
+        : [
+            `Load ${outboundLoadLb} lb of staff-cleared refrigerated inventory.`,
+            "Verify partner batches and inspection hold before departure.",
+          ],
     },
     ...deliveryAllocations.map((allocation, index) => ({
       id: recovery
-        ? `STP-${String(index + 103).padStart(3, "0")}`
-        : `STP-${String(index + 3).padStart(3, "0")}`,
-      sequence: index + 3,
+        ? `STP-${String(index + 102).padStart(3, "0")}`
+        : `STP-${String(index + 2).padStart(3, "0")}`,
+      sequence: index + 2,
       locationId: allocation.destinationId,
       locationType: "partner" as const,
-      arrivalWindow: {
-        start: "2026-07-15T09:30:00-07:00",
-        end: allocation.plannedArrivalAt,
-      },
+      arrivalWindow: receivingWindowFor(allocation.destinationId),
       quantityPickupLb: 0,
       quantityDropoffLb: allocation.quantityLb,
       status: "pending" as const,
@@ -264,15 +230,15 @@ export function createMission(
 
   return {
     id: missionId,
-    donationId: donation.id,
+    inventoryLotId: productLot.id,
     approvedPlanOptionId: plan.id,
     vehicleId: vehicles[0].id,
     driverId: drivers[0].id,
     stops,
     routeLegs: recovery
       ? recoveryRouteLegs(plan.metrics.totalMiles)
-      : plan.strategy === "warehouse_first"
-        ? warehouseRouteLegs(plan.metrics.totalMiles)
+      : plan.strategy === "hold_for_later"
+        ? []
         : initialRouteLegs(plan.metrics.totalMiles),
     status: "assigned",
     createdAt: recovery

@@ -13,84 +13,79 @@ export function allocatedQuantityLb(plan: PlanOption): number {
 }
 
 export function accountedQuantityLb(plan: PlanOption): number {
-  return allocatedQuantityLb(plan) + plan.inspectionHoldLb + plan.declinedLb;
+  return allocatedQuantityLb(plan) + plan.inspectionHoldLb + plan.unallocatedLb;
 }
 
 export function quantityConserves(
   plan: PlanOption,
-  offeredQuantityLb: number,
+  availableInventoryQuantityLb: number,
 ): boolean {
-  return Math.abs(accountedQuantityLb(plan) - offeredQuantityLb) <= QUANTITY_TOLERANCE_LB;
+  return Math.abs(accountedQuantityLb(plan) - availableInventoryQuantityLb) <= QUANTITY_TOLERANCE_LB;
 }
 
 export type QuantityReconciliation = {
-  offeredQuantityLb: number;
-  deliveredBeforeRiskLb: number;
+  availableInventoryQuantityLb: number;
+  outboundAllocatedLb: number;
+  retainedLongTermLb: number;
   inspectionHoldLb: number;
-  expectedLossLb: number;
-  declinedQuantityLb: number;
-  redirectedQuantityLb: number;
-  unassignedQuantityLb: number;
+  externalTransferLb: number;
+  unallocatedLb: number;
+  quantityPlannedOutboundInTimeLb: number;
+  expectedSpoilageLb: number;
   totalAccountedLb: number;
-  holdOrLossLb: number;
   reconciles: boolean;
 };
 
-/** Reconciles outcome buckets without double-counting an inspection hold. */
+/** Reconciles physical buckets; expected spoilage is a non-exclusive risk metric. */
 export function reconcilePlanQuantities(
   plan: PlanOption,
-  offeredQuantityLb: number,
+  availableInventoryQuantityLb: number,
 ): QuantityReconciliation {
-  const redirectedQuantityLb = plan.allocations
+  const externalTransferLb = plan.allocations
     .filter(
       (allocation) =>
         allocation.destinationType === "external_redirect" ||
         allocation.handling === "redirect",
     )
     .reduce((total, allocation) => total + Math.max(0, allocation.quantityLb), 0);
-  const deliveredBeforeRiskLb = Math.max(
-    0,
-    plan.metrics.quantityDistributedInTimeLb - redirectedQuantityLb,
-  );
+  const retainedLongTermLb = plan.allocations
+    .filter(
+      (allocation) =>
+        allocation.destinationType === "warehouse" &&
+        allocation.handling === "store",
+    )
+    .reduce((total, allocation) => total + Math.max(0, allocation.quantityLb), 0);
+  const outboundAllocatedLb = plan.allocations
+    .filter(
+      (allocation) =>
+        allocation.destinationType !== "warehouse" &&
+        allocation.destinationType !== "external_redirect" &&
+        allocation.handling !== "redirect",
+    )
+    .reduce((total, allocation) => total + Math.max(0, allocation.quantityLb), 0);
   const inspectionHoldLb = Math.max(0, plan.inspectionHoldLb);
-  const declinedQuantityLb = Math.max(0, plan.declinedLb);
-  const residualAfterKnownBuckets =
-    offeredQuantityLb -
-    deliveredBeforeRiskLb -
-    inspectionHoldLb -
-    declinedQuantityLb -
-    redirectedQuantityLb;
-  const expectedLossLb = Math.max(0, residualAfterKnownBuckets);
-  const unassignedQuantityLb = Math.max(
-    0,
-    offeredQuantityLb -
-      deliveredBeforeRiskLb -
-      inspectionHoldLb -
-      expectedLossLb -
-      declinedQuantityLb -
-      redirectedQuantityLb,
-  );
+  const unallocatedLb = Math.max(0, plan.unallocatedLb);
   const totalAccountedLb =
-    deliveredBeforeRiskLb +
+    outboundAllocatedLb +
+    retainedLongTermLb +
     inspectionHoldLb +
-    expectedLossLb +
-    declinedQuantityLb +
-    redirectedQuantityLb +
-    unassignedQuantityLb;
+    externalTransferLb +
+    unallocatedLb;
 
   return {
-    offeredQuantityLb,
-    deliveredBeforeRiskLb,
+    availableInventoryQuantityLb,
+    outboundAllocatedLb,
+    retainedLongTermLb,
     inspectionHoldLb,
-    expectedLossLb,
-    declinedQuantityLb,
-    redirectedQuantityLb,
-    unassignedQuantityLb,
+    externalTransferLb,
+    unallocatedLb,
+    quantityPlannedOutboundInTimeLb:
+      plan.metrics.quantityPlannedOutboundInTimeLb,
+    expectedSpoilageLb: plan.metrics.expectedSpoilageLb,
     totalAccountedLb,
-    holdOrLossLb: inspectionHoldLb + expectedLossLb,
     reconciles:
-      residualAfterKnownBuckets >= -QUANTITY_TOLERANCE_LB &&
-      Math.abs(totalAccountedLb - offeredQuantityLb) <= QUANTITY_TOLERANCE_LB,
+      Math.abs(totalAccountedLb - availableInventoryQuantityLb) <=
+      QUANTITY_TOLERANCE_LB,
   };
 }
 
@@ -161,12 +156,12 @@ export function validatePlanOption(
     );
   }
 
-  if (!Number.isFinite(plan.declinedLb) || plan.declinedLb < 0) {
+  if (!Number.isFinite(plan.unallocatedLb) || plan.unallocatedLb < 0) {
     issues.push(
       quantityIssue({
         code: "INVALID_QUANTITY",
         entityId: plan.id,
-        message: "Declined quantity must be finite and nonnegative.",
+        message: "Unallocated quantity must be finite and nonnegative.",
       }),
     );
   }
@@ -185,36 +180,44 @@ export function validatePlanOption(
     seenAllocationIds.add(allocation.id);
   }
 
-  if (!quantityConserves(plan, context.offeredQuantityLb)) {
+  if (!quantityConserves(plan, context.availableInventoryQuantityLb)) {
     const accountedLb = accountedQuantityLb(plan);
     issues.push(
       quantityIssue({
         code: "QUANTITY_MISMATCH",
         plannedQuantityLb: accountedLb,
-        limitQuantityLb: context.offeredQuantityLb,
+        limitQuantityLb: context.availableInventoryQuantityLb,
         excessQuantityLb: Number.isFinite(accountedLb)
-          ? Math.max(0, accountedLb - context.offeredQuantityLb)
+          ? Math.max(0, accountedLb - context.availableInventoryQuantityLb)
           : undefined,
-        message: `Quantity mismatch: ${accountedLb} lb accounted for of ${context.offeredQuantityLb} lb offered.`,
+        message: `Quantity mismatch: ${accountedLb} lb accounted for of ${context.availableInventoryQuantityLb} lb available.`,
       }),
     );
   }
 
   const reconciliation = reconcilePlanQuantities(
     plan,
-    context.offeredQuantityLb,
+    context.availableInventoryQuantityLb,
   );
-  if (!reconciliation.reconciles) {
+  if (
+    !reconciliation.reconciles ||
+    Math.abs(
+      reconciliation.quantityPlannedOutboundInTimeLb -
+        reconciliation.outboundAllocatedLb,
+    ) > QUANTITY_TOLERANCE_LB
+  ) {
     issues.push(
       quantityIssue({
         code: "METRIC_QUANTITY_MISMATCH",
         plannedQuantityLb: reconciliation.totalAccountedLb,
-        limitQuantityLb: context.offeredQuantityLb,
+        limitQuantityLb: context.availableInventoryQuantityLb,
         excessQuantityLb: Math.max(
           0,
-          reconciliation.totalAccountedLb - context.offeredQuantityLb,
+          reconciliation.totalAccountedLb - context.availableInventoryQuantityLb,
         ),
-        message: `Outcome quantities do not reconcile: ${reconciliation.totalAccountedLb} lb accounted for of ${context.offeredQuantityLb} lb offered.`,
+        message: !reconciliation.reconciles
+          ? `Inventory quantities do not reconcile: ${reconciliation.totalAccountedLb} lb accounted for of ${context.availableInventoryQuantityLb} lb available.`
+          : `Planned outbound metric is ${reconciliation.quantityPlannedOutboundInTimeLb} lb but outbound allocations total ${reconciliation.outboundAllocatedLb} lb.`,
       }),
     );
   }

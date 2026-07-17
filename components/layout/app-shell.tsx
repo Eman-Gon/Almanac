@@ -4,26 +4,36 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3,
-  Box,
   ChevronDown,
   ClipboardList,
   Gauge,
+  MapPinned,
   Menu,
+  PackageSearch,
   RefreshCcw,
   Truck,
   UserRound,
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { scenario } from "@/data/seed/scenario";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { useDemoState } from "@/state/demo-state";
 
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
-  { href: "/donations/DON-104", label: "Donations", icon: Box },
+  { href: "/inventory", label: "Inventory", icon: PackageSearch },
   { href: "/plans/PLN-104", label: "Plans", icon: ClipboardList },
+  { href: "/map", label: "Map", icon: MapPinned },
   { href: "/missions/MSN-104", label: "Missions", icon: Truck },
   { href: "/impact", label: "Impact", icon: BarChart3 },
+] as const;
+
+const scenarioPreviews = [
+  "Truck breakdown",
+  "Cold capacity lost",
+  "Driver unavailable",
+  "Agency receiving window shortened",
 ] as const;
 
 function routeIsActive(pathname: string, href: string): boolean {
@@ -93,10 +103,31 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="toggle-on" aria-label="Demo mode enabled"><span /></span>
               </div>
               <div className="scenario-label">Scenario</div>
-              <div className="scenario-select" aria-label="Current scenario">
-                <span>Strawberry Rescue</span>
-                <ChevronDown size={16} aria-hidden="true" />
-              </div>
+              <details className="scenario-picker">
+                <summary className="scenario-select" aria-label="Open scenario selector" data-testid="scenario-selector">
+                  <span>{scenario.name}</span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </summary>
+                <div className="scenario-menu" aria-label="Scenario options">
+                  <div className="scenario-option scenario-option-active">
+                    <span><strong>{scenario.name}</strong><small>Executable MVP scenario</small></span>
+                    <span className="scenario-badge scenario-badge-active">Active</span>
+                  </div>
+                  {scenarioPreviews.map((preview) => (
+                    <button
+                      className="scenario-option scenario-option-preview"
+                      type="button"
+                      disabled
+                      key={preview}
+                      title="Preview only; not executable in this MVP"
+                    >
+                      <span><strong>{preview}</strong><small>Preview only in the primary MVP flow</small></span>
+                      <span className="scenario-badge">Preview</span>
+                    </button>
+                  ))}
+                  <p className="scenario-menu-note">Only Strawberry Inventory Release changes the demo state today.</p>
+                </div>
+              </details>
               <button className="reset-button" type="button" onClick={reset}>
                 <RefreshCcw size={16} aria-hidden="true" />
                 Reset scenario

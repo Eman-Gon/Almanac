@@ -10,22 +10,32 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   }
   await resetScenario.click();
 
-  await page.goto("/donations");
-  await expect(page.getByRole("heading", { name: "Recent offers" })).toBeVisible();
-  await expect(page.getByText(/DON-103 · Market Street Grocery/)).toBeVisible();
-  await expect(page.getByText("History · display only")).toBeVisible();
-  await page.getByRole("link", { name: /Strawberries DON-104 · Market Street Grocery.*1,200 lb.*Ready for planning/ }).click();
-  await expect(page.getByRole("heading", { name: "Original donor message" }).first()).toBeVisible();
+  await page.goto("/inventory");
+  await expect(page.getByRole("heading", { name: "At-risk inventory" })).toBeVisible();
+  await expect(page.getByText(/LOT-103 · South County Distribution Center/)).toBeVisible();
+  await expect(page.getByText("Mock history · display only")).toBeVisible();
+  await page.locator('a[href="/inventory/LOT-104"]').filter({ hasText: "Strawberries" }).click();
+  await expect(page.getByRole("heading", { name: "Confirmed inventory facts" })).toBeVisible();
+  await expect(page.getByText("Historical agency acceptance", { exact: true })).toBeVisible();
 
   await expect(page.locator('a[href="/missions/MSN-104"]', { hasText: "MSN-1023" })).toHaveCount(0);
 
   await page.goto("/plans/PLN-104");
-  await page.locator("article", { has: page.getByRole("heading", { name: "Warehouse First" }) }).getByRole("button", { name: "Select plan" }).click();
+  await page.locator(".plan-card").filter({ hasText: "Hold for Later" }).getByRole("button", { name: "Select plan" }).click();
   await expect(page.locator('a[href="/partners/WH-001"]')).toHaveCount(0);
-  await page.locator("article", { has: page.getByRole("heading", { name: "Mixed Plan" }) }).getByRole("button", { name: "Select plan" }).click();
+  await page.locator(".plan-card").filter({ hasText: "Balanced Release" }).getByRole("button", { name: "Select plan" }).click();
 
   await page.goto("/partners/PAR-001");
   await expect(page.getByRole("heading", { name: "Harbor Light Pantry" })).toBeVisible();
+  await expect(page.getByText("9:30 AM – 12:00 PM", { exact: true })).toBeVisible();
+
+  await page.goto("/partners/PAR-002");
+  await expect(page.getByRole("heading", { name: "Eastside Community Pantry" })).toBeVisible();
+  await expect(page.getByText("10:00 AM – 12:30 PM", { exact: true })).toBeVisible();
+
+  await page.goto("/partners/PAR-004");
+  await expect(page.getByRole("heading", { name: "Northside Family Resource Center" })).toBeVisible();
+  await expect(page.getByText("9:30 AM – 2:00 PM", { exact: true })).toBeVisible();
 
   await page.goto("/map");
   const routesLayer = page.getByRole("checkbox", { name: "Routes" });
@@ -33,7 +43,6 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   const capacityLayer = page.getByRole("checkbox", { name: "Warehouse capacity" });
   const vehiclesLayer = page.getByRole("checkbox", { name: "Vehicles" });
   const routeStopLabels = [
-    ["DNR-001", "Market Street Grocery"],
     ["WH-001", "South County Distribution Center"],
     ["PAR-001", "Harbor Light Pantry"],
     ["PAR-002", "Eastside Community Pantry"],
@@ -45,6 +54,7 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   await expect(page.getByTestId("map-zoom-status")).toHaveText("100%");
   await expect(page.getByTestId("map-route-layer")).toHaveCount(1);
   await expect(page.getByTestId("map-route-layer")).toHaveAttribute("data-route-status", "candidate");
+  await expect(page.getByTestId("map-marker-DNR-001")).toHaveCount(0);
   await expect(page.getByTestId("map-marker-PAR-001")).toHaveCount(1);
   await expect(page.getByTestId("map-location-PAR-001")).toHaveCount(1);
   await expect(page.getByTestId("map-location-PAR-004")).toHaveCount(0);
@@ -52,6 +62,13 @@ test("seeded routes and invalid record states are intentional", async ({ page })
     await expect(page.getByTestId(`map-route-label-${id}`)).toContainText(name);
   }
   await expect(page.getByTestId("map-route-label-PAR-004")).toHaveCount(0);
+
+  await page.getByTestId("network-map-canvas").hover();
+  await page.mouse.wheel(0, -600);
+  await expect(page.getByTestId("map-zoom-status")).toHaveText("125%");
+  await page.waitForTimeout(150);
+  await page.mouse.wheel(0, 600);
+  await expect(page.getByTestId("map-zoom-status")).toHaveText("100%");
 
   const routeGeometry = await page.getByTestId("map-route-layer").getAttribute("points");
   await page.getByRole("button", { name: "Zoom in map" }).click();
@@ -67,10 +84,17 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   await expect(page.getByTestId("map-viewport")).not.toHaveAttribute("transform", viewportTransformBeforePan ?? "");
   const canvasBounds = await page.getByTestId("network-map-canvas").boundingBox();
   expect(canvasBounds).not.toBeNull();
+  if (!canvasBounds) {
+    throw new Error("Map canvas bounds are unavailable");
+  }
   const viewportTransformBeforeDrag = await page.getByTestId("map-viewport").getAttribute("transform");
-  await page.mouse.move((canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) - 70, (canvasBounds?.y ?? 0) + 100);
+  const dragStartX = canvasBounds.x + canvasBounds.width / 2;
+  const dragStartY = canvasBounds.y + canvasBounds.height / 2;
+  await page.mouse.move(dragStartX, dragStartY);
   await page.mouse.down();
-  await page.mouse.move((canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) - 110, (canvasBounds?.y ?? 0) + 135);
+  // The route-focused zoom starts at the left/bottom pan clamps. Drag inward so
+  // the viewport can move instead of asking the clamp to absorb the gesture.
+  await page.mouse.move(dragStartX + 100, dragStartY - 70, { steps: 4 });
   await page.mouse.up();
   await expect(page.getByTestId("map-viewport")).not.toHaveAttribute("transform", viewportTransformBeforeDrag ?? "");
   await expect(page.getByTestId("map-route-layer")).toHaveAttribute("points", routeGeometry ?? "");
@@ -144,7 +168,7 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   await expect(page.getByText("The replacement mission has not been created yet.")).toBeVisible();
 
   for (const path of [
-    "/donations/UNKNOWN",
+    "/inventory/UNKNOWN",
     "/plans/UNKNOWN",
     "/packing/UNKNOWN",
     "/missions/UNKNOWN",
@@ -157,7 +181,7 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   expect(pageErrors).toEqual([]);
 });
 
-test("donation intake reports when the backup model handled extraction", async ({ page }) => {
+test("legacy donation intake stays isolated from the warehouse hero", async ({ page }) => {
   await page.route("**/api/donations/parse", async (route) => {
     await route.fulfill({
       status: 200,
@@ -189,9 +213,10 @@ test("donation intake reports when the backup model handled extraction", async (
   await page.getByRole("button", { name: "Load demo offer" }).click();
   await page.getByRole("button", { name: "Parse offer" }).click();
 
-  await page.getByText("Supporting operational details", { exact: true }).click();
-  await expect(page.getByText("Validated backup-model extraction")).toBeVisible();
-  await expect(page.getByText("minimax-m25")).toBeVisible();
+  await expect(page).toHaveURL(/\/donations\/DON-104\?intake=backup_model&model=minimax-m25/);
+  await expect(page.getByRole("heading", { name: "Inventory lot detail" })).toBeVisible();
+  await expect(page.getByText("No donor pickup is part of this workflow.")).toBeVisible();
+  await expect(page.getByText("Ready for deterministic outbound planning")).toBeVisible();
 });
 
 test("donation intake saves, restores, and clears a local draft", async ({ page }) => {

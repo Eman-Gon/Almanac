@@ -1,13 +1,31 @@
-import { donation, partners, productLot, scenario, warehouse } from "@/data/seed/scenario";
+import { partners, productLot, scenario, warehouse } from "@/data/seed/scenario";
 import {
-  estimatedHouseholdsSupported,
+  modeledHouseholdEquivalents,
   plannedColdStorageUtilizationPct,
   refrigeratedStagingUtilizationPct,
 } from "@/domain/metrics/calculate";
-import { calculateDestinationScore } from "@/domain/scoring/destination-score";
+import {
+  acceptanceHistorySignal,
+  calculateDestinationScore,
+  type DestinationScoreInput,
+} from "@/domain/scoring/destination-score";
 import type { Allocation, DestinationScore, PlanOption, PlanSet } from "@/domain/types";
 
 const planSetId = "PLN-104";
+
+function partnerScore(
+  partnerId: string,
+  input: Omit<DestinationScoreInput, "historicalAcceptance" | "refusalRiskPenalty">,
+): DestinationScore {
+  const partner = partners.find((candidate) => candidate.id === partnerId);
+  if (!partner) throw new Error(`Partner ${partnerId} was not found.`);
+  const acceptance = acceptanceHistorySignal(partner, productLot.category);
+  return calculateDestinationScore({
+    ...input,
+    historicalAcceptance: acceptance.score,
+    refusalRiskPenalty: Math.round(partner.refusalRisk / 5),
+  });
+}
 
 const destinationScores: Record<string, DestinationScore> = {
   "WH-001": calculateDestinationScore({
@@ -17,11 +35,12 @@ const destinationScores: Record<string, DestinationScore> = {
     availableCapacity: 35,
     recentServiceGap: 20,
     equityPriority: 30,
+    historicalAcceptance: 0,
     travelPenalty: 2,
     spoilagePenalty: 8,
     refusalRiskPenalty: 0,
   }),
-  "PAR-001": calculateDestinationScore({
+  "PAR-001": partnerScore("PAR-001", {
     documentedNeed: 100,
     usabilityMatch: 100,
     receivingWindowFit: 100,
@@ -30,9 +49,8 @@ const destinationScores: Record<string, DestinationScore> = {
     equityPriority: 100,
     travelPenalty: 2,
     spoilagePenalty: 1,
-    refusalRiskPenalty: 1,
   }),
-  "PAR-002": calculateDestinationScore({
+  "PAR-002": partnerScore("PAR-002", {
     documentedNeed: 100,
     usabilityMatch: 100,
     receivingWindowFit: 100,
@@ -41,9 +59,8 @@ const destinationScores: Record<string, DestinationScore> = {
     equityPriority: 100,
     travelPenalty: 4,
     spoilagePenalty: 2,
-    refusalRiskPenalty: 2,
   }),
-  "PAR-003": calculateDestinationScore({
+  "PAR-003": partnerScore("PAR-003", {
     documentedNeed: 100,
     usabilityMatch: 100,
     receivingWindowFit: 100,
@@ -52,9 +69,8 @@ const destinationScores: Record<string, DestinationScore> = {
     equityPriority: 100,
     travelPenalty: 4,
     spoilagePenalty: 3,
-    refusalRiskPenalty: 3,
   }),
-  "PAR-004": calculateDestinationScore({
+  "PAR-004": partnerScore("PAR-004", {
     documentedNeed: 100,
     usabilityMatch: 100,
     receivingWindowFit: 100,
@@ -63,7 +79,6 @@ const destinationScores: Record<string, DestinationScore> = {
     equityPriority: 100,
     travelPenalty: 5,
     spoilagePenalty: 2,
-    refusalRiskPenalty: 2,
   }),
 };
 
@@ -89,12 +104,24 @@ function allocation(
 
 function commonAssumptions() {
   return [
-    "All quantities use the confirmed 1,200 lb operational estimate.",
+    "All quantities use the validated 1,200 lb available inventory at WH-001.",
     "Route miles use the seeded distance matrix; no live routing service is required.",
-    "Food condition remains subject to staff inspection.",
+    "Staff condition review is recorded; the explicit inspection hold still requires supervisor release.",
     `Destination ranking uses ${scenario.scoreConfigVersion}.`,
-    "Expected spoilage, staff effort, need-match, equity, and refusal-risk are seeded strategy-level estimates; allocation edits recalculate quantity, households, and capacity metrics only.",
+    "Category-specific agency acceptance uses synthetic accepted, refused, and short-receipt history with visible sample sizes.",
+    "Expected spoilage, staff effort, need-match, equity, and refusal-risk are seeded strategy-level estimates; allocation edits recalculate outbound quantity, household-equivalents, and capacity metrics only.",
   ];
+}
+
+function plannedOutboundAllocationLb(allocations: Allocation[]): number {
+  return allocations
+    .filter(
+      (allocation) =>
+        allocation.destinationType !== "warehouse" &&
+        allocation.destinationType !== "external_redirect" &&
+        allocation.handling !== "redirect",
+    )
+    .reduce((total, allocation) => total + allocation.quantityLb, 0);
 }
 
 export function withDerivedCapacityMetrics(plan: PlanOption): PlanOption {
@@ -120,7 +147,7 @@ export function applyCanonicalAllocationEdit(
     canonical.planSetId !== submitted.planSetId ||
     canonical.strategy !== submitted.strategy ||
     canonical.inspectionHoldLb !== submitted.inspectionHoldLb ||
-    canonical.declinedLb !== submitted.declinedLb ||
+    canonical.unallocatedLb !== submitted.unallocatedLb ||
     canonical.allocations.length !== submitted.allocations.length
   ) {
     return null;
@@ -148,9 +175,8 @@ export function applyCanonicalAllocationEdit(
 
   if (allocations.some((allocation) => allocation === null)) return null;
   const canonicalAllocations = allocations as Allocation[];
-  const quantityDistributedInTimeLb = canonicalAllocations.reduce(
-    (total, allocation) => total + allocation.quantityLb,
-    0,
+  const quantityPlannedOutboundInTimeLb = plannedOutboundAllocationLb(
+    canonicalAllocations,
   );
 
   return withDerivedCapacityMetrics({
@@ -158,16 +184,16 @@ export function applyCanonicalAllocationEdit(
     allocations: canonicalAllocations,
     metrics: {
       ...canonical.metrics,
-      quantityDistributedInTimeLb,
-      estimatedHouseholdsSupported: estimatedHouseholdsSupported(
-        quantityDistributedInTimeLb,
+      quantityPlannedOutboundInTimeLb,
+      modeledHouseholdEquivalents: modeledHouseholdEquivalents(
+        quantityPlannedOutboundInTimeLb,
         scenario.householdWeightLb,
       ),
     },
   });
 }
 
-function createWarehousePlan(): PlanOption {
+function createHoldPlan(): PlanOption {
   const storageHeadroomLb =
     warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb;
   const storedQuantityLb = 1_200;
@@ -175,8 +201,8 @@ function createWarehousePlan(): PlanOption {
   return withDerivedCapacityMetrics({
     id: "OPT-001",
     planSetId,
-    name: "Warehouse First",
-    strategy: "warehouse_first",
+    name: "Hold for Later",
+    strategy: "hold_for_later",
     status: "generated",
     allocations: [
       allocation(
@@ -189,12 +215,12 @@ function createWarehousePlan(): PlanOption {
       ),
     ],
     inspectionHoldLb: 0,
-    declinedLb: 0,
+    unallocatedLb: 0,
     metrics: {
-      quantityDistributedInTimeLb: 990,
+      quantityPlannedOutboundInTimeLb: 0,
       expectedSpoilageLb: 210,
-      estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_200, 3),
-      totalMiles: 18.4,
+      modeledHouseholdEquivalents: 0,
+      totalMiles: 0,
       staffMinutes: 110,
       coldCapacityUtilizationPct: 0,
       refrigeratedStagingUtilizationPct: 0,
@@ -215,12 +241,12 @@ function createWarehousePlan(): PlanOption {
   });
 }
 
-function createDirectPlan(): PlanOption {
+function createFastestReleasePlan(): PlanOption {
   return withDerivedCapacityMetrics({
     id: "OPT-002",
     planSetId,
-    name: "Direct Distribution",
-    strategy: "direct_distribution",
+    name: "Fastest Agency Release",
+    strategy: "fastest_release",
     status: "generated",
     allocations: [
       allocation("ALL-002", "PAR-001", "partner", 420, "2026-07-15T11:30:00-07:00", "cross_dock"),
@@ -228,11 +254,11 @@ function createDirectPlan(): PlanOption {
       allocation("ALL-004", "PAR-003", "packing_program", 400, "2026-07-15T12:40:00-07:00", "pack"),
     ],
     inspectionHoldLb: 0,
-    declinedLb: 0,
+    unallocatedLb: 0,
     metrics: {
-      quantityDistributedInTimeLb: 1_110,
+      quantityPlannedOutboundInTimeLb: 1_200,
       expectedSpoilageLb: 90,
-      estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_200, 3),
+      modeledHouseholdEquivalents: modeledHouseholdEquivalents(1_200, 3),
       totalMiles: 45.7,
       staffMinutes: 108,
       coldCapacityUtilizationPct: 0,
@@ -256,12 +282,12 @@ function createDirectPlan(): PlanOption {
   });
 }
 
-function createMixedPlan(): PlanOption {
+function createBalancedReleasePlan(): PlanOption {
   return withDerivedCapacityMetrics({
     id: "OPT-003",
     planSetId,
-    name: "Mixed Plan",
-    strategy: "mixed",
+    name: "Balanced Release",
+    strategy: "balanced_release",
     status: "selected",
     allocations: [
       allocation("ALL-005", "PAR-001", "partner", 420, "2026-07-15T11:30:00-07:00", "cross_dock"),
@@ -269,11 +295,11 @@ function createMixedPlan(): PlanOption {
       allocation("ALL-007", "PAR-003", "packing_program", 400, "2026-07-15T12:40:00-07:00", "pack"),
     ],
     inspectionHoldLb: 60,
-    declinedLb: 0,
+    unallocatedLb: 0,
     metrics: {
-      quantityDistributedInTimeLb: 1_140,
+      quantityPlannedOutboundInTimeLb: 1_140,
       expectedSpoilageLb: 60,
-      estimatedHouseholdsSupported: estimatedHouseholdsSupported(1_140, 3),
+      modeledHouseholdEquivalents: modeledHouseholdEquivalents(1_140, 3),
       totalMiles: 24.8,
       staffMinutes: 96,
       coldCapacityUtilizationPct: 0,
@@ -304,8 +330,12 @@ function createMixedPlan(): PlanOption {
 export function generatePlanSet(): PlanSet {
   const set: PlanSet = {
     id: planSetId,
-    donationId: donation.id,
-    options: [createWarehousePlan(), createDirectPlan(), createMixedPlan()],
+    inventoryLotId: productLot.id,
+    options: [
+      createHoldPlan(),
+      createFastestReleasePlan(),
+      createBalancedReleasePlan(),
+    ],
     generatedAt: "2026-07-15T10:47:00-07:00",
     selectedOptionId: "OPT-003",
   };

@@ -4,9 +4,17 @@
 
 Build a polished, reliable hackathon prototype that demonstrates one end-to-end workflow:
 
-> Parse an urgent perishable donation, compare destination plans, obtain human approval, create packing and delivery instructions, recover from a disruption, and calculate impact.
+> Identify an at-risk perishable lot already inside the food-bank warehouse, compare explainable outbound plans using current constraints and agency history, obtain human approval, create packing and delivery instructions from the warehouse, recover from a partner cancellation, and calculate traceable scenario impact.
 
 The MVP is not a complete food-bank operating system.
+
+---
+
+## Authoritative scope boundary
+
+The judged workflow begins **after receiving and staff condition review**. `LOT-104` is existing inventory at `WH-001`; ChoiceGrid does not schedule a donor pickup, book a driver, inspect the incoming donation, or coordinate upstream collection in the hero scenario.
+
+Donor intake, donor pickup, Vapi outreach, and driver scheduling are not hero features. Existing experimental routes may remain only as clearly isolated, non-navigation test surfaces until removed or repurposed.
 
 ---
 
@@ -14,49 +22,48 @@ The MVP is not a complete food-bank operating system.
 
 ### 1. Operations dashboard
 
-- Show one urgent donation alert
-- Show expiration-risk pounds
-- Show cold-capacity utilization
-- Show active missions and agency shortage indicators
-- Provide a short seeded overnight briefing
+- Show one urgent at-risk inventory alert
+- Show pounds approaching the seeded risk deadline
+- Show long-term cold-storage and short-dwell staging utilization
+- Show active outbound missions and agency shortage indicators
+- Provide a short seeded shift briefing
 
-### 2. Donation intake and review
+### 2. Inventory-lot review
 
-- Paste or enter a donor message
-- Extract structured fields
-- Show original text and field confidence
-- Identify missing information
-- Allow a deterministic fallback when no model is configured
+- Show warehouse, product, available pounds, received time, risk deadline, temperature requirement, and staff-entered condition status
+- Show missing or low-confidence operational facts without fabricating them
+- Preserve the lot's inventory and audit history
+- Allow plan generation only when required deterministic facts are present
 
 ### 3. Destination and plan generation
 
-- Load partner demand, capacity, receiving windows, and service-gap data
-- Calculate destination scores
-- Produce three complete plan options
-- Preserve quantity conservation
-- Explain tradeoffs and exclusions
+- Load current agency demand, capacity, receiving windows, service-gap data, and category-specific acceptance history
+- Show accepted, refused, and short-receipt sample counts behind the historical signal
+- Calculate destination scores deterministically
+- Produce three complete alternatives: **Hold for Later**, **Fastest Agency Release**, and **Balanced Release**
+- Preserve quantity conservation and explain tradeoffs, assumptions, and exclusions
 
 ### 4. Human approval
 
 - Approve a plan
 - Edit allocation quantities within constraints
 - Record the approver and reason
-- Reject invalid or over-capacity edits
+- Reject invalid, over-capacity, or history-only decisions that conflict with current hard constraints
 
-### 5. Map and mission
+### 5. Map and outbound mission
 
-- Show donor, warehouse, partner agencies, and vehicle
-- Display selected route and route-stop details
-- Display receiving windows and capacity indicators
-- Navigate between map, partner, and mission screens
+- Show warehouse, partner agencies, and assigned vehicle context
+- Begin the route at `WH-001`; no donor pickup appears
+- Display selected route, stop names, receiving windows, capacity, demand, and historical acceptance context
+- Navigate between map, partner, packing, and mission screens
 
 ### 6. Packing or cross-dock plan
 
 - Derive quantities from the approved plan
 - Show destination, quantity, lot, priority, and staging instructions
 - Indicate refrigerated handling
-- Persist `pending | complete` status for each batch without changing approved quantities
-- Create `PKG-104` on plan approval and `PKG-105` on recovery approval; keep the original read-only and split already-packed quantity from any pending recovery-only delta
+- Persist `pending | complete` without changing approved pounds
+- Create `PKG-104` on plan approval and `PKG-105` on recovery approval; keep the original read-only and split already-packed quantity from the recovery-only delta
 
 ### 7. Disruption and recovery
 
@@ -64,11 +71,11 @@ Implement one fully working disruption:
 
 - Partner cancellation
 
-The system must produce a replacement allocation, packing plan, mission, and audit record. Truck breakdown, cold-capacity loss, driver unavailability, and a shortened pickup deadline are disabled preview controls, not executable disruption fixtures.
+The system must produce a replacement allocation, packing plan, outbound mission, and audit record. Vehicle breakdown, cold-capacity loss, driver unavailability, and a shortened agency receiving window are disabled previews, not executable fixtures.
 
 ### 8. Impact and audit
 
-- Calculate operational and food-impact metrics
+- Calculate operational and food-impact metrics from the seeded lot
 - Label scenario estimates
 - Show approval, override, disruption, and replan events
 
@@ -79,11 +86,10 @@ The system must produce a replacement allocation, packing plan, mission, and aud
 Only after the MVP passes the end-to-end demo:
 
 - Additional disruption types
-- Donor-performance history
-- Refusal-pattern analysis
+- Improved agency acceptance and short-receipt analysis
 - Shift-start briefing generated from current state
-- Voice-note ingestion
-- Multilingual partner communications
+- De-identified historical lot replay
+- Multilingual draft partner communications
 - Limited pantry or program substitution preferences
 - Cross-food-bank transfer option
 - Camera-assisted condition flagging
@@ -97,81 +103,62 @@ Stretch work must not destabilize the primary scenario.
 
 The MVP will not implement:
 
+- New-donation intake or donor pickup coordination as the hero workflow
+- Donor, partner, or driver scheduling
+- Live Vapi calls or automated outreach in the judged flow
 - Production authentication or authorization
-- Real recipient accounts
-- Real medical or dietary records
-- Live food-bank integrations
-- Real GPS tracking
-- Production route optimization
+- Real recipient accounts, medical records, or household data
+- Live food-bank integrations, GPS tracking, or production route optimization
 - Automated food-safety approval
-- Full warehouse management
-- Purchase-order management
-- Billing, payments, or donor tax receipts
-- Enterprise CRM
-- Full volunteer scheduling
-- Public pantry reservations
-- Real-time public eligibility determination
-- Multi-tenant regional deployment
-- Regulatory compliance certification
-- Machine-learning forecasting trained on live food-bank history
+- Full warehouse management, purchasing, billing, CRM, or volunteer scheduling
+- Public pantry reservations or eligibility determination
+- Multi-tenant deployment or compliance certification
+- Machine-learning forecasting trained on live history
 
 ---
 
 ## Data scope
 
-The implemented hero dataset contains:
+The hero dataset contains:
 
 - 1 warehouse
 - 10 partner agencies
-- 1 donor
-- 3 vehicles
-- 4 drivers
-- 1 primary product lot
-- 1 active donation offer
-- 8 display-only historical donation summaries excluded from planning, KPIs, and impact calculations
+- 3 vehicles and 4 synthetic drivers as execution context, not a scheduling product
+- 1 primary existing inventory lot: `LOT-104`
+- Category-specific synthetic agency acceptance/refusal/short-receipt history with explicit sample sizes
+- 8 display-only historical inventory-lot summaries excluded from planning, KPIs, and impact
 - 1 executable partner-cancellation fixture plus disabled disruption previews
-- Synthetic Santa Clara County-area coordinates
-- Aggregate partner and community profiles
+- Synthetic Santa Clara County-area coordinates and aggregate community profiles
 
-No real household records are required.
+No real household, donor-contact, or recipient records are required.
 
 ---
 
 ## Technical constraints
 
 - The demo must run locally.
-- Core behavior must work without a live external route service.
-- Agent outputs must have deterministic fallback fixtures.
-- The production build must succeed.
-- Seed data must reset to a known state.
-- A presenter must be able to complete the primary flow without developer tools.
+- Core behavior must work without a live route, map, communications, or LLM service.
+- Deterministic fallback explanations must keep the demo usable.
+- The production build must succeed and seed state must reset reliably.
+- A presenter must complete the hero flow without developer tools.
 
 ---
 
 ## Definition of MVP complete
 
-- [ ] Dashboard shows the seeded urgent donation.
-- [ ] Donation details are extracted and reviewable.
-- [ ] Three complete alternatives are generated; infeasible alternatives are visibly blocked and at least one is approvable.
-- [ ] Plan metrics are calculated.
-- [ ] Human approval changes state.
-- [ ] Packing instructions derive from approved quantities.
-- [ ] Map and mission reflect the approved plan.
-- [ ] One disruption creates a valid replacement plan.
+- [ ] Dashboard shows the seeded at-risk inventory lot.
+- [ ] Inventory facts, risk deadline, and staff condition status are reviewable.
+- [ ] Agency acceptance history is visible with sample size and does not override hard constraints.
+- [ ] Three alternatives are generated; infeasible alternatives are blocked and at least one is approvable.
+- [ ] Plan metrics and quantity conservation are calculated.
+- [ ] Human approval creates packing instructions and an outbound mission beginning at `WH-001`.
+- [ ] One partner cancellation creates a valid human-approved replacement.
 - [ ] Impact metrics and audit history update.
-- [ ] Quantity conservation tests pass.
-- [ ] No real PII is present.
-- [ ] The full demo passes Playwright or a documented manual smoke test.
+- [ ] No donor pickup exists in the hero route and no real PII is present.
+- [ ] The full flow passes Playwright or a documented smoke test.
 
 ---
 
 ## Stop condition for new features
 
-Do not add a feature when any of these are true:
-
-- The primary demo is not reliable.
-- The feature requires a new external dependency that can fail live.
-- It introduces real sensitive data.
-- It cannot be explained in the pitch.
-- It duplicates an existing competitor without supporting the core workflow.
-- It changes the product story from urgent allocation and recovery.
+Do not add a feature when the primary demo is unreliable, it requires a live dependency, introduces sensitive data, cannot be explained in the pitch, duplicates an upstream donation marketplace, or shifts the story away from at-risk warehouse inventory allocation and recovery.

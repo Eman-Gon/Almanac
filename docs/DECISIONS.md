@@ -6,7 +6,7 @@ This file records important project decisions so coding agents do not repeatedly
 
 ## D-001 — Focus on one urgent perishable-donation workflow
 
-**Status:** Accepted
+**Status:** Superseded by D-017
 **Decision:** The MVP centers on a 1,200 lb strawberry donation, plan comparison, approval, route, disruption, and impact.
 **Reason:** A coherent end-to-end story is stronger and more buildable than a broad collection of shallow features.
 **Consequence:** Features unrelated to this workflow are stretch scope.
@@ -61,7 +61,7 @@ This file records important project decisions so coding agents do not repeatedly
 ## D-007 — Use a map as decision context, not decoration
 
 **Status:** Accepted
-**Decision:** The map shows donors, warehouse, partners, routes, receiving windows, capacity, and demand-related status.
+**Decision:** The hero map shows the warehouse origin, partners, routes, receiving windows, capacity, demand, and historical acceptance context. It contains no donor pickup.
 **Reason:** Distance alone is insufficient; the map should explain the plan.
 **Consequence:** A synchronized list is required for accessibility and fallback.
 
@@ -97,8 +97,8 @@ This file records important project decisions so coding agents do not repeatedly
 ## D-011 — Three plan options are the core interaction
 
 **Status:** Accepted
-**Decision:** Present Warehouse First, Direct Distribution, and Mixed Plan where feasible.
-**Reason:** Scenario comparison makes tradeoffs visible and demonstrates more than a chatbot answer.
+**Decision:** Present Hold for Later, Fastest Agency Release, and Balanced Release. Hold for Later remains visible but blocked; Balanced Release is the seeded recommendation.
+**Reason:** Scenario comparison makes the warehouse-release tradeoffs visible and demonstrates more than a chatbot answer.
 **Consequence:** Each option must be complete, calculated, and explainable.
 
 ---
@@ -134,9 +134,30 @@ This file records important project decisions so coding agents do not repeatedly
 
 **Status:** Accepted
 **Decision:** Model long-term refrigerated storage and short-dwell refrigerated staging as separate capacity pools. The hero warehouse has 420 lb of long-term storage headroom and 500 lb of refrigerated staging. The 60 lb supervisor inspection hold consumes storage; Community Kitchen's packing allocation consumes staging.
-**Reason:** Cross-dock and meal-kit staging do not represent the same operational constraint as holding product in long-term warehouse storage. Keeping the pools explicit makes Warehouse First correctly infeasible while the Mixed Plan and recovery remain deterministically feasible.
+**Reason:** Cross-dock and meal-kit staging do not represent the same operational constraint as holding product in long-term warehouse storage. Keeping the pools explicit makes Hold for Later correctly infeasible while Balanced Release and recovery remain deterministically feasible.
 **Alternatives considered:** Treat all refrigerated space as one pool; increase a single warehouse-capacity number; send the recovery's additional 60 lb to inspection hold.
 **Consequence:** Capacity services, schemas, fixtures, plan metrics, UI labels, and tests must validate the pools separately. The primary plan stages 400 lb; recovery stages 460 lb within 500 lb of staging and Community Kitchen's 500 lb capacity and confirmed 460 lb demand.
+
+---
+
+## D-016 — Separate operator validation from an operational pilot
+
+**Status:** Accepted
+**Decision:** The seeded application may be used for facilitated operator discovery and usability testing. It must not be described as capable of historical case replay or a live shadow pilot until a configurable de-identified case path, partner-approved data boundary, named operational owner, success measures, and stop conditions exist.
+**Reason:** The current plan-generation and browser-state workflow are intentionally tied to the synthetic Strawberry Rescue scenario. Better documentation or a cosmetic pilot-mode label does not create operational readiness.
+**Alternatives considered:** Call the current synthetic walkthrough a pilot; add a cosmetic pilot toggle; introduce real operational data directly into demo state.
+**Consequence:** Validation claims must follow `PILOT_VALIDATION_PLAN.md` and `research/validation/EVIDENCE_REGISTER.md`. Current staff procedures remain authoritative in any future shadow evaluation, and no interview, pilot interest, commitment, or result may be fabricated.
+
+---
+
+## D-017 — Start with existing at-risk warehouse inventory
+
+**Status:** Accepted
+**Decision:** The hero begins with `LOT-104`, 1,200 lb of strawberries already received at `WH-001`. ChoiceGrid combines current agency constraints with category-specific acceptance/refusal/short-receipt history, compares outbound plans, requires human approval, creates packing and warehouse-origin delivery instructions, and replans after a partner cancellation. Donor intake, donor pickup, Vapi outreach, and driver scheduling are not hero features.
+**Reason:** Authoritative hackathon-operator product direction says upstream donor collection introduces too many scheduling, quality-review, and handling steps; the higher-value problem is deciding where existing over-inventory should go before it spoils.
+**Evidence boundary:** This is authoritative challenge/product direction, not consent to publish a person's identity or raw transcript, not proof of broad user demand, and not a pilot commitment.
+**Alternatives considered:** Preserve the donor-first story; add existing inventory as a secondary tab; broaden into a logistics scheduler.
+**Consequence:** The primary route is `/inventory/LOT-104`; missions start at `WH-001` and contain no donor pickup. Agency history must show sample size and cannot override current hard constraints. D-001's donor-first framing is superseded; the strawberry quantities, human approval, deterministic calculations, cancellation recovery, and synthetic evidence labels remain.
 
 ---
 

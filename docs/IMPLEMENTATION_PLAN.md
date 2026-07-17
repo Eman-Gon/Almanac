@@ -8,7 +8,7 @@ Recommended order:
 
 ```text
 Data and contracts
-→ donation review
+→ at-risk inventory review
 → plan calculation
 → human approval
 → map and mission
@@ -40,7 +40,7 @@ Owns:
 
 - Application shell
 - Dashboard
-- Donation review
+- Inventory-lot review
 - Decision room
 - Packing screen
 - Mission and impact screens
@@ -60,7 +60,7 @@ Owns:
 
 Owns:
 
-- Intake structured extraction
+- Inventory-risk explanation
 - Explanation generation
 - Fallback fixtures
 - Agent run logging
@@ -105,7 +105,7 @@ Agents must coordinate through approved contracts rather than inventing separate
 ### Tasks
 
 - Implement schemas from `DATA_MODEL.md`
-- Create warehouse, donor, partner, vehicle, driver, and donation fixtures
+- Create warehouse, inventory-lot, partner, agency-history, vehicle, and driver fixtures
 - Implement deterministic seed and domain services
 - Implement reset function
 - Implement quantity-conservation helpers
@@ -113,27 +113,27 @@ Agents must coordinate through approved contracts rather than inventing separate
 ### Exit criteria
 
 - Seed data validates
-- `DON-104` loads
+- `LOT-104` loads at `WH-001`
 - Reset is idempotent
 - Domain unit tests pass
 
 ---
 
-## Milestone 2 — Dashboard and donation workflow
+## Milestone 2 — Dashboard and inventory workflow
 
 ### Tasks
 
 - Build application shell
 - Build dashboard KPI and alert cards
-- Build donation intake
-- Build donation details and confidence display
-- Implement Intake Agent and fallback
-- Implement donation APIs
+- Build at-risk inventory list and lot details
+- Display risk deadline, available pounds, location, temperature, condition status, and missing facts
+- Implement Inventory Risk Review Agent and deterministic fallback explanation
+- Implement inventory APIs
 
 ### Exit criteria
 
 - User can open the seeded alert
-- Original message and structured fields render
+- Existing lot and warehouse risk facts render
 - Missing data blocks planning
 - Fallback works without API key
 
@@ -250,7 +250,7 @@ Agents must coordinate through approved contracts rather than inventing separate
 
 ### Day 1 afternoon
 
-- Donation details, planning engine, decision room
+- Inventory details, planning engine, decision room
 
 ### Day 1 evening
 
@@ -273,7 +273,7 @@ Do not wait until the end to integrate branches.
 ```text
 Schemas and seed data
   ├── Dashboard
-  ├── Donation details
+  ├── Inventory lot details
   ├── Planning engine
   │     ├── Decision room
   │     ├── Packing plan

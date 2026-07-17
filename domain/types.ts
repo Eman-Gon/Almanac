@@ -1,4 +1,5 @@
 export type {
+  AgencyAcceptanceHistory,
   AgentRun,
   Allocation,
   AuditEvent,
@@ -14,7 +15,10 @@ export type {
   PlanMetrics,
   PlanOption,
   PlanSet,
+  ProductCategory,
   ProductLot,
+  ProductLotConditionStatus,
+  ProductLotSourceType,
   RiskLevel,
   TemperatureClass,
   Vehicle,

@@ -47,13 +47,13 @@ export function ApprovalDialog({
       }}>
         <div className="dialog-header">
           <div className="dialog-icon"><ShieldCheck size={22} aria-hidden="true" /></div>
-          <div><h2>Review & approve</h2><p>This creates packing instructions and an assigned mission.</p></div>
+          <div><h2>Review & approve</h2><p>This creates warehouse packing instructions and an assigned outbound mission.</p></div>
           <button className="icon-button" type="button" onClick={close} aria-label="Close approval dialog"><X size={18} /></button>
         </div>
         <div className="dialog-body">
           <div className="approval-summary">
             <span>Selected plan</span><strong>{plan.name}</strong>
-            <span>Quantity accounted for</span><strong>1,200 lb</strong>
+            <span>Available inventory accounted for</span><strong>1,200 lb</strong>
             <span>Approver</span><strong>demo_user</strong>
             <span>Operational status</span><strong className="summary-ok"><CheckCircle2 size={14} aria-hidden="true" />All hard constraints pass</strong>
           </div>
@@ -68,7 +68,7 @@ export function ApprovalDialog({
         </div>
         <div className="dialog-actions">
           <button className="button button-secondary" type="button" onClick={close}>Cancel</button>
-          <button className="button button-primary" type="submit" disabled={!confirmed}>Approve & create mission</button>
+          <button className="button button-primary" type="submit" disabled={!confirmed}>Approve & create outbound mission</button>
         </div>
       </form>
     </dialog>

@@ -2,7 +2,7 @@
 
 ## Conventions
 
-- IDs use stable prefixed strings such as `DON-104` or `PAR-012`.
+- IDs use stable prefixed strings such as `LOT-104` or `PAR-012`.
 - Times use ISO 8601.
 - Food weight uses pounds in the MVP.
 - Capacity fields include explicit units.
@@ -23,7 +23,9 @@ type DataSource = "seed" | "user" | "agent" | "calculated";
 
 ---
 
-## Donor
+## Donor and donation offer (non-hero compatibility entities)
+
+These entities may support upstream integrations later, but they are not prerequisites for the warehouse-inventory-first hero. No donor or pickup data appears in the executable strawberry route.
 
 ```ts
 interface Donor {
@@ -97,16 +99,19 @@ interface ExtractedField {
 interface ProductLot {
   id: EntityId;
   donationId?: EntityId;
+  sourceType: "existing_inventory" | "donation" | "purchase" | "transfer" | "other";
   productName: string;
   category: ProductCategory;
   quantityLb: number;
+  availableQuantityLb: number;
   temperatureClass: TemperatureClass;
-  receivedAt?: ISODateTime;
-  riskDeadline?: ISODateTime;
+  receivedAt: ISODateTime;
+  riskDeadline: ISODateTime;
   riskLevel: RiskLevel;
+  conditionStatus: "staff_cleared" | "needs_confirmation" | "inspection_hold";
   usabilityTags: UsabilityTag[];
   currentLocationId: EntityId;
-  status: "offered" | "inbound" | "receiving" | "available" | "allocated" | "inspection_hold" | "distributed" | "disposed";
+  status: "available" | "partially_allocated" | "allocated" | "inspection_hold" | "distributed" | "disposed";
 }
 
 type ProductCategory =
@@ -192,11 +197,24 @@ interface PartnerAgency {
   demandSignals: DemandSignal[];
   acceptedCategories: ProductCategory[];
   preferredTags: UsabilityTag[];
+  acceptanceHistory: AgencyAcceptanceHistory[];
   refusalRisk: number;
   recentServiceGap: number;
   accessBurden: number;
   status: "available" | "limited" | "unavailable" | "canceled";
   notes: OperationalNote[];
+}
+
+interface AgencyAcceptanceHistory {
+  category: ProductCategory;
+  offeredCount: number;
+  acceptedCount: number;
+  refusedCount: number;
+  shortReceiptCount: number;
+  acceptedQuantityLb: number;
+  acceptanceRatePct: number;
+  sampleSize: number;
+  lastOutcomeAt?: ISODateTime;
 }
 
 interface DemandSignal {
@@ -242,7 +260,7 @@ type PlanStatus = "generated" | "selected" | "approved" | "rejected" | "supersed
 
 interface PlanSet {
   id: EntityId;
-  donationId: EntityId;
+  inventoryLotId: EntityId;
   options: PlanOption[];
   generatedAt: ISODateTime;
   selectedOptionId?: EntityId;
@@ -253,11 +271,11 @@ interface PlanOption {
   id: EntityId;
   planSetId: EntityId;
   name: string;
-  strategy: "warehouse_first" | "direct_distribution" | "mixed" | "custom";
+  strategy: "hold_for_later" | "fastest_release" | "balanced_release" | "custom";
   status: PlanStatus;
   allocations: Allocation[];
   inspectionHoldLb: number;
-  declinedLb: number;
+  unallocatedLb: number;
   metrics: PlanMetrics;
   assumptions: string[];
   risks: PlanRisk[];
@@ -283,15 +301,16 @@ interface DestinationScore {
   availableCapacity: number;
   recentServiceGap: number;
   equityPriority: number;
+  historicalAcceptance: number;
   travelPenalty: number;
   spoilagePenalty: number;
   refusalRiskPenalty: number;
 }
 
 interface PlanMetrics {
-  quantityDistributedInTimeLb: number;
+  quantityPlannedOutboundInTimeLb: number;
   expectedSpoilageLb: number;
-  estimatedHouseholdsSupported: number;
+  modeledHouseholdEquivalents: number;
   totalMiles: number;
   staffMinutes: number;
   coldCapacityUtilizationPct: number;
@@ -302,7 +321,9 @@ interface PlanMetrics {
 }
 ```
 
-Plan edits are quantity-only overlays on a canonical `PlanOption`. The system accepts changed `Allocation.quantityLb` values only when plan and allocation identities still match, then reconstructs all authoritative fields from the canonical option. Distributed pounds, households, long-term storage use, and refrigerated-staging use are quantity-derived. Route miles, expected spoilage, staff minutes, need-match, equity, and refusal risk remain seeded strategy-level scenario estimates until quantity-sensitive formulas exist.
+Plan edits are quantity-only overlays on a canonical `PlanOption`. The system accepts changed `Allocation.quantityLb` values only when plan and allocation identities still match, then reconstructs all authoritative fields from the canonical option. Planned outbound pounds, modeled household-equivalents, long-term storage use, and refrigerated-staging use are quantity-derived. Route miles, expected spoilage, staff minutes, need-match, equity, and refusal risk remain seeded strategy-level scenario estimates until quantity-sensitive formulas exist.
+
+The three hero labels map to the strategies as follows: **Hold for Later** → `hold_for_later`, **Fastest Agency Release** → `fastest_release`, and **Balanced Release** → `balanced_release`. Hold for Later is blocked because all 1,200 lb cannot fit within 420 lb of long-term refrigerated headroom; as a non-executable hold it has 0 outbound miles. The seeded executable route totals remain 45.7 miles for Fastest Agency Release and 24.8 miles for Balanced Release.
 
 ---
 
@@ -358,7 +379,7 @@ type MissionStatus =
 
 interface Mission {
   id: EntityId;
-  donationId: EntityId;
+  inventoryLotId: EntityId;
   approvedPlanOptionId: EntityId;
   vehicleId: EntityId;
   driverId: EntityId;
@@ -373,7 +394,7 @@ interface RouteStop {
   id: EntityId;
   sequence: number;
   locationId: EntityId;
-  locationType: "donor" | "warehouse" | "partner";
+  locationType: "warehouse" | "partner";
   arrivalWindow: TimeWindow;
   quantityPickupLb: number;
   quantityDropoffLb: number;
@@ -390,7 +411,7 @@ interface RouteLeg {
 }
 ```
 
-The seeded strategy templates sum to 18.4 miles for Warehouse First, 45.7 miles for Direct Distribution, and 24.8 miles for Mixed Plan. A mission may complete only its first pending stop; canceled stops are skipped and out-of-order completion is rejected.
+The approved hero mission begins at `WH-001` with a warehouse load/departure stop and then visits partner drop-offs; it has no donor pickup. The seeded executable route templates sum to 45.7 miles for Fastest Agency Release and 24.8 miles for Balanced Release. A mission may complete only its first pending stop; canceled stops are skipped and out-of-order completion is rejected.
 
 ---
 
@@ -400,7 +421,7 @@ The seeded strategy templates sum to 18.4 miles for Warehouse First, 45.7 miles 
 interface Disruption {
   id: EntityId;
   missionId: EntityId;
-  type: "partner_canceled" | "vehicle_breakdown" | "capacity_loss" | "driver_unavailable" | "quantity_changed" | "pickup_window_changed";
+  type: "partner_canceled" | "vehicle_breakdown" | "capacity_loss" | "driver_unavailable" | "quantity_changed" | "receiving_window_changed";
   occurredAt: ISODateTime;
   affectedEntityId: EntityId;
   details: Record<string, unknown>;
@@ -463,11 +484,11 @@ interface OperationalNote {
 ## Invariants
 
 1. Quantities must be nonnegative.
-2. Approved allocation totals cannot exceed accepted quantity.
+2. Approved outbound allocation totals cannot exceed `availableQuantityLb`.
 3. Destination allocations cannot exceed compatible capacity without an explicit override.
 4. Vehicle load cannot exceed capacity.
 5. Temperature capability must match product requirement.
-6. A plan must identify all offered quantity as accepted, declined, redirected, held, or unresolved.
+6. A plan must identify all available inventory as outbound allocated, retained, redirected, held for inspection, modeled loss, or explicitly unallocated.
 7. Only approved plans create executable missions.
 8. Consequential status changes create audit events.
 9. Replanned missions supersede rather than silently overwrite the original mission.
@@ -477,15 +498,19 @@ interface OperationalNote {
 13. Recovery packing uses non-colliding batch IDs and separates already-packed quantity from a pending recovery-only delta when a completed destination/staging batch grows.
 14. Canonical plan and allocation identities cannot be changed through quantity editing; submitted metrics are not authoritative.
 15. Mission stops complete in route sequence, and a superseded mission or historical packing plan is read-only.
+16. The hero mission originates at `WH-001` and contains no donor pickup stop.
+17. Historical acceptance is always shown with its sample size and cannot override current capacity, temperature, availability, or receiving-window constraints.
+18. `availableQuantityLb` cannot exceed the lot's physical `quantityLb`.
 
 ---
 
 ## Minimum seed dataset
 
-- `DON-104`: 1,200 lb strawberries
-- `DON-096` through `DON-103`: display-only synthetic donation-history summaries with terminal outcomes; these are not executable offers and do not enter calculations
+- `LOT-104`: 1,200 lb existing strawberries at `WH-001`, already received and staff-cleared except for the seeded 60 lb inspection hold
+- `LOT-096` through `LOT-103`: display-only synthetic inventory-history summaries with terminal outcomes; these are not executable lots and do not enter calculations
 - `WH-001`: primary warehouse near refrigerated capacity
 - `PAR-001` through `PAR-010`: partner agencies with varied windows and capacity
+- Synthetic category-specific acceptance/refusal/short-receipt summaries for every candidate agency, with explicit sample sizes
 - `VEH-001` through `VEH-003`: vehicle fleet
 - `DRV-001` through `DRV-004`: synthetic drivers
 - Three plan options

@@ -3,21 +3,21 @@
 ## Primary users
 
 ### Operations manager
-Reviews urgent issues, compares plans, approves allocations, and monitors impact.
+Reviews at-risk inventory, compares plans, approves allocations, and monitors recovery and impact.
 
-### Donation coordinator
-Receives and structures donation offers, confirms missing information, and communicates with donors.
+### Inventory coordinator
+Confirms on-hand quantity, location, risk deadline, temperature class, and staff condition status.
 
 ### Warehouse lead
-Reviews cold capacity, packing, cross-dock, staging, and handling instructions.
+Reviews storage, staging, packing, and handling instructions.
 
 ### Dispatcher
-Reviews vehicles, routes, receiving windows, and disruption recovery.
+Reviews the approved warehouse-origin route and handles disruptions; ChoiceGrid does not schedule drivers in the MVP.
 
 ### Partner-agency coordinator
-Maintains agency capacity, demand, receiving hours, and refusal notes.
+Maintains current capacity, demand, receiving hours, and category-specific acceptance/refusal/short-receipt history.
 
-The MVP may use one signed-in `demo_user` representing these roles while preserving role labels in the interface.
+The MVP may use one signed-in `demo_user` while preserving role labels.
 
 ---
 
@@ -25,139 +25,98 @@ The MVP may use one signed-in `demo_user` representing these roles while preserv
 
 ```text
 Dashboard
-  ├── Donation Details
-  │     └── Decision Room
-  │           ├── Partner Profile
-  │           ├── Demand Map
-  │           └── Approve Plan
-  │                 ├── Packing Plan
-  │                 └── Mission Map
-  │                       ├── Disruption Simulator
-  │                       └── Impact and Audit
-  └── Existing Mission
-        └── Impact and Audit
+  └── At-Risk Inventory
+        └── Inventory Lot Details
+              └── Decision Room
+                    ├── Partner Profile
+                    ├── Demand and Capacity Map
+                    └── Approve Plan
+                          ├── Packing Plan
+                          └── Warehouse-Origin Mission
+                                ├── Partner Cancellation
+                                └── Impact and Audit
 ```
 
 ---
 
-## Flow 1 — Primary urgent-donation workflow
+## Flow 1 — Primary at-risk-inventory workflow
 
 ### Starting state
 
-- The dashboard contains alert `DON-104`.
-- The donor offers 1,200 lb of strawberries.
-- Pickup deadline is two hours away.
-- The warehouse is near refrigerated capacity.
+- Dashboard alert references `LOT-104`.
+- `LOT-104` contains 1,200 lb of strawberries already received at `WH-001`.
+- The lot is refrigerated, staff-cleared for planning, and approaching a seeded risk deadline.
+- Long-term refrigerated headroom is 420 lb; short-dwell staging is 500 lb.
+- Candidate agencies include current constraints and category-specific synthetic acceptance history.
 
 ### Steps
 
-1. User opens the dashboard.
-2. User selects the urgent-donation alert.
-3. Donation details show original message and extracted fields.
-4. User confirms or corrects missing fields.
-5. User selects **Generate plans**.
-6. Capacity, need, planning, and routing services run.
-7. The decision room displays three complete alternatives; infeasible alternatives are visibly blocked.
-8. User inspects metrics, assumptions, exclusions, and map.
-9. User approves one plan or edits quantities.
-10. System validates quantities and capacities.
-11. System creates approved packing plan `PKG-104` and assigned mission `MSN-104`.
-12. User opens the mission map.
-13. User reviews route stops and receiving windows.
-14. User opens impact after the mission or simulated completion.
+1. User opens the dashboard and selects the at-risk inventory alert.
+2. Inventory details show available pounds, received time, risk deadline, temperature, warehouse location, condition status, and audit history.
+3. User confirms any missing staff-entered fact and selects **Generate outbound plans**.
+4. Capacity, need, acceptance-history, planning, and routing services run deterministically.
+5. The Decision Room displays Hold for Later, Fastest Agency Release, and Balanced Release; infeasible alternatives are visibly blocked.
+6. User inspects metrics, assumptions, exclusions, current agency facts, historical outcomes, sample sizes, and the warehouse-origin map.
+7. User approves Balanced Release or edits quantities.
+8. System validates quantity, capacity, temperature, agency availability, receiving windows, and route constraints.
+9. System creates approved packing plan `PKG-104` and assigned mission `MSN-104`.
+10. User reviews the route from `WH-001` to partner drop-offs and later opens calculated impact.
 
 ### Success state
 
-- Donation status is `approved` or `in_execution`.
-- Approved allocations conserve quantity.
-- Mission `MSN-104` and packing plan `PKG-104` reference the same allocations.
+- `LOT-104` is `allocated` or `partially_allocated`.
+- Approved allocations conserve available inventory.
+- `MSN-104` and `PKG-104` reference `LOT-104` and the same allocations.
+- There is no donor marker or donor pickup stop.
 - An approval audit event exists.
 
 ---
 
-## Flow 2 — Missing or uncertain donation information
+## Flow 2 — Missing or uncertain inventory information
 
-1. User pastes donor message.
-2. Intake Agent extracts known fields.
-3. A required field such as exact pickup address is missing.
-4. Screen shows `needs_confirmation` instead of inventing a value.
-5. User enters the missing value or chooses seeded fallback data.
-6. Plan generation becomes available.
-
-### Required behavior
-
-- Do not silently fill required operational fields.
-- Preserve confidence per extracted field.
-- Keep original text visible.
+1. User opens `LOT-104` or another supported lot.
+2. A required fact such as available quantity, risk deadline, temperature class, or staff condition status is missing.
+3. Screen shows `needs_confirmation`; it does not infer a safety or shelf-life fact.
+4. User enters or confirms the fact with a reason.
+5. Plan generation becomes available and the confirmation is audited.
 
 ---
 
 ## Flow 3 — Compare plan options
 
-Each option must be complete enough to execute.
+- **Hold for Later:** attempts to retain the full lot, is blocked by 420 lb of long-term cold headroom, and creates no outbound mission.
+- **Fastest Agency Release:** emphasizes same-day agency release, uses little long-term storage, and has a seeded 45.7-mile warehouse-origin route.
+- **Balanced Release:** splits the lot across agency deliveries, short-dwell program staging, and a 60 lb inspection hold; its seeded route is 24.8 miles.
 
-### Example options
-
-- **Warehouse First:** receive all product at the warehouse; seeded route template 18.4 miles.
-- **Direct Distribution:** cross-dock or pick up and deliver directly to agencies; seeded route template 45.7 miles.
-- **Mixed Plan:** split product among direct delivery, warehouse packing, and inspection hold; seeded route template 24.8 miles.
-
-### User actions
-
-- Compare pounds delivered in time
-- Compare miles and labor
-- Compare cold-capacity use
-- Compare need match and equity indicators
-- Inspect excluded agencies
-- Open partner profile
-- Adjust score weights in an advanced drawer if implemented
-- Approve or edit an option
+Users compare planned outbound pounds, miles, labor, cold-storage and staging use, need match, equity indicators, receiving windows, historical acceptance, refusal/short-receipt evidence, and exclusions. Sparse history is labeled low-confidence; history never overrides a current hard constraint.
 
 ---
 
 ## Flow 4 — Edit allocation before approval
 
-1. User changes a destination quantity; plan and allocation identities cannot be edited.
-2. System rebuilds the option from its canonical rows, recalculates distributed pounds, households, storage and staging utilization, and validates conservation, partner, vehicle, temperature, and windows.
-3. Invalid values show inline errors.
-4. System suggests where unassigned quantity can move.
-5. User enters an edit reason.
-6. User approves the edited plan.
-7. Audit event stores original and final quantities.
+1. User changes a destination quantity; identities cannot change.
+2. System rebuilds the option from canonical rows and recalculates planned outbound pounds, modeled household-equivalents, storage, and staging.
+3. System validates conservation, partner capacity, vehicle capacity, temperature, and windows.
+4. Invalid values show inline errors; user enters an edit reason.
+5. Human approves the edited option, and the audit event stores original and final quantities.
 
-Expected spoilage, staff minutes, need-match, equity, refusal risk, and route miles remain labeled seeded strategy estimates; they are not presented as dynamically recalculated from quantity edits.
-
-### Invalid examples
-
-- Negative quantity
-- Destination exceeds cold capacity
-- Vehicle exceeds payload
-- Delivery after risk deadline without warning and explicit override
-- Total assigned exceeds accepted quantity
+Expected spoilage, staff minutes, need-match, equity, refusal risk, and route miles remain labeled seeded strategy estimates until quantity-sensitive formulas exist.
 
 ---
 
 ## Flow 5 — Packing-batch completion
 
-1. User opens `PKG-104` after plan approval or `PKG-105` after recovery approval.
-2. User starts packing.
-3. Every primary batch begins `pending`; a recovery plan may begin `in_progress` when it contains preserved completed work.
-4. User marks individual batches `complete` or reopens them.
-5. Batch and plan progress persist across navigation in the same browser.
-
-### Required behavior
-
-- Completion controls never change approved quantities.
-- The packing plan becomes `complete` only when all batches are complete.
-- A supported packing route opened before its prerequisite approval shows an intentional not-created state rather than synthetic executable instructions.
-- `PKG-105` uses `BAT-101`-series IDs. If a completed destination/staging batch grows during recovery, it splits into an already-packed `-C` batch and a pending recovery-only `-R` delta.
-- After recovery, `PKG-104` remains visible as read-only history and only active `PKG-105` can change.
+1. User opens `PKG-104` after approval or `PKG-105` after recovery approval.
+2. User starts packing, completes or reopens individual batches, and sees progress persist.
+3. Completion changes status only, never approved quantity.
+4. `PKG-105` preserves matching completed work and separates any added recovery amount into a pending `-R` delta.
+5. After recovery, `PKG-104` is read-only and `PKG-105` is active.
 
 ## Flow 5A — Mission-stop completion
 
 1. User opens the active mission.
-2. Only the first pending route stop is enabled for completion.
-3. Pickup and delivery event types must match the stop's action.
+2. Only the first pending stop is enabled.
+3. `warehouse_load_complete` targets the `WH-001` origin; `delivery_complete` targets a partner drop-off.
 4. Completing the final non-canceled stop marks the mission `delivered`.
 
 Out-of-order completion is rejected and creates no audit event.
@@ -166,61 +125,43 @@ Out-of-order completion is rejected and creates no audit event.
 
 ## Flow 6 — Partner cancellation
 
-1. User opens an approved mission.
-2. User triggers the named **Eastside Community Pantry canceled** fixture.
-3. System marks Partner B and its affected route stop `canceled`.
-4. Recovery Agent identifies affected quantity and windows.
-5. Deterministic planner sends 260 lb to Northside Family Resource Center and increases Community Kitchen staging from 400 lb to 460 lb.
-6. User reviews changes.
-7. User approves the replacement.
-8. System creates replacement packing plan `PKG-105` with non-colliding batch IDs. Already-packed quantity is retained; any added recovery-only quantity is a separate pending batch.
-9. The original mission becomes `superseded`, replacement mission `MSN-105` becomes assigned, and the route, metrics, and audit history update.
+1. User triggers the named **Eastside Community Pantry canceled** fixture.
+2. System marks the partner and affected route stop `canceled` and identifies 320 affected lb.
+3. Completed and unaffected work remains unchanged.
+4. Deterministic recovery sends 260 lb to Northside Family Resource Center and increases Community Kitchen staging from 400 lb to 460 lb.
+5. User reviews and approves the replacement.
+6. System creates `PKG-105` and `MSN-105`, preserves `PKG-104` read-only, and marks `MSN-104` `superseded`.
 
 ### Success state
 
-- No quantity remains assigned to the canceled partner.
-- Replacement destinations stay within capacity.
-- Route and impact metrics are recalculated.
-- `PKG-104` remains read-only history, `PKG-105` is active, and recovery packing quantities match the approved replacement.
-- The Missions navigation and `/missions` redirect resolve to `MSN-105` after recovery.
-- Audit history links the superseded and replacement missions.
+- No allocation remains at the canceled partner.
+- Replacement destinations stay within current capacity, history remains explanatory, and quantity is conserved.
+- Audit history links the original and replacement mission.
 
 ---
 
 ## Flow 7 — Additional disruption previews
 
-Truck breakdown, cold-capacity loss, driver unavailability, and a shortened pickup deadline appear as disabled preview controls. They are not executable fixtures and must not be presented as implemented recovery paths.
+Vehicle breakdown, cold-capacity loss, driver unavailability, and a shortened agency receiving window are disabled previews. Driver scheduling, donor scheduling, and donor pickup are not executable workflows.
 
 ---
 
-## Flow 8 — Low-confidence or failed AI call
+## Flow 8 — Low-confidence or failed AI explanation
 
-1. AI request fails or output schema is invalid.
-2. System shows a non-blocking status.
-3. Deterministic seeded extraction or explanation is loaded.
-4. User can continue the demo.
-5. Agent run is logged as `fallback_used`.
+1. An optional explanation request fails or violates its schema.
+2. System shows a non-blocking status and loads a deterministic explanation of validated lot facts.
+3. User continues; the run is logged as `fallback_used`.
 
-The application must never become unusable because an external model is unavailable.
+No external model is required for planning.
 
 ---
 
 ## Flow 9 — Partner profile inspection
 
-From a map marker or plan row:
-
-1. User opens partner profile.
-2. Screen shows receiving window, storage, demand, product preferences, recent allocations, refusal notes, and service-gap indicator.
-3. User returns to the decision room without losing plan state.
+From a marker or plan row, user opens a partner profile showing current windows, capacity, demand, product preferences, recent allocations, and category-specific accepted/refused/short-receipt counts with sample size. User returns without losing plan state.
 
 ---
 
 ## Flow 10 — Demo reset
 
-1. Presenter opens a hidden or clearly labeled demo-control menu.
-2. Presenter selects **Reset scenario**.
-3. Application restores original seed state.
-4. All temporary approvals, disruptions, and audit events are cleared.
-5. Dashboard opens at the starting alert.
-
-Reset must be idempotent and available only in demo mode. The in-app action clears the browser's versioned `localStorage`; `npm run demo:reset` can verify immutable fixture readiness but cannot clear browser state.
+The presenter uses **Reset scenario** to restore `LOT-104`, agency history, capacities, partner statuses, and the unapproved baseline. The in-app action clears versioned browser state; `npm run demo:reset` verifies immutable fixtures but cannot clear browser storage.

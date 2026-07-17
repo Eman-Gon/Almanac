@@ -110,7 +110,7 @@ The interface must record:
 
 - Use structured output schemas.
 - Reject invalid output.
-- Preserve the original donor message alongside extracted fields.
+- Preserve source provenance for any legacy upstream intake, but do not make donor messages or pickup data part of the hero lot.
 - Show confidence by field when practical.
 - Mark missing information explicitly.
 - Use deterministic seeded fallback output if the model is unavailable.

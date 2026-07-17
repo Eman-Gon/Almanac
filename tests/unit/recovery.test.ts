@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createMission } from "@/domain/execution/create-execution";
-import { donation, partners, productLot, vehicles, warehouse } from "@/data/seed/scenario";
+import { partners, productLot, vehicles, warehouse } from "@/data/seed/scenario";
 import { generatePlanSet } from "@/domain/planning/generate-plans";
 import { accountedQuantityLb, validatePlanOption } from "@/domain/planning/quantity";
 import { createRecoveryMission, createRecoveryOption } from "@/domain/recovery/create-recovery";
@@ -10,7 +10,7 @@ describe("partner-cancellation recovery", () => {
   const original = options[2];
   const recovery = createRecoveryOption(original);
   const context = {
-    offeredQuantityLb: donation.quantityLb,
+    availableInventoryQuantityLb: productLot.availableQuantityLb,
     productLot,
     warehouse,
     partners,
@@ -60,7 +60,7 @@ describe("partner-cancellation recovery", () => {
     const boundaryRecovery = createRecoveryOption(boundaryPlan);
 
     expect(boundaryRecovery.inspectionHoldLb).toBe(80);
-    expect(boundaryRecovery.metrics.quantityDistributedInTimeLb).toBe(1_120);
+    expect(boundaryRecovery.metrics.quantityPlannedOutboundInTimeLb).toBe(1_120);
     expect(accountedQuantityLb(boundaryRecovery)).toBe(1_200);
     expect(validatePlanOption(boundaryRecovery, context).approvable).toBe(true);
   });
@@ -71,6 +71,11 @@ describe("partner-cancellation recovery", () => {
     expect(originalMission.id).toBe("MSN-104");
     expect(originalMission.stops.some((stop) => stop.locationId === "PAR-002")).toBe(true);
     expect(replacement.id).toBe("MSN-105");
+    expect(replacement.stops[0]).toMatchObject({
+      locationId: "WH-001",
+      locationType: "warehouse",
+    });
+    expect(replacement.stops).toHaveLength(4);
     expect(replacement.stops.some((stop) => stop.locationId === "PAR-002")).toBe(false);
     expect(replacement.stops.some((stop) => stop.locationId === "PAR-004")).toBe(true);
   });

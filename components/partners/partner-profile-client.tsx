@@ -7,6 +7,20 @@ import { Panel } from "@/components/shared/panel";
 import type { PartnerAgency } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
 
+function formatTime(value: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/Los_Angeles",
+  }).format(new Date(value));
+}
+
+function formatReceivingWindow(partner: PartnerAgency): string {
+  const window = partner.receivingWindows[0];
+  if (!window) return "Needs confirmation";
+  return `${formatTime(window.start)} – ${formatTime(window.end)}`;
+}
+
 export function PartnerProfileClient({ partner }: { partner: PartnerAgency }) {
   const { state } = useDemoState();
   const status = state.partnerStatusOverrides[partner.id] ?? partner.status;
@@ -32,7 +46,7 @@ export function PartnerProfileClient({ partner }: { partner: PartnerAgency }) {
           <div><span>Status</span><strong className={status === "available" ? "inline-green" : ""}><StatusIcon size={15} aria-hidden="true" />{status}</strong></div>
           <div><span>Location</span><strong><MapPinned size={15} aria-hidden="true" />{partner.location.city}, CA</strong></div>
           <div><span>Refrigerated capacity</span><strong><Snowflake size={15} aria-hidden="true" />{partner.refrigeratedCapacityAvailableLb} lb</strong></div>
-          <div><span>Receiving window</span><strong>9:30 AM – 1:00 PM</strong></div>
+          <div><span>Receiving window</span><strong>{formatReceivingWindow(partner)}</strong></div>
         </section>
         <div className="partner-grid">
           <Panel title="Current demand"><div className="profile-stat"><strong>{partner.demandSignals[0].desiredQuantityLb} lb</strong><span>Confirmed produce demand · {partner.demandSignals[0].urgency} urgency</span></div><div className="profile-list"><p><strong>Accepted categories</strong>{partner.acceptedCategories.join(", ")}</p><p><strong>Preferred usability</strong>{partner.preferredTags.join(", ").replaceAll("_", " ")}</p></div></Panel>

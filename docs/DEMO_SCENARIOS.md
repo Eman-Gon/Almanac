@@ -2,103 +2,82 @@
 
 ## Demo objective
 
-Show a coherent, understandable story in approximately 90 seconds:
+Show one coherent 90-second story:
 
-> An urgent perishable donation arrives, ChoiceGrid compares several plans, a human approves one, the route appears on a map, a disruption occurs, and the system creates an updated plan with calculated impact.
+> A perishable lot is already sitting in the food-bank warehouse. ChoiceGrid combines current constraints with agency acceptance history, compares outbound plans, requires human approval, creates warehouse-origin instructions, and recovers when an agency cancels.
 
 ---
 
 ## Primary scenario: Strawberry Rescue
 
-### Scenario ID
-
-```text
-SCN-STRAWBERRY-001
-```
+**Scenario ID:** `SCN-STRAWBERRY-001`
 
 ### Starting facts
 
-- Donor: Market Street Grocery
-- Offer: 1,200 lb strawberries
+- `LOT-104`: 1,200 lb strawberries already received at `WH-001`
 - Temperature: refrigerated
-- Pickup deadline: 1:00 PM
-- Modeled risk deadline: 36 hours after offer
-- Main warehouse long-term refrigerated-storage headroom: 420 lb
-- Separate short-dwell refrigerated staging available: 500 lb
-- Vehicle 1 refrigerated capacity: 1,400 lb
-- Two high-demand pantries can receive today
-- One pantry has high need but limited cold capacity
-- Community Kitchen has 500 lb compatible capacity and confirmed demand for up to 460 lb; the primary plan stages 400 lb
-- 60 lb is reserved for supervisor inspection hold in long-term refrigerated storage and modeled as expected loss for impact calculations
+- Condition: staff-cleared for planning, with 60 lb reserved for supervisor inspection hold
+- Modeled risk deadline: 36 hours after the seeded inventory alert
+- Long-term refrigerated-storage headroom: 420 lb
+- Separate short-dwell refrigerated staging: 500 lb
+- Seeded refrigerated vehicle payload: 1,400 lb; this is execution context, not driver scheduling
+- Two high-demand agencies can receive today
+- One high-need agency has limited cold capacity
+- Community Kitchen has 500 lb compatible capacity and confirmed demand up to 460 lb
+- Every candidate agency has synthetic category-specific accepted, refused, and short-receipt counts with a visible sample size
 
-All values are synthetic.
+All values and organizations are synthetic. No donor pickup is part of the scenario.
 
 ### Starting dashboard
 
-Expected cards:
-
-- Urgent offers: 1
-- Pounds at high expiration risk: 1,200
+- At-risk lots: 1
+- Pounds approaching risk deadline: 1,200
 - Refrigerated capacity used: seeded percentage
-- Open missions: seeded background count
+- Open outbound missions: seeded background count
 
-### Donation message
+### Inventory alert
 
 ```text
-Hi, Market Street Grocery has about 80 cases of strawberries available today, roughly 1,200 pounds. They need to be picked up before 1 PM and kept refrigerated. Please confirm quickly.
+LOT-104 · Strawberries · 1,200 lb available at WH-001
+Refrigerated · high modeled spoilage risk
+Review agency fit and release before the seeded risk deadline.
 ```
-
-### Expected extraction
-
-- Product: strawberries
-- Quantity: 1,200 lb
-- Pickup window end: 1:00 PM
-- Refrigerated: yes
-- Urgency: high
-- Confidence: high for product, quantity, deadline, temperature
-- Exact street address may be loaded from donor profile
 
 ---
 
 ## Primary plan options
 
-### Option A — Warehouse First
+### Option A — Hold for Later
 
-- Receive 1,200 lb at warehouse
-- Exceeds the 420 lb long-term refrigerated-storage headroom by 780 lb
-- Seeded route template: 18.4 miles
-- Lowest coordination complexity
-- Highest modeled spoilage risk
+- Attempts to keep all 1,200 lb in long-term storage
+- Exceeds 420 lb headroom by 780 lb
+- Has 0 planned outbound pounds and 0 outbound miles
+- Remains visible but cannot be approved
 
-This option is visibly infeasible and cannot be approved. The separate short-dwell staging pool does not make a `store` allocation feasible.
+Short-dwell staging cannot substitute for long-term storage.
 
-### Option B — Direct Distribution
+### Option B — Fastest Agency Release
 
-- Send product directly to three partners
-- Low warehouse utilization
-- Higher route miles
-- Seeded route template: 45.7 miles
-- Strong immediate access
-- Greater receiving-window sensitivity
+- Emphasizes same-day outbound allocation
+- Uses little long-term storage
+- Has greater route and receiving-window sensitivity
+- Uses the seeded 45.7-mile warehouse-origin route
 
-### Option C — Mixed Plan
+### Option C — Balanced Release
 
 Recommended seeded result:
 
-- 420 lb to Partner A
-- 320 lb to Partner B
-- 400 lb to meal-kit program through refrigerated staging
-- 60 lb inspection hold
+| Destination or handling path | Quantity |
+|---|---:|
+| Harbor Light Pantry | 420 lb |
+| Eastside Community Pantry | 320 lb |
+| Community Kitchen refrigerated staging | 400 lb |
+| Supervisor inspection hold | 60 lb |
+| **Total** | **1,200 lb** |
 
-Totals:
+Balanced Release uses the seeded 24.8-mile warehouse-origin route and is recommended from current need, capacity, receiving windows, service gap, and historical acceptance/refusal evidence. History is explanatory and never overrides a hard current constraint.
 
-```text
-420 + 320 + 400 + 60 = 1,200 lb
-```
-
-Option C should be recommended because it balances urgency, cold capacity, demand, and operating feasibility.
-
-Its seeded route template totals 24.8 miles.
+`expectedSpoilageLb` is a risk estimate, not an additional quantity bucket. The 60 lb inspection hold is treated as modeled loss for impact and counted physically once.
 
 ---
 
@@ -106,186 +85,76 @@ Its seeded route template totals 24.8 miles.
 
 ### 0–15 seconds
 
-1. Open `/dashboard`.
-2. Point to urgent strawberry alert.
-3. Say: “A grocery store has offered 1,200 pounds of strawberries, but pickup must happen within two hours.”
-4. Open donation.
+Open `/dashboard`, point to `LOT-104`, and say: “The food bank already has 1,200 pounds of strawberries. The problem is moving existing inventory before it spoils.” Open `/inventory/LOT-104`.
 
 ### 15–30 seconds
 
-1. Show original donor message and structured extraction.
-2. Point to refrigeration and deadline.
-3. Select **Generate plans**.
+Show on-hand pounds, risk deadline, warehouse location, refrigeration, staff condition status, and missing-data guardrails. Generate outbound plans.
 
 ### 30–50 seconds
 
-1. Open decision room.
-2. Compare the three options.
-3. Point to warehouse cold-capacity warning.
-4. Show map and destination fit.
-5. Approve Mixed Plan.
+Compare Hold for Later, Fastest Agency Release, and Balanced Release. Show the blocked 780 lb storage conflict, current agency constraints, historical acceptance sample sizes, and warehouse-origin map. Approve Balanced Release.
 
 ### 50–65 seconds
 
-1. Open packing plan or mission.
-2. On `PKG-104`, start packing and complete Community Kitchen batch `BAT-003`; then show destination quantities and route.
-3. State that all major operational actions remain human-approved.
+Open `PKG-104`, start packing, complete Community Kitchen batch `BAT-003`, and show `MSN-104` beginning at `WH-001` with no donor pickup.
 
 ### 65–80 seconds
 
-1. Trigger **Eastside Community Pantry canceled**.
-2. Show affected quantity.
-3. Approve recovery option.
-4. Show replacement packing plan `PKG-105` and the changed route.
+Trigger **Eastside Community Pantry canceled**, review the affected 320 lb, and approve recovery.
 
 ### 80–90 seconds
 
-1. Open impact.
-2. State scenario outcomes.
-3. Clarify that values are calculated from simulated data.
+Show `PKG-105`, `MSN-105`, calculated impact, and linked audit history.
 
 ---
 
 ## Primary disruption: Partner cancellation
 
-### Event
+After approval, Eastside Community Pantry cancels because receiving staff are unavailable.
 
-Partner B cancels after plan approval because receiving staff are unavailable.
+Required behavior:
 
-### Expected system behavior
-
-1. Mark Partner B and its affected route stop `canceled`.
-2. Identify 320 affected pounds.
-3. Preserve all completed or unaffected work.
-4. Generate the deterministic replacement option.
-5. Send 260 lb to Northside Family Resource Center and increase Community Kitchen staging from 400 lb to 460 lb. The original 60 lb inspection hold remains unchanged.
-6. Recalculate route, miles, households, and spoilage risk.
-7. Require human approval.
-8. Create `PKG-105` with `BAT-101`-series IDs. Split the already-packed Community Kitchen 400 lb into a completed `-C` row and its additional 60 lb recovery delta into a pending `-R` row.
-9. Mark original mission `MSN-104` `superseded`, assign replacement mission `MSN-105`, and record linked audit events.
-
-### Success criteria
-
-- No remaining allocation to canceled partner
-- No capacity violation
-- Community Kitchen remains within 500 lb compatible capacity, confirmed 460 lb demand, and 500 lb refrigerated staging capacity
-- Total quantity still conserved
-- New route visible
-- Replanning timer displayed
-- Original mission retained as `superseded`
-- Original `PKG-104` retained read-only, replacement `PKG-105` active, and recovery packing quantities match the approved replacement
-- Disruption, approval, recovery packing, and replacement mission events advance from `11:18:00` through `11:20:00` without backdated actions
+1. Mark the partner and affected stop `canceled`.
+2. Identify 320 affected lb and preserve unaffected/completed work.
+3. Move 260 lb to Northside Family Resource Center.
+4. Increase Community Kitchen staging from 400 lb to 460 lb within confirmed demand and capacity.
+5. Keep the original 60 lb inspection hold.
+6. Require recovery approval.
+7. Create `PKG-105` with non-colliding batches and `MSN-105`; preserve `PKG-104` read-only and mark `MSN-104` `superseded`.
 
 ---
 
-## Disabled preview: Truck breakdown
+## Disabled previews
 
-### Event
+- Vehicle breakdown
+- Cold-capacity loss
+- Driver unavailable
+- Agency receiving window shortened
 
-Assigned refrigerated vehicle becomes unavailable before pickup.
-
-### Conceptual options
-
-- Reassign to another refrigerated vehicle
-- Split load across compatible vehicles
-- Ask partner for direct pickup, if seeded
-- Reduce accepted quantity or redirect externally when no capacity exists
-
-This control is disabled in the current MVP. These conceptual options must not be presented as an executable or tested fixture.
-
----
-
-## Additional preview scenarios
-
-These are shown only as disabled preview buttons:
-
-### Cold-capacity loss
-
-Warehouse loses 200 lb of available refrigerated capacity.
-
-### Pickup deadline shortened
-
-Pickup closes 45 minutes earlier than expected.
-
-### Driver unavailable
-
-Assigned driver cannot complete the mission.
+These are not executable. Donor scheduling, donor pickup, driver scheduling, and Vapi outreach are not demo steps.
 
 ---
 
 ## Target scenario metrics
 
-The fixture should reproduce approximately:
-
 | Metric | Target |
 |---|---:|
-| Pounds offered | 1,200 lb |
-| Pounds assigned or distributed in time | 1,140 lb |
-| Inspection hold or modeled loss | 60 lb |
-| Estimated households supported | 380 |
+| Existing inventory available | 1,200 lb |
+| Planned outbound before the seeded risk deadline | 1,140 lb |
+| Inspection hold treated as modeled loss | 60 lb |
+| Modeled household-equivalents | 380 |
 | Modeled spoilage avoidance | 94% |
-| Replanning time | 11 seconds |
+| Seeded disruption-to-recovery event interval | 11 seconds |
 
-These are simulated estimates. If formulas or assumptions change, update this file and tests together.
-
----
-
-## Demo reset
-
-Before presenting, verify the immutable fixture:
-
-```bash
-npm run demo:reset
-```
-
-Then use **Reset scenario** in the app to clear browser `localStorage` and return to `/dashboard`. The terminal command reports fixture readiness but cannot clear browser state.
-
-Reset must restore:
-
-- Donation `DON-104`
-- Original partner statuses
-- Original capacity
-- No approved plan
-- No disruption
-- Baseline audit events only
-- Primary dashboard alert
+These are calculated or seeded synthetic scenario values, not observed impact.
 
 ---
 
-## Failure contingency
+## Demo reset and contingency
 
-### LLM unavailable
+`npm run demo:reset` verifies immutable fixtures. The in-app **Reset scenario** clears browser state and restores `LOT-104`, original capacities, agency histories and statuses, no approval, no disruption, and baseline audit events.
 
-Use seeded extraction and show a small “Demo fallback” notice. Continue normally.
+If an optional model explanation fails, use the deterministic lot-risk explanation. If the map fails, use the synchronized route list. If browser state is unclear, use the in-app reset.
 
-### Map rendering problem
-
-Use the synchronized location list and route summary. The MVP has no live tile dependency.
-
-### Route calculation fails
-
-Load precomputed route geometry and distances.
-
-### Animation fails
-
-Use static before-and-after route views.
-
-### Presenter loses state
-
-Use reset, then a “Jump to Decision Room” demo control if implemented.
-
----
-
-## Statements to avoid during the pitch
-
-- “The AI knows the food is safe.”
-- “These are real households served.”
-- “This is connected to Alameda County's live systems.”
-- “No existing product does any of this.”
-- “Our fairness score is objective.”
-
-Preferred language:
-
-- “The prototype estimates urgency and requests staff review.”
-- “These scenario metrics are calculated from simulated data.”
-- “The reviewed public products cover pieces of the workflow; ChoiceGrid demonstrates a closed operational loop.”
+Avoid claims that the AI knows food is safe, that modeled households are real, that the prototype is connected to live systems, or that historical acceptance guarantees a future agency outcome.

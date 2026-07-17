@@ -326,7 +326,10 @@ export function completeMissionStop(
       ...state.auditEvents,
       auditEvent({
         id: `AUD-${missionId}-${stopId}`,
-        eventType: stop.quantityPickupLb > 0 ? "pickup_complete" : "delivery_complete",
+        eventType:
+          stop.locationType === "warehouse" && stop.quantityPickupLb > 0
+            ? "warehouse_load_complete"
+            : "delivery_complete",
         entityType: "RouteStop",
         entityId: stopId,
         actorType: "human",

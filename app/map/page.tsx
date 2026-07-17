@@ -10,7 +10,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
 import { NetworkMap, type MapLayers, type MapRouteSummary } from "@/components/shared/network-map";
 import { Panel } from "@/components/shared/panel";
-import { donation, partners, warehouse } from "@/data/seed/scenario";
+import { partners, productLot, warehouse } from "@/data/seed/scenario";
 import { createMission } from "@/domain/execution/create-execution";
 import { totalRouteMiles } from "@/domain/metrics/calculate";
 import { generatePlanSet } from "@/domain/planning/generate-plans";
@@ -163,7 +163,7 @@ export default function MapPage() {
     label: routeSummaryLabel(routeStatus, missionId, activePlan.name),
     miles: totalRouteMiles(mission.routeLegs),
     stops: mission.stops.length,
-    loadLb: donation.quantityLb,
+    loadLb: mission.stops.find((stop) => stop.locationType === "warehouse")?.quantityPickupLb ?? 0,
     status: routeStatus,
   };
 
@@ -188,13 +188,13 @@ export default function MapPage() {
         ? "Replacement route after Eastside cancellation"
         : disrupted
           ? "Interrupted route awaiting human-approved recovery"
-          : "Donor pickup → cold staging → partner deliveries";
+          : "Warehouse origin → partner receiving stops";
 
   return (
     <>
       <PageHeader
         title={requestedMissionId || requestedPlanId ? "Route map" : "Network map"}
-        subtitle={`${recovery ? "Recovery route" : activePlan.name} · ${donation.productDescription} · ${donation.quantityLb.toLocaleString()} lb`}
+        subtitle={`${recovery ? "Recovery route" : activePlan.name} · ${productLot.productName} · ${productLot.availableQuantityLb.toLocaleString()} lb available inventory`}
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: requestedMissionId ? "Mission" : "Plans", href: requestedMissionId ? `/missions/${missionId}` : "/plans/PLN-104" }, { label: "Map" }]}
         backHref={returnTo}
         backLabel={returnTo.includes("/missions/") ? "Back to Mission" : returnTo.includes("/plans/") ? "Back to Plan" : returnTo.includes("/partners/") ? "Back to Partner" : "Back to Dashboard"}
@@ -211,8 +211,8 @@ export default function MapPage() {
               <p>{routeContextDescription}</p>
             </div>
             <div className="map-story-facts" aria-label="Route story">
-              <span><Package size={15} aria-hidden="true" /><strong>{donation.quantityLb.toLocaleString()} lb</strong> {donation.productDescription.toLowerCase()}</span>
-              <span><Clock3 size={15} aria-hidden="true" />Pickup by <strong>{formatTime(donation.pickupWindow?.end ?? "2026-07-15T13:00:00-07:00")}</strong></span>
+              <span><Package size={15} aria-hidden="true" /><strong>{productLot.availableQuantityLb.toLocaleString()} lb</strong> available {productLot.productName.toLowerCase()}</span>
+              <span><Clock3 size={15} aria-hidden="true" />Risk deadline <strong>Jul 16 · {formatTime(productLot.riskDeadline)}</strong></span>
               <span><Route size={15} aria-hidden="true" /><strong>{routeSummary.miles.toFixed(1)} mi</strong></span>
               <span><strong>{routeSummary.stops}</strong> stops</span>
             </div>
@@ -248,11 +248,12 @@ export default function MapPage() {
           <div className="map-partner-meta">{partners.length} partner records · use the route list above for the current stop sequence.</div>
           <div className="table-scroll">
             <table className="data-table partner-map-table">
-              <thead><tr><th>Partner</th><th>Status</th><th>Demand / service gap</th><th>Cold capacity</th><th>Receiving window</th><th>Route relevance</th></tr></thead>
+              <thead><tr><th>Partner</th><th>Status</th><th>Demand / service gap</th><th>Cold capacity</th><th>Receiving window</th><th>Historical produce acceptance</th><th>Route relevance</th></tr></thead>
               <tbody>
                 {partners.map((partner) => {
                   const status = state.partnerStatusOverrides[partner.id] ?? partner.status;
                   const demand = partner.demandSignals[0];
+                  const acceptance = partner.acceptanceHistory.find((history) => history.category === productLot.category);
                   const onRoute = routePartnerIds.has(partner.id);
                   return (
                     <tr key={partner.id}>
@@ -261,6 +262,7 @@ export default function MapPage() {
                       <td><strong>{demand?.desiredQuantityLb.toLocaleString() ?? "—"} lb</strong><span>{demand ? `${titleCase(demand.urgency)} need · gap ${partner.recentServiceGap}/100` : "Demand unknown"}</span></td>
                       <td><strong>{partner.refrigeratedCapacityAvailableLb.toLocaleString()} lb</strong><span>Compatible refrigerated capacity</span></td>
                       <td>{partner.receivingWindows[0] ? formatWindow(partner.receivingWindows[0]) : "Window unknown"}</td>
+                      <td>{acceptance ? <><strong>{acceptance.acceptanceRatePct}% full acceptance</strong><span>{acceptance.acceptedCount} accepted · {acceptance.refusedCount} refused · {acceptance.shortReceiptCount} short · n={acceptance.sampleSize}</span></> : "History unknown"}</td>
                       <td>{onRoute ? <span className="fit-cell"><CheckCircle2 size={14} aria-hidden="true" />On route</span> : status === "canceled" || status === "unavailable" ? <span className="conflict-cell"><AlertTriangle size={14} aria-hidden="true" />Excluded</span> : <span className="plain-status plain-status-blue">Context</span>}</td>
                     </tr>
                   );

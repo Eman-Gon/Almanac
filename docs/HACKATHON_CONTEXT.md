@@ -117,13 +117,13 @@ Do not claim these percentages or weights as official.
 
 | Official area | ChoiceGrid contribution |
 |---|---|
-| Accepting donations | Parses and evaluates urgent offers |
-| Warehousing | Checks cold capacity, dock constraints, and storage feasibility |
+| Accepting donations | Outside the hero; existing upstream systems may provide source lineage |
+| Warehousing | Identifies at-risk on-hand lots and checks storage/staging feasibility |
 | Allocation | Compares destination and split-allocation plans |
 | Packing | Produces cross-dock and packing instructions |
 | Distribution | Creates approved mission quantities and stops |
 | Delivery | Displays routes, receiving windows, and disruptions |
-| AI agents | Uses specialized intake, capacity, matching, planning, recovery, and communication agents |
+| AI agents | Uses bounded inventory-risk, capacity, matching, planning, routing, and recovery agents |
 | Human-in-the-loop | Requires approval before operational state changes |
 | Quantification | Calculates food, capacity, route, time, and impact metrics |
 

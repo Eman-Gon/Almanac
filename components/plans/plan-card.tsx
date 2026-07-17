@@ -1,13 +1,13 @@
 import { AlertTriangle, CheckCircle2, Clock3, MapPin, UsersRound } from "lucide-react";
-import { donation } from "@/data/seed/scenario";
+import { productLot } from "@/data/seed/scenario";
 import { reconcilePlanQuantities, validatePlanOption } from "@/domain/planning/quantity";
 import { scenarioValidationContext } from "@/domain/planning/scenario-context";
 import type { PlanOption } from "@/domain/types";
 
 const descriptions: Record<PlanOption["strategy"], string> = {
-  warehouse_first: "Receive at the warehouse before outbound distribution.",
-  direct_distribution: "Deliver directly to three partner agencies.",
-  mixed: "Balance direct delivery, staging, and an inspection hold.",
+  hold_for_later: "Keep the full lot in long-term cold storage for a later release.",
+  fastest_release: "Prioritize same-day outbound release across agency receiving windows.",
+  balanced_release: "Balance agency need, route miles, staging, and a small inspection hold.",
   custom: "Custom staff-edited allocation strategy.",
 };
 
@@ -31,8 +31,8 @@ export function PlanCard({
   onViewDetails?: () => void;
 }) {
   const validation = validatePlanOption(plan, scenarioValidationContext);
-  const reconciliation = reconcilePlanQuantities(plan, donation.quantityLb);
-  const recommended = plan.strategy === "mixed";
+  const reconciliation = reconcilePlanQuantities(plan, productLot.availableQuantityLb);
+  const recommended = plan.strategy === "balanced_release";
   const hasWarnings = plan.risks.some((risk) => !risk.blocking);
   const statusLabel = recommended
     ? "Recommended"
@@ -55,8 +55,8 @@ export function PlanCard({
         <span>{validation.displayMessage ?? "All hard constraints pass."}</span>
       </div>
       <dl className="plan-metric-list refactor-plan-metrics">
-        <div><dt><Clock3 size={14} aria-hidden="true" />Delivered before risk deadline</dt><dd>{reconciliation.deliveredBeforeRiskLb.toLocaleString()} lb</dd></div>
-        <div><dt><AlertTriangle size={14} aria-hidden="true" />Inspection hold or expected loss</dt><dd>{reconciliation.holdOrLossLb.toLocaleString()} lb</dd></div>
+        <div><dt><Clock3 size={14} aria-hidden="true" />Planned outbound before risk deadline</dt><dd>{reconciliation.quantityPlannedOutboundInTimeLb.toLocaleString()} lb</dd></div>
+        <div><dt><AlertTriangle size={14} aria-hidden="true" />Retained, held, or unallocated</dt><dd>{(reconciliation.retainedLongTermLb + reconciliation.inspectionHoldLb + reconciliation.unallocatedLb).toLocaleString()} lb</dd></div>
         <div><dt><MapPin size={14} aria-hidden="true" />Total miles</dt><dd>{plan.metrics.totalMiles.toFixed(1)} mi</dd></div>
         <div><dt><UsersRound size={14} aria-hidden="true" />Estimated staff time</dt><dd>{plan.metrics.staffMinutes} min</dd></div>
       </dl>

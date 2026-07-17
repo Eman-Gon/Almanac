@@ -3,7 +3,7 @@
 **Prepared:** July 16, 2026  
 **Purpose:** Consolidate the important hackathon requirements, Reddit findings, research analytics, formal evidence, competitor landscape, product ideas, and final recommendation developed during this research process.
 
-> **Most important conclusion:** The strongest opportunity is not another pantry locator, recipe chatbot, donation listing board, or ordinary routing app. The strongest gap is an **AI-assisted allocation and recovery system that matches urgent food with the destinations most able to use it, then turns the approved decision into a packing and delivery plan.**
+> **Most important conclusion:** The strongest opportunity identified in the reviewed evidence is not another pantry locator, recipe chatbot, donation listing board, or ordinary routing app. ChoiceGrid's **hypothesized integration wedge** is an AI-assisted allocation and recovery system that matches urgent food with feasible destinations, then turns the human-approved decision into a packing and delivery plan. This positioning still requires operator validation.
 
 ---
 
@@ -89,9 +89,9 @@ A representative demo:
 4. It displays three alternative plans.
 5. A food-bank employee approves one.
 6. A map displays the donor, warehouse, pantry destinations, and routes.
-7. A pantry cancels or a truck breaks down.
+7. A pantry cancellation triggers the executable recovery path; truck breakdown remains a disabled preview concept.
 8. The system generates a revised plan.
-9. The impact screen shows pounds saved, households served, miles, and replanning time.
+9. The impact screen shows pounds planned before the seeded risk deadline, modeled household-equivalents, seeded route miles, a modeled spoilage estimate, and the auditable event interval.
 
 ---
 
@@ -890,8 +890,9 @@ Source: [CT Insider — Connecticut Foodshare Warehouse Expansion](https://www.c
 |---|---|---|
 | **Plentiful** | Pantry finder, reservations, multilingual access, digital check-in, messaging, reporting, network insights | Do not build only a pantry locator or reservation tool |
 | **Vivery** | Centralized food-resource map, agency updates, language and food-category information, analytics | A public find-food map is already crowded |
-| **MealConnect** | Connects food banks, donors, partner agencies, and volunteer pickups for scheduled and real-time donations | A donation-posting and pickup marketplace is not enough |
+| **MealConnect** | Connects food banks, donors, partner agencies, and pickups for scheduled and real-time donations | A donation-posting and pickup marketplace is not ChoiceGrid's intended wedge |
 | **Food Rescue Hero** | Volunteer scheduling, donor coordination, rescue tracking, mobile workflows, dashboards, equity analytics | Generic rescue dispatch is already mature |
+| **Careit** | Donation posting, matching, pickup coordination, records, reporting, and publicly described impact tracking | Position ChoiceGrid as a complementary allocation and recovery layer |
 | **Link2Feed** | Client intake, household and program tracking, reporting, volunteer tools, delivery integration | Do not rebuild case management |
 | **PantrySoft** | CRM, visit tracking, inventory, client portal, online ordering, reporting, volunteer platform | Pantry management and online ordering are crowded |
 
@@ -901,6 +902,7 @@ Source: [CT Insider — Connecticut Foodshare Warehouse Expansion](https://www.c
 - [Vivery](https://www.vivery.org/)
 - [MealConnect](https://mealconnect.org/)
 - [Food Rescue Hero](https://foodrescuehero.org/)
+- [Careit](https://careit.com/)
 - [Link2Feed](https://www.link2feed.com/)
 - [PantrySoft](https://www.pantrysoft.com/)
 
@@ -922,9 +924,9 @@ These can exist as supporting screens, but they are not differentiated enough by
 
 ---
 
-# 8. The main market and product gap
+# 8. The hypothesized integration wedge
 
-The strongest gap is the closed loop below:
+Based on the reviewed public pages, the strongest **hypothesized** wedge is the closed loop below. This must be validated with operators and does not prove that existing products lack private or upcoming capabilities:
 
 ```text
 Donation or inventory event
@@ -1199,7 +1201,7 @@ Display:
 - Volunteer requirement
 - Labels and instructions
 
-### 6. Live Mission Map
+### 6. Mission Map
 
 - Pickup
 - Stops
@@ -1210,23 +1212,22 @@ Display:
 
 ### 7. Disruption Simulator
 
-Buttons:
+The implemented MVP includes one executable button and several clearly disabled preview concepts:
 
-- Truck breakdown
-- Pantry cancellation
-- Freezer capacity lost
-- Driver unavailable
-- Donation quantity doubled
-- Pickup deadline shortened
+- Pantry cancellation — executable
+- Truck breakdown — preview
+- Freezer capacity lost — preview
+- Driver unavailable — preview
+- Pickup deadline shortened — preview
 
 ### 8. Impact and Audit
 
-- Pounds saved
+- Pounds planned before the seeded risk deadline
 - Estimated spoilage avoided
-- Households served
+- Modeled household-equivalents
 - Miles
-- Staff time saved
-- Replanning time
+- Seeded staff-time estimate, when labeled
+- Seeded disruption-to-recovery event interval
 - Human overrides
 - Reasons for decisions
 
@@ -1265,16 +1266,16 @@ Generate:
 
 ### 75–85 seconds
 
-Trigger **Pantry Canceled** or **Truck Breakdown**.
+Trigger the executable **Pantry Canceled** fixture. Truck breakdown and the other disruption concepts remain disabled previews.
 
 ### 85–90 seconds
 
 Display scenario results:
 
-- 1,140 pounds distributed
-- 380 households supported
-- 94% estimated spoilage avoided
-- Plan rebuilt in 11 seconds
+- 1,140 pounds planned before the seeded risk deadline
+- 380 modeled household-equivalents using the seeded 3 lb assumption
+- 94% modeled spoilage avoidance against the seeded baseline
+- An 11-second seeded event-time interval, not compute time or observed staff time
 
 These should be clearly labeled as **simulated scenario estimates**.
 
@@ -1286,13 +1287,13 @@ These should be clearly labeled as **simulated scenario estimates**.
 
 | Component | Real implementation |
 |---|---|
-| Donation extraction | LLM returns validated JSON |
+| Donation extraction | Validated structured model output when configured, with backup and deterministic seeded fallback |
 | Destination scoring | Deterministic formula |
 | Plan comparison | Three calculated alternatives |
 | Human approval | Updates application state |
-| Map | Real markers, popups, route lines, navigation |
+| Map | Interactive bundled schematic markers, popups, precomputed route lines, layers, zoom, pan, and synchronized navigation |
 | Packing plan | Derived from approved quantities |
-| Disruption recovery | Recalculates assignments and routes |
+| Disruption recovery | Recalculates assignments and routes for the executable partner-cancellation fixture |
 | Impact metrics | Calculated from before-and-after state |
 | Explanations | Generated from actual data and scores |
 | Audit trail | Stores recommendation, approval, override, and reason |
@@ -1301,13 +1302,13 @@ These should be clearly labeled as **simulated scenario estimates**.
 
 - One warehouse
 - Ten partner pantries
-- Five donors
+- One donor in the hero scenario
 - Three vehicles
 - Four drivers
-- Twenty inventory products
-- Three active donations
-- Four disruption scenarios
-- Alameda County or San Francisco coordinates
+- One primary product lot
+- One active donation plus display-only synthetic history
+- One executable partner-cancellation fixture plus disabled disruption previews
+- Synthetic Santa Clara County-area coordinates
 - Aggregate community profiles
 - Precomputed route coordinates
 - Sample receiving and refusal notes
@@ -1517,8 +1518,14 @@ Public product pages may not describe every internal capability. Therefore:
 2. [Vivery](https://www.vivery.org/)  
 3. [MealConnect](https://mealconnect.org/)  
 4. [Food Rescue Hero](https://foodrescuehero.org/)  
-5. [Link2Feed](https://www.link2feed.com/)  
-6. [PantrySoft](https://www.pantrysoft.com/)  
+5. [Careit](https://careit.com/)
+6. [Link2Feed](https://www.link2feed.com/)
+7. [PantrySoft](https://www.pantrysoft.com/)
+
+Current adoption context:
+
+- [Feeding America — What is MealConnect?](https://www.feedingamerica.org/hunger-blog/what-mealconnect-learn-about-feeding-americas-food-rescue-platform), April 14, 2026. Feeding America reported more than seven billion pounds facilitated since 2014; this is category-adoption evidence, not ChoiceGrid demand.
+- [Careit — Impact](https://careit.com/impact/). Public figures are vendor-reported and should be labeled as product-page claims.
 
 ---
 

@@ -9,7 +9,6 @@ import {
   LocateFixed,
   MapPin,
   Minus,
-  Package,
   Plus,
   Snowflake,
   Truck,
@@ -17,8 +16,8 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
-import { donor, partners, vehicles, warehouse } from "@/data/seed/scenario";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from "react";
+import { partners, productLot, vehicles, warehouse } from "@/data/seed/scenario";
 import type { Mission } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
 
@@ -66,8 +65,9 @@ const mapBounds = {
 
 const MAP_ZOOM_LEVELS = [1, 1.25, 1.5, 1.75] as const;
 const DEFAULT_VIEWPORT = { zoom: 1, panX: 0, panY: 0 };
+const ROUTE_FOCUS_SCREEN = { x: 50, y: 58 };
 
-type MapLocationKind = "donor" | "warehouse" | "partner" | "vehicle";
+type MapLocationKind = "warehouse" | "partner" | "vehicle";
 type StatusTone = "green" | "amber" | "red" | "purple" | "blue" | "slate";
 
 type MapLocation = {
@@ -94,6 +94,7 @@ type MapLocation = {
     coveragePct?: number;
   };
   receivingWindow?: string;
+  acceptanceEvidence?: string;
   note: string;
 };
 
@@ -106,7 +107,8 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function maximumPan(zoom: number): number {
-  return Math.max(0, (zoom - 1) * 42);
+  if (zoom <= 1) return 0;
+  return Math.min(32, (zoom - 1) * 42 + 8);
 }
 
 function clampViewport(viewport: MapViewport): MapViewport {
@@ -163,7 +165,6 @@ function statusLabel(status: string): string {
 function locationKindLabel(kind: MapLocationKind): string {
   if (kind === "warehouse") return "Warehouse";
   if (kind === "vehicle") return "Vehicle";
-  if (kind === "donor") return "Donor pickup";
   return "Partner agency";
 }
 
@@ -185,24 +186,8 @@ function buildLocationData(
     : routeLocationIds?.length
     ? routeLocationIds
     : variant === "recovery"
-      ? [donor.id, warehouse.id, "PAR-001", "PAR-004", "PAR-003"]
-      : [donor.id, warehouse.id, "PAR-001", "PAR-002", "PAR-003"];
-
-  const donorLocation: MapLocation = {
-    id: donor.id,
-    name: donor.name,
-    city: donor.location.city,
-    kind: "donor",
-    icon: Package,
-    tone: "blue",
-    status: "Pickup required",
-    statusTone: "blue",
-    point: pointForLocation(donor.location),
-    routeStop: routeIds.includes(donor.id),
-    quantityLb: 1_200,
-    receivingWindow: formatWindow({ start: "2026-07-15T11:00:00-07:00", end: "2026-07-15T13:00:00-07:00" }),
-    note: "1,200 lb refrigerated strawberries · inspect at pickup",
-  };
+      ? [warehouse.id, "PAR-001", "PAR-004", "PAR-003"]
+      : [warehouse.id, "PAR-001", "PAR-002", "PAR-003"];
 
   const warehouseLocation: MapLocation = {
     id: warehouse.id,
@@ -211,23 +196,25 @@ function buildLocationData(
     kind: "warehouse",
     icon: Warehouse,
     tone: "purple",
-    status: "Cold capacity watch",
+    status: "Outbound origin",
     statusTone: "purple",
     point: pointForLocation(warehouse.location),
     routeStop: routeIds.includes(warehouse.id),
+    quantityLb: productLot.availableQuantityLb,
     capacity: {
       availableLb: warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb,
       label: "Long-term cold storage headroom",
       coveragePct: ((warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb) / warehouse.refrigeratedCapacityLb) * 100,
     },
     receivingWindow: formatWindow(warehouse.dockWindows[0]),
-    note: `${warehouse.refrigeratedStagingCapacityAvailableLb.toLocaleString()} lb short-dwell staging available`,
+    note: `${productLot.availableQuantityLb.toLocaleString()} lb available inventory · ${warehouse.refrigeratedStagingCapacityAvailableLb.toLocaleString()} lb short-dwell staging available`,
   };
 
   const partnerLocations = partners.map((partner): MapLocation => {
     const demand = partner.demandSignals[0];
     const status = partnerStatusOverrides[partner.id] ?? partner.status;
     const availableCapacity = partner.refrigeratedCapacityAvailableLb;
+    const acceptance = partner.acceptanceHistory.find((history) => history.category === productLot.category);
     return {
       id: partner.id,
       name: partner.name,
@@ -255,6 +242,9 @@ function buildLocationData(
       receivingWindow: partner.receivingWindows[0]
         ? formatWindow(partner.receivingWindows[0])
         : "Receiving window unknown",
+      acceptanceEvidence: acceptance
+        ? `${acceptance.acceptanceRatePct}% full acceptance · ${acceptance.acceptedCount} accepted / ${acceptance.refusedCount} refused / ${acceptance.shortReceiptCount} short · n=${acceptance.sampleSize}`
+        : "Category history unknown",
       note: `${titleCase(partner.agencyType)} · service gap ${partner.recentServiceGap}/100`,
     };
   });
@@ -282,7 +272,7 @@ function buildLocationData(
   }));
 
   return {
-    locations: [donorLocation, warehouseLocation, ...partnerLocations, ...vehicleLocations],
+    locations: [warehouseLocation, ...partnerLocations, ...vehicleLocations],
     routeIds,
   };
 }
@@ -341,6 +331,13 @@ function LocationMarker({
 
   const displayPoint = projectPoint(location.point, viewport);
   const showLabel = (routeVisible && routeStop) || selected;
+  // Long route names need more room than the marker icon. Flip labels before
+  // the visual midpoint of the right-hand third so they stay inside stacked
+  // and tablet-width map canvases, including after zoom projection.
+  const labelOnLeft = displayPoint.x > 55;
+  const labelBelow = displayPoint.y < 15;
+  const labelAbove = displayPoint.y > 85;
+  const labelPlacement = labelBelow ? "map-marker-label-below" : labelAbove ? "map-marker-label-above" : "";
 
   return (
     <div
@@ -363,7 +360,7 @@ function LocationMarker({
       </button>
       {showLabel ? (
         <span
-          className={`map-marker-label map-marker-label-${location.id} ${displayPoint.x > 82 ? "map-marker-label-left" : ""} ${selected ? "map-marker-label-selected" : ""}`}
+          className={`map-marker-label ${labelOnLeft ? "map-marker-label-left" : ""} ${labelPlacement} ${selected ? "map-marker-label-selected" : ""}`}
           data-testid={routeStop ? `map-route-label-${location.id}` : undefined}
           aria-hidden="true"
         >
@@ -409,10 +406,11 @@ function MapDetailCard({
         ) : location.routeStop ? <span className="map-context-chip">Route layer hidden</span> : <span className="map-context-chip">Context location</span>}
       </div>
       <div className="map-detail-facts">
-        {plannedQuantityLb ? <div><span>{location.kind === "donor" ? "Planned pickup" : location.kind === "warehouse" ? "Planned warehouse transfer" : "Planned delivery"}</span><strong>{plannedQuantityLb.toLocaleString()} lb · Refrigerated</strong></div> : location.quantityLb ? <div><span>{location.kind === "donor" ? "Pickup load" : "Planned load"}</span><strong>{location.quantityLb.toLocaleString()} lb · Refrigerated</strong></div> : null}
+        {plannedQuantityLb ? <div><span>{location.kind === "warehouse" ? "Planned outbound load" : "Planned delivery"}</span><strong>{plannedQuantityLb.toLocaleString()} lb · Refrigerated</strong></div> : location.quantityLb ? <div><span>Available inventory</span><strong>{location.quantityLb.toLocaleString()} lb · Refrigerated</strong></div> : null}
         {location.demand ? <div><span>Demand</span><strong>{location.demand.quantityLb.toLocaleString()} lb · {titleCase(location.demand.urgency)}</strong></div> : null}
         {location.capacity ? <div><span>{location.capacity.label}</span><strong>{location.capacity.availableLb.toLocaleString()} lb available</strong></div> : null}
-        {location.receivingWindow ? <div><span>{location.kind === "donor" ? "Pickup window" : "Receiving window"}</span><strong>{location.receivingWindow}</strong></div> : null}
+        {location.receivingWindow ? <div><span>{location.kind === "warehouse" ? "Warehouse departure window" : "Receiving window"}</span><strong>{location.receivingWindow}</strong></div> : null}
+        {location.acceptanceEvidence ? <div><span>Historical produce acceptance</span><strong>{location.acceptanceEvidence}</strong></div> : null}
       </div>
       {location.capacity?.coveragePct !== undefined ? (
         <div className="map-capacity-meter" aria-label={`${location.capacity.label}: ${Math.round(location.capacity.coveragePct)} percent coverage`}>
@@ -436,7 +434,7 @@ function CompactLocationList({ locations, routeSummary }: { locations: MapLocati
         const content = <><span className={`legend-dot ${location.tone}`}><Icon size={11} aria-hidden="true" /></span>{location.routeStop ? <span className="map-compact-sequence">{index + 1}</span> : null}<span><strong>{location.name}</strong><small>{location.status}</small></span></>;
         return location.href ? <Link key={location.id} href={location.href}>{content}</Link> : <span key={location.id}>{content}</span>;
       })}
-      <div className="map-sync-note">Donor → cold staging → partner deliveries</div>
+      <div className="map-sync-note">Warehouse origin → partner deliveries</div>
     </div>
   );
 }
@@ -484,7 +482,6 @@ function InteractiveLocationList({
       </div>
       {routeSummary ? routesVisible ? <div className="map-route-summary"><RouteSummaryLine routeSummary={routeSummary} /><span className="map-route-summary-note">{routeSummaryNotes[routeSummary.status]}</span></div> : <div className="map-layer-hidden-note"><RouteSummaryLine routeSummary={routeSummary} /><span>Routes layer hidden · location context remains available.</span></div> : null}
       <div className="map-legend" aria-label="Map legend">
-        <span><i className="legend-swatch legend-blue" />Donor</span>
         {layers.capacity ? <span data-testid="map-legend-capacity"><i className="legend-swatch legend-purple" />Warehouse</span> : null}
         {layers.demand ? <span data-testid="map-legend-demand"><i className="legend-swatch legend-green" />Available <i className="legend-swatch legend-amber" />Limited <i className="legend-swatch legend-red" />Unavailable</span> : null}
         {layers.vehicles ? <span data-testid="map-legend-vehicles"><i className="legend-swatch legend-slate" />Vehicle</span> : null}
@@ -548,7 +545,7 @@ function LocationListButton({
       <span className={`map-location-card-icon ${markerClass(location)}`}><Icon size={14} aria-hidden="true" /></span>
       {sequence ? <span className="map-location-sequence">{sequence}</span> : null}
       <span className="map-location-card-copy"><strong>{location.name}</strong><small>{location.city} · {location.status}</small></span>
-      <span className="map-location-card-signal">{plannedQuantityLb ? <><b>{plannedQuantityLb.toLocaleString()} lb</b><small>{location.kind === "donor" ? "pickup load" : location.kind === "warehouse" ? "warehouse transfer" : "planned delivery"}</small></> : location.demand ? <><b>{location.demand.quantityLb.toLocaleString()} lb</b><small>{titleCase(location.demand.urgency)} need</small></> : location.capacity ? <><b>{location.capacity.availableLb.toLocaleString()} lb</b><small>{location.kind === "vehicle" ? "payload" : "cold headroom"}</small></> : location.quantityLb ? <><b>{location.quantityLb.toLocaleString()} lb</b><small>pickup load</small></> : <><b>Pickup</b><small>{location.receivingWindow ?? "Window unknown"}</small></>}</span>
+      <span className="map-location-card-signal">{plannedQuantityLb ? <><b>{plannedQuantityLb.toLocaleString()} lb</b><small>{location.kind === "warehouse" ? "outbound load" : "planned delivery"}</small></> : location.demand ? <><b>{location.demand.quantityLb.toLocaleString()} lb</b><small>{titleCase(location.demand.urgency)} need</small></> : location.capacity ? <><b>{location.capacity.availableLb.toLocaleString()} lb</b><small>{location.kind === "vehicle" ? "payload" : "cold headroom"}</small></> : location.quantityLb ? <><b>{location.quantityLb.toLocaleString()} lb</b><small>available inventory</small></> : <><b>Window</b><small>{location.receivingWindow ?? "Window unknown"}</small></>}</span>
     </button>
   );
 }
@@ -601,11 +598,24 @@ export function NetworkMap({
     panX: number;
     panY: number;
   } | null>(null);
+  const lastWheelZoomAt = useRef(0);
   const lastSelectionTrigger = useRef<{ id: string; source: SelectionSource } | null>(null);
   const selectedLocation = interactive
     ? visibleLocations.find((location) => location.id === selectedLocationId)
     : undefined;
   const route = routePoints(locations, routeIds);
+  const routeFocusPoint = useMemo(() => {
+    const points = routeIds
+      .map((id) => locations.find((location) => location.id === id)?.point)
+      .filter((point): point is { x: number; y: number } => Boolean(point));
+    if (!points.length) return { x: 50, y: 50 };
+    const xValues = points.map((point) => point.x);
+    const yValues = points.map((point) => point.y);
+    return {
+      x: (Math.min(...xValues) + Math.max(...xValues)) / 2,
+      y: (Math.min(...yValues) + Math.max(...yValues)) / 2,
+    };
+  }, [locations, routeIds]);
   const routeStatus = routeSummary?.status ?? (variant === "recovery" ? "replanned" : "approved");
   const zoomIndex = MAP_ZOOM_LEVELS.findIndex((level) => level === viewport.zoom);
   const canZoomOut = zoomIndex > 0;
@@ -617,9 +627,13 @@ export function NetworkMap({
       const nextIndex = clamp(currentIndex + direction, 0, MAP_ZOOM_LEVELS.length - 1);
       const nextZoom = MAP_ZOOM_LEVELS[nextIndex];
       if (nextZoom === 1) return DEFAULT_VIEWPORT;
-      return clampViewport({ ...current, zoom: nextZoom });
+      return clampViewport({
+        zoom: nextZoom,
+        panX: ROUTE_FOCUS_SCREEN.x - 50 - (routeFocusPoint.x - 50) * nextZoom,
+        panY: ROUTE_FOCUS_SCREEN.y - 50 - (routeFocusPoint.y - 50) * nextZoom,
+      });
     });
-  }, []);
+  }, [routeFocusPoint]);
 
   const resetViewport = useCallback(() => {
     setViewport(DEFAULT_VIEWPORT);
@@ -688,8 +702,36 @@ export function NetworkMap({
     }
   }
 
+  function handleMapWheel(event: WheelEvent<HTMLDivElement>) {
+    if (!interactive || (Math.abs(event.deltaX) < 1 && Math.abs(event.deltaY) < 1)) return;
+    if (event.target instanceof Element && event.target.closest("button, a, .map-detail-card, .map-zoom-controls")) return;
+    event.preventDefault();
+
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const isPinchZoom = event.ctrlKey || event.metaKey;
+    const isCoarseWheel = event.deltaMode !== 0 || Math.abs(event.deltaY) >= 100;
+
+    // Trackpad pinch gestures arrive as modified wheel events. Small, unmodified
+    // trackpad deltas pan the map once it is zoomed; larger mouse-wheel deltas
+    // retain the existing scroll-to-zoom behavior.
+    if (Math.abs(event.deltaY) > 0 && (isPinchZoom || viewport.zoom === 1 || isCoarseWheel)) {
+      const now = performance.now();
+      if (now - lastWheelZoomAt.current < 90) return;
+      lastWheelZoomAt.current = now;
+      updateZoom(event.deltaY < 0 ? 1 : -1);
+      return;
+    }
+
+    if (viewport.zoom > 1) {
+      panViewport(
+        (-event.deltaX / bounds.width) * 100,
+        (-event.deltaY / bounds.height) * 100,
+      );
+    }
+  }
+
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (!interactive || viewport.zoom === 1) return;
+    if (!interactive || event.button !== 0 || viewport.zoom === 1) return;
     if (event.target instanceof Element && event.target.closest("button, a, .map-detail-card")) return;
     dragRef.current = {
       pointerId: event.pointerId,
@@ -698,6 +740,7 @@ export function NetworkMap({
       panX: viewport.panX,
       panY: viewport.panY,
     };
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragging(true);
   }
@@ -731,11 +774,12 @@ export function NetworkMap({
       <div
         className={`map-canvas ${viewport.zoom > 1 ? "map-canvas-zoomed" : ""} ${dragging ? "map-canvas-dragging" : ""}`}
         role={interactive ? "group" : "img"}
-        aria-label="Schematic route map for the current mission"
+        aria-label="Schematic warehouse-origin route map for the current mission"
         aria-describedby={interactive ? "map-zoom-status" : undefined}
         tabIndex={interactive ? 0 : undefined}
         data-testid={interactive ? "network-map-canvas" : undefined}
         onKeyDown={interactive ? handleMapKeyDown : undefined}
+        onWheel={interactive ? handleMapWheel : undefined}
         onPointerDown={interactive ? handlePointerDown : undefined}
         onPointerMove={interactive ? handlePointerMove : undefined}
         onPointerUp={interactive ? handlePointerEnd : undefined}
@@ -801,7 +845,7 @@ export function NetworkMap({
           </div>
         ) : null}
         {interactive && selectedLocation ? <MapDetailCard location={selectedLocation} routeStop={routeStopByLocation.get(selectedLocation.id)} routeVisible={layers.routes} onClose={closeDetails} /> : null}
-        {interactive ? <div className="map-canvas-footer"><span><Snowflake size={13} aria-hidden="true" />Select a marker or route stop for details.</span><span>{viewport.zoom > 1 ? "Drag or use arrow keys to pan" : "Use + / − to zoom"}</span></div> : null}
+        {interactive ? <div className="map-canvas-footer"><span><Snowflake size={13} aria-hidden="true" />Select a marker or route stop for details.</span><span>{viewport.zoom > 1 ? "Drag or trackpad-scroll to pan · pinch to zoom" : "Scroll or pinch to zoom"}</span></div> : null}
       </div>
 
       {showList ? interactive ? (

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  donation,
   partners,
   productLot,
   vehicles,
@@ -15,6 +14,10 @@ import {
   type PlanValidation,
   type PlanValidationContext,
 } from "@/domain/planning/quantity";
+import {
+  acceptanceHistorySignal,
+  calculateDestinationScore,
+} from "@/domain/scoring/destination-score";
 import type { PartnerAgency, PlanOption } from "@/domain/types";
 
 function issueCodes(validation: PlanValidation): string[] {
@@ -23,9 +26,9 @@ function issueCodes(validation: PlanValidation): string[] {
 
 describe("deterministic planning", () => {
   const set = generatePlanSet();
-  const mixed = set.options[2];
+  const balanced = set.options[2];
   const context: PlanValidationContext = {
-    offeredQuantityLb: donation.quantityLb,
+    availableInventoryQuantityLb: productLot.availableQuantityLb,
     productLot,
     warehouse,
     partners,
@@ -44,25 +47,25 @@ describe("deterministic planning", () => {
     };
   }
 
-  it("generates the three approved strategy families", () => {
+  it("generates the three warehouse-inventory strategy families", () => {
     expect(set.options).toHaveLength(3);
     expect(set.options.map((option) => option.strategy)).toEqual([
-      "warehouse_first",
-      "direct_distribution",
-      "mixed",
+      "hold_for_later",
+      "fastest_release",
+      "balanced_release",
     ]);
   });
 
-  it("conserves every offered pound in every option", () => {
+  it("conserves every available pound in every option", () => {
     for (const option of set.options) {
-      expect(quantityConserves(option, donation.quantityLb)).toBe(true);
-      expect(accountedQuantityLb(option)).toBe(donation.quantityLb);
+      expect(quantityConserves(option, productLot.availableQuantityLb)).toBe(true);
+      expect(accountedQuantityLb(option)).toBe(productLot.availableQuantityLb);
     }
   });
 
   it("calculates the warehouse conflict even when display risks are absent", () => {
-    const warehouseFirst = { ...set.options[0], risks: [] };
-    const validation = validatePlanOption(warehouseFirst, context);
+    const holdForLater = { ...set.options[0], risks: [] };
+    const validation = validatePlanOption(holdForLater, context);
     const issue = validation.issues.find(
       (candidate) =>
         candidate.code === "WAREHOUSE_STORAGE_CAPACITY_EXCEEDED",
@@ -78,33 +81,38 @@ describe("deterministic planning", () => {
   });
 
   it("reconciles every seeded plan without double-counting expected loss", () => {
-    const reconciliation = set.options.map((option) => reconcilePlanQuantities(option, donation.quantityLb));
+    const reconciliation = set.options.map((option) =>
+      reconcilePlanQuantities(option, productLot.availableQuantityLb),
+    );
 
     expect(reconciliation.map((result) => result.reconciles)).toEqual([true, true, true]);
     expect(reconciliation.map((result) => result.totalAccountedLb)).toEqual([1_200, 1_200, 1_200]);
     expect(reconciliation[2]).toMatchObject({
-      deliveredBeforeRiskLb: 1_140,
+      outboundAllocatedLb: 1_140,
+      retainedLongTermLb: 0,
       inspectionHoldLb: 60,
-      expectedLossLb: 0,
-      holdOrLossLb: 60,
+      expectedSpoilageLb: 60,
     });
   });
 
-  it("blocks a plan whose displayed outcome buckets exceed the offer", () => {
+  it("blocks a plan whose outbound metric exceeds its allocations", () => {
     const invalidMetrics: PlanOption = {
-      ...mixed,
-      metrics: { ...mixed.metrics, quantityDistributedInTimeLb: 1_200 },
+      ...balanced,
+      metrics: { ...balanced.metrics, quantityPlannedOutboundInTimeLb: 1_200 },
     };
-    const result = reconcilePlanQuantities(invalidMetrics, donation.quantityLb);
+    const result = reconcilePlanQuantities(
+      invalidMetrics,
+      productLot.availableQuantityLb,
+    );
     const validation = validatePlanOption(invalidMetrics, context);
 
-    expect(result.reconciles).toBe(false);
+    expect(result.reconciles).toBe(true);
     expect(issueCodes(validation)).toContain("METRIC_QUANTITY_MISMATCH");
     expect(validation.approvable).toBe(false);
   });
 
-  it("reports an approvable mixed allocation with derived capacity usage", () => {
-    const validation = validatePlanOption(mixed, context);
+  it("reports an approvable balanced allocation with derived capacity usage", () => {
+    const validation = validatePlanOption(balanced, context);
 
     expect(validation.approvable).toBe(true);
     expect(validation.issues).toEqual([]);
@@ -119,7 +127,7 @@ describe("deterministic planning", () => {
       excessQuantityLb: 0,
     });
     expect(validation.capacity.vehiclePayload).toEqual({
-      plannedQuantityLb: 1_200,
+      plannedQuantityLb: 1_140,
       limitQuantityLb: 1_400,
       excessQuantityLb: 0,
     });
@@ -133,12 +141,12 @@ describe("deterministic planning", () => {
       compatibleCapacityLb: 500,
       activeDemandLb: 460,
     });
-    expect(mixed.metrics.quantityDistributedInTimeLb).toBe(1_140);
+    expect(balanced.metrics.quantityPlannedOutboundInTimeLb).toBe(1_140);
   });
 
   it("uses blocking risk text only as a display fallback", () => {
     const staleRiskPlan: PlanOption = {
-      ...mixed,
+      ...balanced,
       risks: [
         {
           code: "STALE_FIXTURE_WARNING",
@@ -157,8 +165,8 @@ describe("deterministic planning", () => {
 
   it("rejects nonnegative and conservation violations", () => {
     const invalid: PlanOption = {
-      ...mixed,
-      allocations: mixed.allocations.map((allocation, index) =>
+      ...balanced,
+      allocations: balanced.allocations.map((allocation, index) =>
         index === 0 ? { ...allocation, quantityLb: -1 } : allocation,
       ),
     };
@@ -169,16 +177,16 @@ describe("deterministic planning", () => {
   });
 
   it("aggregates duplicate-destination quantities for staging, partner capacity, and demand", () => {
-    const mealKit = mixed.allocations.find(
+    const mealKit = balanced.allocations.find(
       (allocation) => allocation.destinationId === "PAR-003",
     );
     if (!mealKit) throw new Error("Expected seeded meal-kit allocation.");
 
     const aggregateOverflow: PlanOption = {
-      ...mixed,
+      ...balanced,
       allocations: [
-        mixed.allocations[0],
-        { ...mixed.allocations[1], quantityLb: 219 },
+        balanced.allocations[0],
+        { ...balanced.allocations[1], quantityLb: 219 },
         mealKit,
         { ...mealKit, id: "ALL-008", quantityLb: 101 },
       ],
@@ -196,14 +204,14 @@ describe("deterministic planning", () => {
   });
 
   it("checks warehouse storage and separate refrigerated staging limits", () => {
-    const storageValidation = validatePlanOption(mixed, {
+    const storageValidation = validatePlanOption(balanced, {
       ...context,
       warehouse: {
         ...context.warehouse,
         occupiedRefrigeratedLb: 1_941,
       },
     });
-    const stagingValidation = validatePlanOption(mixed, {
+    const stagingValidation = validatePlanOption(balanced, {
       ...context,
       warehouse: {
         ...context.warehouse,
@@ -221,28 +229,28 @@ describe("deterministic planning", () => {
 
   it("rejects partner status, category, capacity, and expired demand", () => {
     const canceled = validatePlanOption(
-      mixed,
+      balanced,
       contextWithPartner("PAR-003", (partner) => ({
         ...partner,
         status: "canceled",
       })),
     );
     const wrongCategory = validatePlanOption(
-      mixed,
+      balanced,
       contextWithPartner("PAR-003", (partner) => ({
         ...partner,
         acceptedCategories: ["shelf_stable"],
       })),
     );
     const capacityExceeded = validatePlanOption(
-      mixed,
+      balanced,
       contextWithPartner("PAR-003", (partner) => ({
         ...partner,
         refrigeratedCapacityAvailableLb: 399,
       })),
     );
     const expiredDemand = validatePlanOption(
-      mixed,
+      balanced,
       contextWithPartner("PAR-003", (partner) => ({
         ...partner,
         demandSignals: partner.demandSignals.map((signal) => ({
@@ -264,8 +272,8 @@ describe("deterministic planning", () => {
 
   it("rejects receiving-window violations", () => {
     const latePlan: PlanOption = {
-      ...mixed,
-      allocations: mixed.allocations.map((allocation) =>
+      ...balanced,
+      allocations: balanced.allocations.map((allocation) =>
         allocation.destinationId === "PAR-001"
           ? {
               ...allocation,
@@ -281,11 +289,11 @@ describe("deterministic planning", () => {
   });
 
   it("rejects unavailable, temperature-incompatible, and overloaded vehicles", () => {
-    const validation = validatePlanOption(mixed, {
+    const validation = validatePlanOption(balanced, {
       ...context,
       vehicle: {
         ...context.vehicle,
-        capacityLb: 1_199,
+        capacityLb: 1_139,
         temperatureCapability: ["ambient"],
         status: "maintenance",
       },
@@ -297,6 +305,53 @@ describe("deterministic planning", () => {
         "VEHICLE_TEMPERATURE_INCOMPATIBLE",
         "VEHICLE_CAPACITY_EXCEEDED",
       ]),
+    );
+  });
+
+  it("uses category acceptance history as a bounded, sample-aware score signal", () => {
+    const harbor = partners.find((partner) => partner.id === "PAR-001");
+    if (!harbor) throw new Error("Expected seeded Harbor Light partner.");
+    const strong = acceptanceHistorySignal(harbor, productLot.category);
+    const sparse = acceptanceHistorySignal(
+      {
+        ...harbor,
+        acceptanceHistory: [
+          {
+            ...harbor.acceptanceHistory[0],
+            offeredCount: 4,
+            acceptedCount: 3,
+            refusedCount: 1,
+            shortReceiptCount: 0,
+            acceptanceRatePct: 75,
+            sampleSize: 4,
+          },
+        ],
+      },
+      productLot.category,
+    );
+    const withoutHistory = acceptanceHistorySignal(
+      { ...harbor, acceptanceHistory: [] },
+      productLot.category,
+    );
+    const base = {
+      documentedNeed: 80,
+      usabilityMatch: 80,
+      receivingWindowFit: 80,
+      availableCapacity: 80,
+      recentServiceGap: 80,
+      equityPriority: 80,
+      travelPenalty: 0,
+      spoilagePenalty: 0,
+      refusalRiskPenalty: 0,
+    };
+
+    expect(strong).toMatchObject({ score: 90, confidence: "high" });
+    expect(sparse).toMatchObject({ score: 0, confidence: "low" });
+    expect(withoutHistory).toMatchObject({ score: 0, confidence: "unknown" });
+    expect(
+      calculateDestinationScore({ ...base, historicalAcceptance: strong.score }).total,
+    ).toBeGreaterThan(
+      calculateDestinationScore({ ...base, historicalAcceptance: sparse.score }).total,
     );
   });
 });

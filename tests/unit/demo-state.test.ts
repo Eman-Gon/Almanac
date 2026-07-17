@@ -101,7 +101,7 @@ describe("persisted demo state transitions", () => {
   it("cancels the partner and original stop while preserving unaffected work", () => {
     const mixed = generatePlanSet().options[2];
     const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
-    const withCompletedStop = completeStops(approved, ["STP-001", "STP-002", "STP-003"]);
+    const withCompletedStop = completeStops(approved, ["STP-001", "STP-002"]);
     const disrupted = triggerPartnerCancellation(withCompletedStop);
 
     expect(disrupted.partnerStatusOverrides["PAR-002"]).toBe("canceled");
@@ -111,7 +111,7 @@ describe("persisted demo state transitions", () => {
         (stop) => stop.locationId === "PAR-002",
       )?.status,
     ).toBe("canceled");
-    expect(disrupted.missions["MSN-104"].stops.find((stop) => stop.id === "STP-003")?.status).toBe("complete");
+    expect(disrupted.missions["MSN-104"].stops.find((stop) => stop.id === "STP-002")?.status).toBe("complete");
     expect(disrupted.disruption?.affectedQuantityLb).toBe(320);
   });
 
@@ -124,7 +124,7 @@ describe("persisted demo state transitions", () => {
       "BAT-001",
       true,
     );
-    const withCompletedStop = completeStops(packed, ["STP-001", "STP-002", "STP-003"]);
+    const withCompletedStop = completeStops(packed, ["STP-001", "STP-002"]);
     const recovered = approveRecovery(triggerPartnerCancellation(withCompletedStop));
 
     expect(recovered.missions["MSN-104"].status).toBe("superseded");
@@ -139,7 +139,7 @@ describe("persisted demo state transitions", () => {
     expect(recovered.packingPlans["PKG-105"].batches[0].status).toBe("complete");
     expect(recovered.packingPlans["PKG-105"].batches.some((batch) => batch.destinationId === "PAR-002")).toBe(false);
     expect(recovered.activePackingPlanId).toBe("PKG-105");
-    expect(recovered.missions["MSN-105"].routeLegs).toHaveLength(4);
+    expect(recovered.missions["MSN-105"].routeLegs).toHaveLength(3);
     expect(
       recovered.auditEvents.find((event) => event.eventType === "mission_superseded")
         ?.newState,
@@ -149,7 +149,7 @@ describe("persisted demo state transitions", () => {
   it("refuses out-of-order stop completion", () => {
     const mixed = generatePlanSet().options[2];
     const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
-    const unchanged = completeMissionStop(approved, "MSN-104", "STP-005");
+    const unchanged = completeMissionStop(approved, "MSN-104", "STP-004");
 
     expect(unchanged).toBe(approved);
     expect(unchanged.missions["MSN-104"].stops.at(-1)?.status).toBe("pending");
@@ -185,7 +185,7 @@ describe("persisted demo state transitions", () => {
   it("refuses cancellation after the affected delivery is complete", () => {
     const mixed = generatePlanSet().options[2];
     const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
-    const eastsideCompleted = completeStops(approved, ["STP-001", "STP-002", "STP-003", "STP-004"]);
+    const eastsideCompleted = completeStops(approved, ["STP-001", "STP-002", "STP-003"]);
     const unchanged = triggerPartnerCancellation(eastsideCompleted);
 
     expect(unchanged).toBe(eastsideCompleted);
