@@ -2,39 +2,22 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Gauge, Route, Scale, UsersRound } from "lucide-react";
-import { useMemo } from "react";
+import { CheckCircle2, Gauge, Route, Scale, ShieldCheck, UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailsAccordion } from "@/components/shared/details-accordion";
 import { LoadingState } from "@/components/shared/loading-state";
 import { Panel } from "@/components/shared/panel";
 import { StickyActionBar } from "@/components/shared/sticky-action-bar";
 import { productLot, scenario } from "@/data/seed/scenario";
-import { createMission } from "@/domain/execution/create-execution";
 import { spoilageAvoidancePct, totalRouteMiles } from "@/domain/metrics/calculate";
 import { generatePlanSet, getDestinationName } from "@/domain/planning/generate-plans";
 import { reconcilePlanQuantities } from "@/domain/planning/quantity";
-import { createRecoveryOption } from "@/domain/recovery/create-recovery";
+import { scenarioContext } from "@/domain/planning/scenario-context";
 import { useDemoState } from "@/state/demo-state";
 
 export default function ImpactPage() {
   const router = useRouter();
-  const { state, hydrated, resetScenario } = useDemoState();
-  const planSet = useMemo(() => generatePlanSet(), []);
-  const original = state.approvedPlan ?? state.planOverrides[state.selectedPlanId] ?? planSet.options.find((option) => option.id === state.selectedPlanId) ?? planSet.options[2];
-  const recovered = state.stage === "recovered";
-  const plan = recovered ? state.disruption?.recoveryOption ?? createRecoveryOption(original) : original;
-  const missionId = recovered ? "MSN-105" : "MSN-104";
-  const mission = state.missions[missionId] ?? createMission(plan, missionId);
-  const originalMission = state.missions["MSN-104"] ?? createMission(original);
-  const reconciliation = reconcilePlanQuantities(plan, productLot.availableQuantityLb);
-  const spoilagePct = spoilageAvoidancePct(scenario.baselineExpectedSpoilageLb, plan.metrics.expectedSpoilageLb) ?? 0;
-  const events = state.auditEvents;
-  const overrideCount = events.filter((event) => event.eventType === "plan_allocations_edited").length;
-  const affectedQuantityLb = state.disruption?.affectedQuantityLb ?? 0;
-  const alternateQuantityLb = plan.allocations.find((allocation) => allocation.destinationId === "PAR-004")?.quantityLb ?? 0;
-  const originalMealKitLb = original.allocations.find((allocation) => allocation.destinationId === "PAR-003")?.quantityLb ?? 0;
-  const recoveredMealKitLb = plan.allocations.find((allocation) => allocation.destinationId === "PAR-003")?.quantityLb ?? originalMealKitLb;
+  const { state, hydrated, persistedStateError, resetScenario } = useDemoState();
 
   function restart() {
     resetScenario();
@@ -43,9 +26,44 @@ export default function ImpactPage() {
 
   if (!hydrated) return <LoadingState label="Loading saved impact state…" />;
 
+  if (persistedStateError) {
+    return <ImpactStateError onRestart={restart} />;
+  }
+
   if (!state.approvedPlan) {
     return <><PageHeader title="Impact" subtitle="Impact is calculated after human approval." breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Impact" }]} backHref="/dashboard" backLabel="Back to Dashboard" /><div className="route-state"><strong>Impact is calculated after human approval.</strong><span>Approve a feasible plan before reviewing mission outcomes.</span><Link className="button button-primary" href="/plans/PLN-104">Open plan comparison</Link></div></>;
   }
+
+  const original = state.approvedPlan;
+  const recovered = state.stage === "recovered";
+  const missionId = recovered
+    ? scenarioContext.ids.recoveryMissionId
+    : scenarioContext.ids.primaryMissionId;
+  const plan = recovered ? state.disruption?.recoveryOption : original;
+  const mission = state.missions[missionId];
+  const originalMission = state.missions[scenarioContext.ids.primaryMissionId];
+
+  if (!plan || !mission || !originalMission || (recovered && !state.disruption)) {
+    return <ImpactStateError onRestart={restart} />;
+  }
+
+  const reconciliation = reconcilePlanQuantities(plan, productLot.availableQuantityLb);
+  const spoilagePct = spoilageAvoidancePct(scenario.baselineExpectedSpoilageLb, plan.metrics.expectedSpoilageLb) ?? 0;
+  const events = state.auditEvents;
+  const overrideCount = events.filter((event) => event.eventType === "plan_allocations_edited").length;
+  // docs/PRIVACY_AND_SAFETY.md:99-105 requires the interface to record the approver,
+  // timestamp, ORIGINAL RECOMMENDATION, final action, and edit reason. Every field
+  // already existed — approvalReason and allocationEditReason were captured into state
+  // and then rendered nowhere, and the recommendation is deterministic
+  // (planSet.selectedOptionId, generate-plans.ts:412). Nothing new is stored here.
+  const recommendedOptionId = scenarioContext.ids.primaryOptionId;
+  const recommendedPlan = generatePlanSet().options.find((option) => option.id === recommendedOptionId);
+  const followedRecommendation = original.id === recommendedOptionId;
+  const approvalEvent = events.find((event) => event.eventType === "mission_approved");
+  const affectedQuantityLb = state.disruption?.affectedQuantityLb ?? 0;
+  const alternateQuantityLb = plan.allocations.find((allocation) => allocation.destinationId === "PAR-004")?.quantityLb ?? 0;
+  const originalMealKitLb = original.allocations.find((allocation) => allocation.destinationId === "PAR-003")?.quantityLb ?? 0;
+  const recoveredMealKitLb = plan.allocations.find((allocation) => allocation.destinationId === "PAR-003")?.quantityLb ?? originalMealKitLb;
 
   return (
     <>
@@ -63,9 +81,81 @@ export default function ImpactPage() {
 
         <DetailsAccordion title="View calculation details"><div className="impact-support-grid"><Panel title="Supporting metrics"><div className="impact-support-metrics"><div><Route size={16} aria-hidden="true" /><span>Warehouse-origin route miles<strong>{totalRouteMiles(mission.routeLegs).toFixed(1)} mi</strong></span></div><div><Gauge size={16} aria-hidden="true" /><span>Modeled replanning interval<strong>{recovered ? `${scenario.modeledReplanningSeconds} sec` : "Not applicable"}</strong></span></div><div><CheckCircle2 size={16} aria-hidden="true" /><span>Inventory reconciliation<strong>{reconciliation.reconciles ? "Pass" : "Review"}</strong></span></div></div></Panel><Panel title="Allocation by destination"><div className="allocation-bars">{plan.allocations.map((allocation) => <div key={allocation.id}><span>{getDestinationName(allocation.destinationId)}</span><div><i style={{ width: `${(allocation.quantityLb / productLot.availableQuantityLb) * 100}%` }} /></div><strong>{allocation.quantityLb} lb</strong></div>)}<div><span>Supervisor inspection hold</span><div><i className="hold-bar" style={{ width: `${(plan.inspectionHoldLb / productLot.availableQuantityLb) * 100}%` }} /></div><strong>{plan.inspectionHoldLb} lb</strong></div></div></Panel></div><div className="assumption-list impact-assumptions"><p><strong>Household-equivalent model</strong>{reconciliation.quantityPlannedOutboundInTimeLb.toLocaleString()} planned outbound lb ÷ {scenario.householdWeightLb} lb per modeled household-equivalent</p><p><strong>Spoilage model</strong>({scenario.baselineExpectedSpoilageLb.toLocaleString()} baseline lb − {plan.metrics.expectedSpoilageLb} expected lb) ÷ {scenario.baselineExpectedSpoilageLb.toLocaleString()}</p><p><strong>Human overrides</strong>{overrideCount} allocation edit{overrideCount === 1 ? "" : "s"}; approval is not counted as an override</p></div></DetailsAccordion>
 
-        <DetailsAccordion title="Audit history"><div className="table-scroll"><table className="data-table audit-table"><caption className="sr-only">Decision audit history</caption><thead><tr><th>Time</th><th>Event</th><th>Actor</th><th>Reason or result</th></tr></thead><tbody>{events.map((event) => <tr key={event.id}><td>{event.occurredAt.slice(11, 19)}</td><td><strong>{event.eventType.replaceAll("_", " ")}</strong></td><td>{event.actorType} · {event.actorId}</td><td>{event.reason ?? "Scenario event recorded"}</td></tr>)}</tbody></table></div><DetailsAccordion title="Technical details"><p>Audit event identifiers and seeded fixture references remain available in the source record.</p></DetailsAccordion></DetailsAccordion>
+        {/* The approval record and the audit table are deliberately NOT inside an
+            accordion. Auditability is a feature of this product, not a debug view — a
+            reader should not have to know to go looking for what a human decided. */}
+        <Panel title="Approval record">
+          <div className="approval-record">
+            <div>
+              <span>Original recommendation</span>
+              <strong>{recommendedPlan?.name ?? "Unknown"}</strong>
+              <small>Seeded recommendation · {recommendedOptionId}</small>
+            </div>
+            <div className={followedRecommendation ? "" : "approval-record-diverged"}>
+              <span>Human decision</span>
+              <strong>{original.name}</strong>
+              <small>{followedRecommendation ? "Recommendation followed" : "Staff approved a different plan"}</small>
+            </div>
+            <div>
+              <span>Approver</span>
+              <strong>{approvalEvent?.actorId ?? "demo_user"}</strong>
+              <small>{approvalEvent ? `${approvalEvent.actorType} · ${approvalEvent.occurredAt.slice(11, 16)}` : "Timestamp unavailable"}</small>
+            </div>
+            <div className={overrideCount > 0 ? "approval-record-diverged" : ""}>
+              <span>Quantities edited</span>
+              <strong>{overrideCount > 0 ? `${overrideCount} edit${overrideCount === 1 ? "" : "s"}` : "None"}</strong>
+              <small>{overrideCount > 0 ? (state.allocationEditReason || "No reason recorded") : "Approved at recommended quantities"}</small>
+            </div>
+          </div>
+          <div className="approval-reason">
+            <span>Reason given at approval</span>
+            <p>{state.approvalReason || "No reason was entered. The reason field is optional at approval; an allocation edit always requires one."}</p>
+          </div>
+          <div className="guardrail-note">
+            <ShieldCheck size={18} aria-hidden="true" />
+            <div>
+              <strong>An override is not an error</strong>
+              <span>Editing quantities or approving a different plan demonstrates human control. Both are recorded here and in the audit history below.</span>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel title="Audit history">
+          <div className="table-scroll">
+            <table className="data-table audit-table">
+              <caption className="sr-only">Decision audit history</caption>
+              <thead><tr><th>Time</th><th>Event</th><th>Actor</th><th>Reason or result</th></tr></thead>
+              <tbody>{events.map((event) => <tr key={event.id}><td>{event.occurredAt.slice(11, 19)}</td><td><strong>{event.eventType.replaceAll("_", " ")}</strong></td><td>{event.actorType} · {event.actorId}</td><td>{event.reason ?? "Scenario event recorded"}</td></tr>)}</tbody>
+            </table>
+          </div>
+          <DetailsAccordion title="Technical details"><p>Audit event identifiers and seeded fixture references remain available in the source record.</p></DetailsAccordion>
+        </Panel>
 
         <StickyActionBar status={<><CheckCircle2 size={19} aria-hidden="true" /><span><strong>Impact calculated</strong><small>Review the supporting calculations or restart the simulated scenario.</small></span></>}><Link className="button button-secondary" href="/dashboard">Return to Dashboard</Link><button className="button button-primary" type="button" onClick={restart}>Restart demo</button></StickyActionBar>
+      </div>
+    </>
+  );
+}
+
+function ImpactStateError({ onRestart }: { onRestart: () => void }) {
+  return (
+    <>
+      <PageHeader
+        title="Impact"
+        subtitle="The saved workflow state is incomplete."
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Impact" }]}
+        backHref="/dashboard"
+        backLabel="Back to Dashboard"
+      />
+      <div className="route-state" role="alert">
+        <strong>Impact cannot be calculated from this saved state.</strong>
+        <span>
+          The approved plan, mission, or recovery record is missing. ChoiceGrid will not
+          reconstruct operational history from seed data.
+        </span>
+        <button className="button button-primary" type="button" onClick={onRestart}>
+          Restart demo
+        </button>
       </div>
     </>
   );

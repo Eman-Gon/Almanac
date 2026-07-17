@@ -1,9 +1,14 @@
 # dependencies
 /node_modules
+/mobile/node_modules
 
 # next.js
 /.next/
 /out/
+
+# expo
+/mobile/.expo/
+/mobile/dist/
 
 # testing
 /coverage/
@@ -13,6 +18,7 @@
 # local environment files
 .env*
 !.env.example
+!mobile/.env.example
 
 # logs and editor files
 *.log

@@ -67,14 +67,17 @@ export function startPackingTransition(packingPlan: PackingPlan, context: Choice
 export function setPackingBatchTransition(packingPlan: PackingPlan, batchId: string, complete: boolean, context: ChoiceGridScenarioContext = scenarioContext): TransitionResult<{ packingPlan: PackingPlan; changed: boolean; auditEvent: AuditEvent | null }> {
   const batch = packingPlan.batches.find((candidate) => candidate.id === batchId);
   if (!batch) return fail("NOT_FOUND", `Packing batch ${batchId} was not found.`);
-  if (packingPlan.status === "ready") return fail("INVALID_STATE_TRANSITION", "Start the packing plan before changing batch completion.");
+  if (packingPlan.status !== "in_progress" && packingPlan.status !== "complete") {
+    return fail("INVALID_STATE_TRANSITION", "Start the packing plan before changing batch completion.");
+  }
   if ((batch.status === "complete") === complete) return { ok: true, value: { packingPlan, changed: false, auditEvent: null } };
   const updated = setPackingBatchCompletion(packingPlan, batchId, complete);
   const recovery = packingPlan.id === context.ids.recoveryPackingPlanId;
+  const eventType = complete ? "packing_batch_completed" : "packing_batch_reopened";
   return { ok: true, value: {
     packingPlan: updated,
     changed: true,
-    auditEvent: audit({ id: `AUD-PKG-${batchId}`, eventType: complete ? "packing_batch_completed" : "packing_batch_reopened", entityType: "PackingBatch", entityId: batchId, actorType: "human", actorId: "demo_user", occurredAt: recovery ? context.timeline.recoveryPackingChangedAt : context.timeline.primaryPackingChangedAt, previousState: { status: batch.status }, newState: { status: complete ? "complete" : "pending", packingPlanStatus: updated.status } }),
+    auditEvent: audit({ id: `AUD-${packingPlan.id}-${batchId}-${eventType}-${crypto.randomUUID()}`, eventType, entityType: "PackingBatch", entityId: batchId, actorType: "human", actorId: "demo_user", occurredAt: recovery ? context.timeline.recoveryPackingChangedAt : context.timeline.primaryPackingChangedAt, previousState: { status: batch.status }, newState: { status: complete ? "complete" : "pending", packingPlanStatus: updated.status } }),
   } };
 }
 

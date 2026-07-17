@@ -98,6 +98,44 @@ describe("persisted demo state transitions", () => {
     ]);
   });
 
+  it("rejects batch changes until packing has started", () => {
+    const mixed = generatePlanSet().options[2];
+    const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
+    const readyAttempt = setPackingBatchComplete(approved, "PKG-104", "BAT-001", true);
+    const draft = {
+      ...approved,
+      packingPlans: {
+        ...approved.packingPlans,
+        "PKG-104": { ...approved.packingPlans["PKG-104"], status: "draft" as const },
+      },
+    };
+    const draftAttempt = setPackingBatchComplete(draft, "PKG-104", "BAT-001", true);
+
+    expect(readyAttempt).toBe(approved);
+    expect(draftAttempt).toBe(draft);
+    expect(readyAttempt.auditEvents).toHaveLength(approved.auditEvents.length);
+    expect(draftAttempt.auditEvents).toHaveLength(draft.auditEvents.length);
+  });
+
+  it("assigns unique audit IDs across complete, reopen, and recomplete cycles", () => {
+    const mixed = generatePlanSet().options[2];
+    const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
+    const started = startPacking(approved, "PKG-104");
+    const completed = setPackingBatchComplete(started, "PKG-104", "BAT-001", true);
+    const reopened = setPackingBatchComplete(completed, "PKG-104", "BAT-001", false);
+    const recompleted = setPackingBatchComplete(reopened, "PKG-104", "BAT-001", true);
+    const events = recompleted.auditEvents.filter(
+      (event) => event.entityType === "PackingBatch" && event.entityId === "BAT-001",
+    );
+
+    expect(events.map((event) => event.eventType)).toEqual([
+      "packing_batch_completed",
+      "packing_batch_reopened",
+      "packing_batch_completed",
+    ]);
+    expect(new Set(events.map((event) => event.id))).toHaveLength(3);
+  });
+
   it("cancels the partner and original stop while preserving unaffected work", () => {
     const mixed = generatePlanSet().options[2];
     const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
@@ -215,5 +253,56 @@ describe("persisted demo state transitions", () => {
     expect(reset.missions).toEqual({});
     expect(reset.partnerStatusOverrides).toEqual({});
     expect(reset.resetCount).toBe(3);
+  });
+
+  it("rejects persisted approval state when its created mission is missing", () => {
+    const mixed = generatePlanSet().options[2];
+    const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
+    const inconsistent = {
+      ...approved,
+      missions: {},
+    };
+
+    const result = DemoStateSchema.safeParse(inconsistent);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["missions", "MSN-104"] }),
+        ]),
+      );
+    }
+  });
+
+  it("rejects persisted recovery state without its replacement resources", () => {
+    const mixed = generatePlanSet().options[2];
+    const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
+    const recovered = approveRecovery(triggerPartnerCancellation(approved));
+    const inconsistent = {
+      ...recovered,
+      packingPlans: { "PKG-104": recovered.packingPlans["PKG-104"] },
+      missions: { "MSN-104": recovered.missions["MSN-104"] },
+    };
+
+    const result = DemoStateSchema.safeParse(inconsistent);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: ["packingPlans", "PKG-105"] }),
+          expect.objectContaining({ path: ["missions", "MSN-105"] }),
+        ]),
+      );
+    }
+  });
+
+  it("accepts a complete recovered workflow snapshot", () => {
+    const mixed = generatePlanSet().options[2];
+    const approved = approvePlan(createInitialDemoState(), mixed, "Approve baseline.");
+    const recovered = approveRecovery(triggerPartnerCancellation(approved));
+
+    expect(DemoStateSchema.safeParse(recovered).success).toBe(true);
   });
 });

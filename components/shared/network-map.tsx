@@ -329,46 +329,53 @@ function LocationMarker({
     );
   }
 
-  const displayPoint = projectPoint(location.point, viewport);
+  const projectedPoint = projectPoint(location.point, viewport);
   const showLabel = (routeVisible && routeStop) || selected;
+  const labelPoint = showLabel
+    ? { x: clamp(projectedPoint.x, 2, 98), y: clamp(projectedPoint.y, 2, 98) }
+    : projectedPoint;
   // Long route names need more room than the marker icon. Flip labels before
   // the visual midpoint of the right-hand third so they stay inside stacked
   // and tablet-width map canvases, including after zoom projection.
-  const labelOnLeft = displayPoint.x > 55;
-  const labelBelow = displayPoint.y < 15;
-  const labelAbove = displayPoint.y > 85;
+  const labelOnLeft = labelPoint.x > 55;
+  const labelBelow = labelPoint.y < 15;
+  const labelAbove = labelPoint.y > 85;
   const labelPlacement = labelBelow ? "map-marker-label-below" : labelAbove ? "map-marker-label-above" : "";
 
   return (
-    <div
-      className={`map-marker-wrap ${showLabel ? "map-marker-wrap-labeled" : ""}`}
-      style={{ left: `${displayPoint.x}%`, top: `${displayPoint.y}%` }}
-    >
-      <button
-        className={`map-marker-control ${markerClass(location)} ${routeVisible && location.routeStop ? "map-marker-route" : ""} ${selected ? "map-marker-selected" : ""}`}
-        type="button"
-        data-testid={`map-marker-${location.id}`}
-        aria-label={`Inspect ${location.name}, ${location.status}`}
-        aria-pressed={selected}
-        aria-expanded={selected}
-        aria-controls="map-location-detail"
-        title={`${location.name} · ${location.status}`}
-        onClick={() => onSelect(location.id, "marker")}
+    <>
+      <div
+        className={`map-marker-wrap ${showLabel ? "map-marker-wrap-labeled" : ""}`}
+        style={{ left: `${projectedPoint.x}%`, top: `${projectedPoint.y}%` }}
       >
-        <span className="map-marker-pin"><Icon size={16} strokeWidth={2.2} aria-hidden="true" /></span>
-        {routeStop && routeVisible ? <span className="map-marker-sequence-badge" aria-hidden="true">{routeStop.sequence}</span> : null}
-      </button>
-      {showLabel ? (
-        <span
-          className={`map-marker-label ${labelOnLeft ? "map-marker-label-left" : ""} ${labelPlacement} ${selected ? "map-marker-label-selected" : ""}`}
-          data-testid={routeStop ? `map-route-label-${location.id}` : undefined}
-          aria-hidden="true"
+        <button
+          className={`map-marker-control ${markerClass(location)} ${routeVisible && location.routeStop ? "map-marker-route" : ""} ${selected ? "map-marker-selected" : ""}`}
+          type="button"
+          data-testid={`map-marker-${location.id}`}
+          aria-label={`Inspect ${location.name}, ${location.status}`}
+          aria-pressed={selected}
+          aria-expanded={selected}
+          aria-controls="map-location-detail"
+          title={`${location.name} · ${location.status}`}
+          onClick={() => onSelect(location.id, "marker")}
         >
-          {routeStop ? <b>{routeStop.sequence}</b> : null}
-          <span>{location.name}</span>
+          <span className="map-marker-pin"><Icon size={16} strokeWidth={2.2} aria-hidden="true" /></span>
+          {routeStop && routeVisible ? <span className="map-marker-sequence-badge" aria-hidden="true">{routeStop.sequence}</span> : null}
+        </button>
+      </div>
+      {showLabel ? (
+        <span className="map-marker-label-anchor" style={{ left: `${labelPoint.x}%`, top: `${labelPoint.y}%` }}>
+          <span
+            className={`map-marker-label ${labelOnLeft ? "map-marker-label-left" : ""} ${labelPlacement} ${selected ? "map-marker-label-selected" : ""}`}
+            data-testid={routeStop ? `map-route-label-${location.id}` : undefined}
+            aria-hidden="true"
+          >
+            {routeStop ? <b>{routeStop.sequence}</b> : null}
+            <span>{location.name}</span>
+          </span>
         </span>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -655,7 +662,7 @@ export function NetworkMap({
     panX: number;
     panY: number;
   } | null>(null);
-  const lastWheelZoomAt = useRef(0);
+  const lastPinchZoomAt = useRef(0);
   const lastSelectionTrigger = useRef<{ id: string; source: SelectionSource } | null>(null);
   const selectedLocation = interactive
     ? visibleLocations.find((location) => location.id === selectedLocationId)
@@ -775,10 +782,20 @@ export function NetworkMap({
     // Trackpad pinch gestures arrive as modified wheel events. Small, unmodified
     // trackpad deltas pan the map once it is zoomed; larger mouse-wheel deltas
     // retain the existing scroll-to-zoom behavior.
-    if (Math.abs(event.deltaY) > 0 && (isPinchZoom || viewport.zoom === 1 || isCoarseWheel)) {
+    if (isCoarseWheel) {
+      updateZoom(event.deltaY < 0 ? 1 : -1);
+      return;
+    }
+
+    if (isPinchZoom) {
       const now = performance.now();
-      if (now - lastWheelZoomAt.current < 90) return;
-      lastWheelZoomAt.current = now;
+      if (now - lastPinchZoomAt.current < 90) return;
+      lastPinchZoomAt.current = now;
+      updateZoom(event.deltaY < 0 ? 1 : -1);
+      return;
+    }
+
+    if (viewport.zoom === 1) {
       updateZoom(event.deltaY < 0 ? 1 : -1);
       return;
     }
@@ -888,7 +905,7 @@ export function NetworkMap({
             {layers.routes ? <polyline className={`map-route map-route-${routeStatus}`} data-testid="map-route-layer" data-route-status={routeStatus} points={route} /> : null}
             {layers.routes ? routeIds.map((id, index) => {
               const point = locations.find((location) => location.id === id)?.point;
-              return point ? <circle key={id} className={`map-route-node map-route-node-${routeStatus}`} cx={point.x} cy={point.y} r={index === 0 ? 1.9 : 1.5} /> : null;
+              return point ? <circle key={id} className={`map-route-node map-route-node-${routeStatus}`} data-testid={`map-route-node-${id}`} cx={point.x} cy={point.y} r={index === 0 ? 1.9 : 1.5} /> : null;
             }) : null}
           </g>
         </svg>

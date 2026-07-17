@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "ChoiceGrid",
+    "slug": "choicegrid",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0c2830"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.choicegrid.demo"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0c2830"
+      },
+      "package": "com.choicegrid.demo"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "choicegrid-demo-local"
+      }
+    }
+  }
+}

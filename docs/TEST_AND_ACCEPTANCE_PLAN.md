@@ -32,6 +32,12 @@ npm run demo:check
 
 No known critical or high-severity defect may remain in the primary scenario.
 
+Hosted deploy and Expo Go checks (manual after Vercel publish):
+
+- Open the production URL through the primary demo without LLM/Vapi env vars.
+- At 390×844, dashboard does not horizontally overflow the viewport; hamburger navigation works.
+- Expo Go WebView loads `EXPO_PUBLIC_WEB_URL`; Reload preserves `localStorage` demo progress until Reset scenario.
+
 ---
 
 ## Unit tests

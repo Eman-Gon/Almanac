@@ -211,8 +211,18 @@ export function assessPlanCapacity(
       ? Math.max(0, warehouse.refrigeratedStagingCapacityAvailableLb)
       : 0;
   const warehouseStaging = usage(stagedQuantityLb, stagingLimitLb);
+  const outboundQuantityLb = plan.allocations
+    .filter((allocation) => allocation.destinationType !== "warehouse")
+    .reduce(
+      (total, allocation) =>
+        total + nonnegativeFiniteQuantity(allocation.quantityLb),
+      0,
+    );
 
-  if ((warehouseStoredQuantityLb > 0 || stagedQuantityLb > 0) && !warehouse.active) {
+  if (
+    (warehouseStoredQuantityLb > 0 || outboundQuantityLb > 0) &&
+    !warehouse.active
+  ) {
     issues.push(
       makeIssue({
         code: "WAREHOUSE_UNAVAILABLE",
@@ -409,14 +419,7 @@ export function assessPlanCapacity(
     }
   }
 
-  const vehicleLoadLb = plan.allocations
-    .filter((allocation) => allocation.destinationType !== "warehouse")
-    .reduce(
-      (total, allocation) =>
-        total + nonnegativeFiniteQuantity(allocation.quantityLb),
-      0,
-    );
-  const vehiclePayload = usage(vehicleLoadLb, vehicle.capacityLb);
+  const vehiclePayload = usage(outboundQuantityLb, vehicle.capacityLb);
 
   if (vehicle.status === "unavailable" || vehicle.status === "maintenance") {
     issues.push(

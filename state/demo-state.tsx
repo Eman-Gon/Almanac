@@ -35,6 +35,7 @@ const LEGACY_STORAGE_KEY = "choicegrid-demo-v1";
 type DemoContextValue = {
   state: DemoState;
   hydrated: boolean;
+  persistedStateError: boolean;
   selectPlan: (planId: string) => void;
   generatePlans: () => void;
   editPlan: (plan: PlanOption, reason: string) => void;
@@ -52,6 +53,7 @@ const DemoContext = createContext<DemoContextValue | null>(null);
 export function DemoStateProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<DemoState>(initialDemoState);
   const [hydrated, setHydrated] = useState(false);
+  const [persistedStateError, setPersistedStateError] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,9 +64,13 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         try {
           const parsed = DemoStateSchema.safeParse(JSON.parse(persisted));
           if (parsed.success) setState(parsed.data);
-          else window.localStorage.removeItem(STORAGE_KEY);
+          else {
+            window.localStorage.removeItem(STORAGE_KEY);
+            setPersistedStateError(true);
+          }
         } catch {
           window.localStorage.removeItem(STORAGE_KEY);
+          setPersistedStateError(true);
         }
       }
       setHydrated(true);
@@ -130,6 +136,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(PREVIOUS_STORAGE_KEY);
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    setPersistedStateError(false);
     setState((current) => createInitialDemoState(current.resetCount + 1));
   }, []);
 
@@ -137,6 +144,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       hydrated,
+      persistedStateError,
       selectPlan,
       generatePlans,
       editPlan,
@@ -155,6 +163,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
       editPlan,
       generatePlans,
       hydrated,
+      persistedStateError,
       resetScenario,
       selectPlan,
       setPackingBatchComplete,

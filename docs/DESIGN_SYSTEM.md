@@ -27,30 +27,106 @@ Priorities:
 
 Avoid excessive gradients, glowing effects, decorative AI imagery, or animation that distracts from decisions.
 
-### Suggested palette
+### Palette — Cold Chain
 
-| Token | Suggested value | Use |
+The palette ships in `app/globals.css` `:root`. These are the shipped values, not a proposal. Re-point a token there and update this table in the same change.
+
+The governing rule, from `app/globals.css`:
+
+> The product's governing variable is whether perishable inventory stays cold. So the workspace is cool by default: every neutral is a teal-shifted slate, and the primary action is an instrument cyan rather than a generic UI blue. Saturation is reserved for signal. Warmth on screen means something is at risk — amber for a constraint under pressure, red for a break in the chain. Do not introduce a warm hue for a non-urgent purpose; it spends the one contrast the interface relies on to say "look here".
+
+Token names are a palette ramp, not semantics. Roles are used consistently: 200/300 are rules, `--slate-600/700/900` are ink, `--slate-50/100` are ground.
+
+#### Instrument chrome — the dark rail the workspace hangs off
+
+| Token | Value | Use |
 |---|---|---|
-| `--navy-900` | `#17324D` | Primary navigation and headers |
-| `--blue-600` | `#2563EB` | Donors, links, selected controls |
-| `--green-600` | `#2E7D4F` | Feasible, approved, delivered |
-| `--amber-600` | `#B7791F` | Capacity warning, medium risk |
-| `--red-600` | `#C2413B` | Infeasible, canceled, high risk |
-| `--purple-600` | `#6D4C9A` | Warehouse and planning context |
-| `--slate-900` | `#172033` | Primary text |
-| `--slate-600` | `#526071` | Secondary text |
-| `--slate-100` | `#EEF2F6` | Page or card background |
-| `--white` | `#FFFFFF` | Surface |
+| `--navy-950` | `#06171d` | Rail ground |
+| `--navy-900` | `#0c2830` | Rail surface |
+| `--navy-800` | `#124049` | Rail rules and raised chrome |
 
-Verify contrast in the implementation. Do not rely on color alone.
+#### Instrument cyan — primary action and focus
+
+| Token | Value | Use |
+|---|---|---|
+| `--blue-900` | `#063b4f` | Deepest cyan ink |
+| `--blue-700` | `#0a5670` | Pressed and active states |
+| `--blue-600` | `#0d6e8c` | Primary action, links, selected controls |
+| `--blue-500` | `#1898bd` | Focus and emphasis |
+| `--blue-100` | `#cfe9f2` | Selected fill |
+| `--blue-50` | `#f0f9fc` | Lightest cyan wash |
+
+#### Cold-chain intact
+
+| Token | Value | Use |
+|---|---|---|
+| `--green-700` | `#12614a` | Feasible/approved ink |
+| `--green-600` | `#1f7a5c` | Feasible, approved, delivered |
+| `--green-100` | `#dff2ea` | Feasible fill |
+
+#### Alarm — constraint under pressure
+
+| Token | Value | Use |
+|---|---|---|
+| `--amber-700` | `#8a4f08` | Warning ink |
+| `--amber-600` | `#a8630a` | Capacity warning, medium risk |
+| `--amber-500` | `#f59e0b` | Warning marker |
+| `--amber-100` | `#fdefd4` | Warning fill |
+
+#### Alarm — chain broken
+
+| Token | Value | Use |
+|---|---|---|
+| `--red-700` | `#a82520` | Infeasible ink |
+| `--red-600` | `#cc3a2c` | Infeasible, canceled, high risk |
+| `--red-100` | `#ffe7e2` | Infeasible fill |
+
+#### Advisory note
+
+| Token | Value | Use |
+|---|---|---|
+| `--purple-600` | `#5a56a0` | Warehouse and planning context |
+| `--purple-100` | `#e8e8f6` | Advisory fill |
+
+#### Rail-scoped accents
+
+The chrome sits on `--navy-950`, so it needs its own cyan steps: the workspace's `--blue-600` is tuned for contrast against white and goes muddy on a dark ground.
+
+| Token | Value | Use |
+|---|---|---|
+| `--rail-active` | `#0e5f7a` | Active rail item fill |
+| `--rail-active-edge` | `rgba(24, 152, 189, 0.34)` | Active rail item edge |
+| `--rail-accent` | `#4fc3e8` | Rail accent on dark ground |
+
+#### Cool neutral ramp
+
+| Token | Value | Use |
+|---|---|---|
+| `--slate-950` | `#071a1f` | Deepest ink |
+| `--slate-900` | `#0d2129` | Primary text |
+| `--slate-800` | `#16303a` | Strong ink |
+| `--slate-700` | `#2c4a55` | Ink |
+| `--slate-600` | `#4c666f` | Secondary text |
+| `--slate-500` | `#5f7a84` | Tertiary text |
+| `--slate-400` | `#93a9b1` | Muted text and icons |
+| `--slate-300` | `#c4d5d9` | Rule |
+| `--slate-200` | `#d9e5e7` | Rule |
+| `--slate-150` | `#e5eeef` | Subtle rule and fill |
+| `--slate-100` | `#edf4f4` | Page ground |
+| `--slate-50` | `#f6fbfb` | Raised ground |
+| `--white` | `#ffffff` | Surface |
+
+Every ink token clears 4.5:1 on `--white`. `npm run check:contrast` (`scripts/check-contrast.mjs`) enforces the palette across 28 pairs at WCAG AA and exits non-zero on regression. Run it after any token change. Do not rely on color alone.
 
 ---
 
 ## Typography
 
-Use a highly legible sans-serif available through the application stack.
+Instrument Sans (`--type-ui`) and Martian Mono (`--type-mono`), loaded via `next/font` in `app/layout.tsx` and exposed as `--font-ui` / `--font-mono`. The `--type-*` tokens carry system-stack fallbacks so the app stays legible if the fonts fail to load.
 
-Suggested scale:
+Martian Mono is for figures, unit labels, eyebrows, and identifiers only. Never body copy.
+
+Scale:
 
 | Role | Size | Weight |
 |---|---:|---:|
@@ -61,7 +137,7 @@ Suggested scale:
 | Label | 12–14 px | 500–600 |
 | KPI value | 26–36 px | 700 |
 
-Use tabular numbers for metrics when supported.
+`body` sets `font-variant-numeric: tabular-nums` globally, so metrics align by default.
 
 ---
 

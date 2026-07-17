@@ -70,6 +70,15 @@ test("route labels stay readable in the stacked map layout", async ({ page }) =>
 
   const canvas = page.getByTestId("network-map-canvas");
   const labels = page.locator("[data-testid^=map-route-label-]");
+  const assertMarkerTracksRoute = async (locationId: string) => {
+    const markerBounds = await page.getByTestId(`map-marker-${locationId}`).boundingBox();
+    const nodeBounds = await page.getByTestId(`map-route-node-${locationId}`).boundingBox();
+    expect(markerBounds).not.toBeNull();
+    expect(nodeBounds).not.toBeNull();
+    if (!markerBounds || !nodeBounds) throw new Error(`Route geometry for ${locationId} is unavailable`);
+    expect(markerBounds.x + markerBounds.width / 2).toBeCloseTo(nodeBounds.x + nodeBounds.width / 2, 0);
+    expect(markerBounds.y + markerBounds.height / 2).toBeCloseTo(nodeBounds.y + nodeBounds.height / 2, 0);
+  };
   const assertLabelsFit = async () => {
     const canvasBounds = await canvas.boundingBox();
     expect(canvasBounds).not.toBeNull();
@@ -97,6 +106,7 @@ test("route labels stay readable in the stacked map layout", async ({ page }) =>
   await page.getByRole("button", { name: "Zoom in map" }).click();
   await page.waitForTimeout(180);
   await assertLabelsFit();
+  await assertMarkerTracksRoute("PAR-002");
 });
 
 test("zero-pound hold routes remain explicit instead of falling back to capacity", async ({ page }) => {

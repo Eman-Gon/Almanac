@@ -59,6 +59,183 @@ export const DemoStateSchema = z.object({
   auditEvents: z.array(AuditEventSchema),
   fallbackUsed: z.boolean(),
   resetCount: z.number().int().nonnegative(),
+}).superRefine((state, context) => {
+  const primaryPackingPlanId = scenarioContext.ids.primaryPackingPlanId;
+  const recoveryPackingPlanId = scenarioContext.ids.recoveryPackingPlanId;
+  const primaryMissionId = scenarioContext.ids.primaryMissionId;
+  const recoveryMissionId = scenarioContext.ids.recoveryMissionId;
+
+  function issue(message: string, path: (string | number)[]) {
+    context.addIssue({ code: "custom", message, path });
+  }
+
+  if (
+    state.activePackingPlanId !== null &&
+    !state.packingPlans[state.activePackingPlanId]
+  ) {
+    issue("The active packing plan must reference a persisted packing plan.", [
+      "activePackingPlanId",
+    ]);
+  }
+
+  if (state.stage === "initial" || state.stage === "plans_generated") {
+    if (state.approvedPlan !== null) {
+      issue("Pre-approval state cannot contain an approved plan.", ["approvedPlan"]);
+    }
+    if (Object.keys(state.packingPlans).length > 0) {
+      issue("Pre-approval state cannot contain packing plans.", ["packingPlans"]);
+    }
+    if (Object.keys(state.missions).length > 0) {
+      issue("Pre-approval state cannot contain missions.", ["missions"]);
+    }
+    if (state.disruption !== null) {
+      issue("Pre-approval state cannot contain a disruption.", ["disruption"]);
+    }
+    return;
+  }
+
+  if (!state.approvedPlan) {
+    issue("Post-approval state requires the approved plan.", ["approvedPlan"]);
+    return;
+  }
+
+  if (state.approvedPlan.status !== "approved") {
+    issue("The persisted approved plan must have approved status.", [
+      "approvedPlan",
+      "status",
+    ]);
+  }
+
+  const primaryPackingPlan = state.packingPlans[primaryPackingPlanId];
+  if (!primaryPackingPlan) {
+    issue("Post-approval state requires the primary packing plan.", [
+      "packingPlans",
+      primaryPackingPlanId,
+    ]);
+  } else if (primaryPackingPlan.approvedPlanOptionId !== state.approvedPlan.id) {
+    issue("The primary packing plan must reference the approved plan.", [
+      "packingPlans",
+      primaryPackingPlanId,
+      "approvedPlanOptionId",
+    ]);
+  }
+
+  const primaryMission = state.missions[primaryMissionId];
+  if (!primaryMission) {
+    issue("Post-approval state requires the primary mission.", [
+      "missions",
+      primaryMissionId,
+    ]);
+  } else if (primaryMission.approvedPlanOptionId !== state.approvedPlan.id) {
+    issue("The primary mission must reference the approved plan.", [
+      "missions",
+      primaryMissionId,
+      "approvedPlanOptionId",
+    ]);
+  }
+
+  if (state.stage === "approved") {
+    if (state.disruption !== null) {
+      issue("Approved state cannot contain a disruption before replanning.", [
+        "disruption",
+      ]);
+    }
+    if (
+      primaryMission &&
+      !["assigned", "in_transit", "delivered", "closed"].includes(
+        primaryMission.status,
+      )
+    ) {
+      issue("The primary mission status must match an approved active workflow.", [
+        "missions",
+        primaryMissionId,
+        "status",
+      ]);
+    }
+    return;
+  }
+
+  if (!state.disruption) {
+    issue("Disrupted and recovered state requires the recorded disruption.", [
+      "disruption",
+    ]);
+    return;
+  }
+
+  if (state.partnerStatusOverrides[state.disruption.partnerId] !== "canceled") {
+    issue("The disrupted partner must remain marked canceled.", [
+      "partnerStatusOverrides",
+      state.disruption.partnerId,
+    ]);
+  }
+
+  if (state.stage === "disrupted") {
+    if (primaryMission && primaryMission.status !== "replanning") {
+      issue("The primary mission must be replanning after a disruption.", [
+        "missions",
+        primaryMissionId,
+        "status",
+      ]);
+    }
+    return;
+  }
+
+  if (state.disruption.recoveryOption.status !== "approved") {
+    issue("Recovered state requires an approved recovery option.", [
+      "disruption",
+      "recoveryOption",
+      "status",
+    ]);
+  }
+  if (primaryMission && primaryMission.status !== "superseded") {
+    issue("The primary mission must be superseded after recovery approval.", [
+      "missions",
+      primaryMissionId,
+      "status",
+    ]);
+  }
+
+  const recoveryPackingPlan = state.packingPlans[recoveryPackingPlanId];
+  if (!recoveryPackingPlan) {
+    issue("Recovered state requires the recovery packing plan.", [
+      "packingPlans",
+      recoveryPackingPlanId,
+    ]);
+  } else if (
+    recoveryPackingPlan.approvedPlanOptionId !== state.disruption.recoveryOption.id
+  ) {
+    issue("The recovery packing plan must reference the recovery option.", [
+      "packingPlans",
+      recoveryPackingPlanId,
+      "approvedPlanOptionId",
+    ]);
+  }
+
+  const recoveryMission = state.missions[recoveryMissionId];
+  if (!recoveryMission) {
+    issue("Recovered state requires the recovery mission.", [
+      "missions",
+      recoveryMissionId,
+    ]);
+  } else if (
+    recoveryMission.approvedPlanOptionId !== state.disruption.recoveryOption.id
+  ) {
+    issue("The recovery mission must reference the recovery option.", [
+      "missions",
+      recoveryMissionId,
+      "approvedPlanOptionId",
+    ]);
+  } else if (
+    !["assigned", "in_transit", "delivered", "closed"].includes(
+      recoveryMission.status,
+    )
+  ) {
+    issue("The recovery mission status must match an approved recovery workflow.", [
+      "missions",
+      recoveryMissionId,
+      "status",
+    ]);
+  }
 });
 
 export type DemoStage = z.infer<typeof DemoStageSchema>;

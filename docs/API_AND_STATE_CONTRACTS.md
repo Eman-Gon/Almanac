@@ -158,7 +158,7 @@ Updates one batch without changing allocation quantities.
 }
 ```
 
-The HTTP action accepts `PKG-104` or `PKG-105` and requires the current schema-valid packing plan. The route ID must match the plan, `batchId` must exist, and packing must already be `in_progress` or `complete`; a `ready` plan returns `409 INVALID_STATE_TRANSITION`. `complete: false` reopens the batch. Repeating the current batch state returns `changed: false` without an audit event. The plan becomes `complete` only when every batch is complete.
+The HTTP action accepts `PKG-104` or `PKG-105` and requires the current schema-valid packing plan. The route ID must match the plan, `batchId` must exist, and packing must already be `in_progress` or `complete`; both `draft` and `ready` plans return `409 INVALID_STATE_TRANSITION`. `complete: false` reopens the batch. Repeating the current batch state returns `changed: false` without an audit event. Each actual batch-state change receives a unique audit-event ID, including repeated complete/reopen cycles. The plan becomes `complete` only when every batch is complete.
 
 ---
 
@@ -266,7 +266,7 @@ Returns the current Vapi status for a live voice test request. It returns a prev
 
 ## Client state
 
-The implemented state is one Zod-validated `DemoState` persisted under the versioned browser key `choicegrid-demo-v2`:
+The implemented state is one Zod-validated `DemoState` persisted under the versioned browser key `choicegrid-demo-v3` (`state/demo-state.tsx`). The earlier keys `choicegrid-demo-v2` and `choicegrid-demo-v1` are retained only so the in-app reset control clears them alongside the current key; no state is carried forward from them.
 
 ```ts
 interface DemoState {

@@ -161,6 +161,16 @@ This file records important project decisions so coding agents do not repeatedly
 
 ---
 
+## D-018 — Ship the Cold Chain palette and a real typeface
+
+**Status:** Accepted
+**Decision:** The design layer in `app/globals.css` is the "Cold Chain" system. The palette encodes temperature: the workspace is cool by default, every neutral is a teal-shifted slate, and the primary action is an instrument cyan (`--blue-600` `#0d6e8c`) rather than a generic UI blue. Saturation is reserved for signal; warmth means at-risk — amber for a constraint under pressure, red for a break in the chain. No warm hue may be introduced for a non-urgent purpose. Type is Instrument Sans (`--type-ui`) and Martian Mono (`--type-mono`), loaded through `next/font` in `app/layout.tsx`; Martian Mono is restricted to figures, unit labels, eyebrows, and identifiers and is never used for body copy.
+**Reason:** The product's governing variable is whether perishable inventory stays cold, so the palette should carry that meaning rather than decorate. Warmth is the one contrast the interface relies on to say "look here", and spending it on ornament makes at-risk states unreadable. The application previously specified no typeface at all and fell back to the system stack, which gave figures no tabular, instrument-grade treatment and left the shell looking untuned.
+**Alternatives considered:** Keep the earlier generic navy/blue palette and only adjust contrast; use a single typeface for both UI and figures; leave typography on the system stack.
+**Consequence:** `scripts/check-contrast.mjs` enforces the palette across 28 pairs at WCAG AA and exits non-zero on regression; run `npm run check:contrast` after any token change. This supersedes the palette section of `DESIGN_SYSTEM.md`, which now documents the shipped tokens as authoritative rather than suggested. Per D-009, a token or type change must move the CSS and the docs together.
+
+---
+
 ## New decision template
 
 ```md

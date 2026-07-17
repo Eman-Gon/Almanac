@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   Clock3,
   ExternalLink,
   History,
+  Info,
   Snowflake,
   Truck,
 } from "lucide-react";
@@ -20,8 +22,10 @@ import { DetailsAccordion } from "@/components/shared/details-accordion";
 import { DetailsDrawer } from "@/components/shared/details-drawer";
 import { NetworkMap } from "@/components/shared/network-map";
 import { Panel } from "@/components/shared/panel";
+import { ProvenanceTag } from "@/components/shared/provenance";
 import { StickyActionBar } from "@/components/shared/sticky-action-bar";
 import { Tabs } from "@/components/shared/tabs";
+import { scoreWeights, SCORE_CONFIG_VERSION } from "@/domain/scoring/destination-score";
 import {
   partners,
   productLot,
@@ -36,7 +40,7 @@ import {
   validatePlanOption,
 } from "@/domain/planning/quantity";
 import { scenarioValidationContext } from "@/domain/planning/scenario-context";
-import type { PlanOption, PlanSet } from "@/domain/types";
+import type { DestinationScore, PlanOption, PlanSet } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
 
 function formatTime(value: string): string {
@@ -45,6 +49,23 @@ function formatTime(value: string): string {
     minute: "2-digit",
     timeZone: "America/Los_Angeles",
   }).format(new Date(value));
+}
+
+// The deadline was previously the hardcoded literal "Jul 16 · 10:45 PM" on the decision
+// screen, so it would have gone on displaying that after any seed change. AGENTS.md
+// rule 8 requires every displayed value be derived.
+const deadlineParts = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  timeZone: "America/Los_Angeles",
+});
+
+function formatDeadline(value: string): string {
+  const parts = deadlineParts.formatToParts(new Date(value));
+  const pick = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+  return `${pick("month")} ${pick("day")} · ${pick("hour")}:${pick("minute")} ${pick("dayPeriod")}`;
 }
 
 function arrivalWindow(destinationId: string): string {
@@ -103,8 +124,65 @@ function WhyThisPlan({
   );
 }
 
+// The seven weighted inputs, in the order calculateDestinationScore sums them
+// (domain/scoring/destination-score.ts:57-64). Stored values are RAW sub-scores; the
+// weight is applied at total time, so showing raw × weight lets a reader reproduce the
+// arithmetic rather than trust it.
+const scoreFactors = [
+  { key: "documentedNeed", label: "Documented need" },
+  { key: "usabilityMatch", label: "Usability match" },
+  { key: "receivingWindowFit", label: "Receiving window fit" },
+  { key: "availableCapacity", label: "Available capacity" },
+  { key: "recentServiceGap", label: "Recent service gap" },
+  { key: "equityPriority", label: "Equity priority" },
+  { key: "historicalAcceptance", label: "Historical acceptance" },
+] as const;
+
+// Penalties are subtracted un-weighted (destination-score.ts:66-67).
+const scorePenalties = [
+  { key: "travelPenalty", label: "Travel" },
+  { key: "spoilagePenalty", label: "Spoilage" },
+  { key: "refusalRiskPenalty", label: "Refusal risk" },
+] as const;
+
+function ScoreInspector({ score }: { score: DestinationScore }) {
+  return (
+    <div className="score-inspector">
+      <div className="score-inspector-head">
+        <strong>Need-match inputs</strong>
+        <span className="score-config-version">weights {SCORE_CONFIG_VERSION} · raw × weight = contribution</span>
+      </div>
+      <dl className="score-factors">
+        {scoreFactors.map(({ key, label }) => (
+          <div className="score-factor" key={key}>
+            <dt>{label}<span className="score-weight">× {scoreWeights[key]}</span></dt>
+            <dd>
+              <span className="score-raw">{score[key]}</span>
+              <span className="score-contrib">{(score[key] * scoreWeights[key]).toFixed(1)}</span>
+            </dd>
+          </div>
+        ))}
+        {scorePenalties.map(({ key, label }) => (
+          <div className="score-factor score-factor-penalty" key={key}>
+            <dt>{label}<span className="score-weight">penalty</span></dt>
+            <dd>
+              <span className="score-raw">{score[key]}</span>
+              <span className="score-contrib">−{score[key].toFixed(1)}</span>
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <div className="score-inspector-total">
+        <span>Need-match total<span className="score-weight">clamped to 0–100</span></span>
+        <strong>{score.total} / 100</strong>
+      </div>
+    </div>
+  );
+}
+
 function AllocationTable({ plan }: { plan: PlanOption }) {
   const validation = validatePlanOption(plan, scenarioValidationContext);
+  const [openScoreId, setOpenScoreId] = useState<string | null>(null);
   return (
     <div className="table-scroll">
       <table className="data-table allocation-table">
@@ -117,13 +195,14 @@ function AllocationTable({ plan }: { plan: PlanOption }) {
             <th>Receiving window</th>
             <th>Capacity result</th>
             <th>Historical produce acceptance</th>
+            <th>Need match</th>
           </tr>
         </thead>
         <tbody>
           {plan.allocations.map((allocation) => {
             const isPartner = allocation.destinationType === "partner" || allocation.destinationType === "packing_program";
             const capacityFits = !validation.issues.some((issue) => issue.entityId === allocation.destinationId);
-            return (
+            return [
               <tr key={allocation.id}>
                 <td>
                   {isPartner ? (
@@ -143,8 +222,26 @@ function AllocationTable({ plan }: { plan: PlanOption }) {
                   )}
                 </td>
                 <td>{isPartner ? acceptanceEvidence(allocation.destinationId) : "Not applicable"}</td>
-              </tr>
-            );
+                <td>
+                  <button
+                    type="button"
+                    className="score-cell"
+                    aria-expanded={openScoreId === allocation.id}
+                    aria-controls={`score-inspector-${allocation.id}`}
+                    onClick={() => setOpenScoreId(openScoreId === allocation.id ? null : allocation.id)}
+                  >
+                    {allocation.score.total} / 100
+                    <ChevronDown size={13} aria-hidden="true" />
+                    <span className="sr-only"> — show the inputs behind this score</span>
+                  </button>
+                </td>
+              </tr>,
+              openScoreId === allocation.id ? (
+                <tr className="score-inspector-row" key={`${allocation.id}-score`} id={`score-inspector-${allocation.id}`}>
+                  <td colSpan={7}><ScoreInspector score={allocation.score} /></td>
+                </tr>
+              ) : null,
+            ];
           })}
           {plan.inspectionHoldLb > 0 ? (
             <tr>
@@ -154,6 +251,7 @@ function AllocationTable({ plan }: { plan: PlanOption }) {
               <td>Before risk deadline</td>
               <td><span className="fit-cell"><CheckCircle2 size={14} aria-hidden="true" />Within hold limit</span></td>
               <td>Not applicable</td>
+              <td>Not scored</td>
             </tr>
           ) : null}
           {plan.unallocatedLb > 0 ? (
@@ -164,6 +262,7 @@ function AllocationTable({ plan }: { plan: PlanOption }) {
               <td>Before risk deadline</td>
               <td><span className="conflict-cell"><AlertTriangle size={14} aria-hidden="true" />Review required</span></td>
               <td>Not applicable</td>
+              <td>Not scored</td>
             </tr>
           ) : null}
         </tbody>
@@ -171,7 +270,7 @@ function AllocationTable({ plan }: { plan: PlanOption }) {
           <tr>
             <th>Total accounted</th>
             <th className="number-cell">{accountedQuantityLb(plan).toLocaleString()} lb</th>
-            <td colSpan={4}>{validation.approvable ? "All inventory quantities reconcile" : validation.errors[0]}</td>
+            <td colSpan={5}>{validation.approvable ? "All inventory quantities reconcile" : validation.errors[0]}</td>
           </tr>
         </tfoot>
       </table>
@@ -197,16 +296,28 @@ function ComparisonTable({ options }: { options: PlanOption[] }) {
         <caption className="sr-only">Outbound plan metric comparison</caption>
         <thead><tr><th>Metric</th>{options.map((option) => <th key={option.id}>{option.name}</th>)}</tr></thead>
         <tbody>
-          <tr><th>Planned outbound before risk deadline</th>{reconciliations.map(({ option, reconciliation }) => <td key={option.id}>{reconciliation.quantityPlannedOutboundInTimeLb.toLocaleString()} lb</td>)}</tr>
-          <tr><th>Retained in long-term storage</th>{reconciliations.map(({ option, reconciliation }) => <td key={option.id}>{reconciliation.retainedLongTermLb.toLocaleString()} lb</td>)}</tr>
-          <tr><th>Inspection hold / unallocated</th>{reconciliations.map(({ option, reconciliation }) => <td key={option.id}>{(reconciliation.inspectionHoldLb + reconciliation.unallocatedLb).toLocaleString()} lb</td>)}</tr>
-          <tr><th>Total miles</th>{options.map((option) => <td key={option.id}>{option.metrics.totalMiles.toFixed(1)} mi</td>)}</tr>
-          <tr><th>Estimated staff time</th>{options.map((option) => <td key={option.id}>{option.metrics.staffMinutes} min</td>)}</tr>
-          <tr><th>Modeled household-equivalents</th>{options.map((option) => <td key={option.id}>{option.metrics.modeledHouseholdEquivalents}</td>)}</tr>
-          <tr><th>Community need match</th>{options.map((option) => <td key={option.id}>{option.metrics.needMatchScore} / 100</td>)}</tr>
-          <tr><th>Refusal risk estimate</th>{options.map((option) => <td key={option.id}>{option.metrics.refusalRiskScore} / 100</td>)}</tr>
+          {/* Derivation per row is fixed by docs/API_AND_STATE_CONTRACTS.md:95, not by
+              preference: the first three rows and household-equivalents are recalculated
+              from the current quantities, while miles, staff time, need match, and
+              refusal risk stay at their seeded strategy-level values even after a staff
+              edit. Without the tag those two kinds of number look identical. */}
+          <tr><th>Planned outbound before risk deadline<ProvenanceTag derivation="calculated" /></th>{reconciliations.map(({ option, reconciliation }) => <td key={option.id}>{reconciliation.quantityPlannedOutboundInTimeLb.toLocaleString()} lb</td>)}</tr>
+          <tr><th>Retained in long-term storage<ProvenanceTag derivation="calculated" /></th>{reconciliations.map(({ option, reconciliation }) => <td key={option.id}>{reconciliation.retainedLongTermLb.toLocaleString()} lb</td>)}</tr>
+          <tr><th>Inspection hold / unallocated<ProvenanceTag derivation="calculated" /></th>{reconciliations.map(({ option, reconciliation }) => <td key={option.id}>{(reconciliation.inspectionHoldLb + reconciliation.unallocatedLb).toLocaleString()} lb</td>)}</tr>
+          <tr><th>Total miles<ProvenanceTag derivation="seeded" /></th>{options.map((option) => <td key={option.id}>{option.metrics.totalMiles.toFixed(1)} mi</td>)}</tr>
+          <tr><th>Estimated staff time<ProvenanceTag derivation="seeded" /></th>{options.map((option) => <td key={option.id}>{option.metrics.staffMinutes} min</td>)}</tr>
+          <tr><th>Modeled household-equivalents<ProvenanceTag derivation="calculated" /></th>{options.map((option) => <td key={option.id}>{option.metrics.modeledHouseholdEquivalents}</td>)}</tr>
+          <tr><th>Community need match<ProvenanceTag derivation="seeded" /></th>{options.map((option) => <td key={option.id}>{option.metrics.needMatchScore} / 100</td>)}</tr>
+          <tr><th>Refusal risk estimate<ProvenanceTag derivation="seeded" /></th>{options.map((option) => <td key={option.id}>{option.metrics.refusalRiskScore} / 100</td>)}</tr>
         </tbody>
       </table>
+      <div className="guardrail-note">
+        <Info size={18} aria-hidden="true" />
+        <div>
+          <strong>Seeded rows do not move when you edit quantities</strong>
+          <span>Dashed rows are strategy-level scenario estimates. Editing an allocation recalculates the solid rows only; miles, staff time, need match, and refusal risk keep their seeded values.</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -297,7 +408,15 @@ export function DecisionRoomClient({
       />
       <div className="page-content decision-room-page refactor-decision-room">
         <section className="decision-summary refactor-decision-summary" aria-label="Decision constraints">
-          <div><Clock3 aria-hidden="true" /><span>Risk deadline<strong>Jul 16 · 10:45 PM</strong></span></div>
+          {/* Constraint: at-risk inventory has a clock on it, and urgency has to read
+              peripherally. This sat as the first of five identical facts. There is no
+              seeded "now" in the scenario, so this encodes the lot's seeded riskLevel —
+              not a computed countdown, which would also make the demo non-deterministic. */}
+          <div className={`decision-summary-deadline risk-${productLot.riskLevel}`}>
+            <Clock3 aria-hidden="true" />
+            <span>Risk deadline<strong>{formatDeadline(productLot.riskDeadline)}</strong></span>
+            <span className="deadline-risk-tag">{productLot.riskLevel} risk</span>
+          </div>
           <div><Snowflake aria-hidden="true" /><span>Long-term cold headroom<strong>{warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb} lb available</strong></span></div>
           <div><Snowflake aria-hidden="true" /><span>Short-dwell cold staging<strong>{warehouse.refrigeratedStagingCapacityAvailableLb} lb available</strong></span></div>
           <div><Truck aria-hidden="true" /><span>Refrigerated vehicle capacity<strong>{vehicles[0].capacityLb.toLocaleString()} lb</strong></span></div>

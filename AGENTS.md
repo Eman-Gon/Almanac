@@ -82,9 +82,13 @@ npm run test
 npm run test:e2e
 npm run build
 npm run demo:check
+npm run check:contrast
+npm run mobile
 ```
 
 If the actual commands differ, update both `README.md` and this file in the same change.
+
+Hosted web deploy steps live in `docs/DEPLOY.md`. The Expo Go companion under `mobile/` is a WebView shell over that hosted app, not a separate backend.
 
 ---
 

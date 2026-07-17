@@ -12,6 +12,7 @@ import {
 import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { DetailsAccordion } from "@/components/shared/details-accordion";
+import { LoadingState } from "@/components/shared/loading-state";
 import { NetworkSnapshot } from "@/components/shared/network-snapshot";
 import { Panel } from "@/components/shared/panel";
 import {
@@ -43,7 +44,10 @@ function KpiCard({
 }
 
 export default function DashboardPage() {
-  const { state } = useDemoState();
+  const { state, hydrated } = useDemoState();
+
+  if (!hydrated) return <LoadingState label="Loading saved demo state…" />;
+
   const planSet = generatePlanSet();
   const snapshotPlan = state.approvedPlan
     ?? state.planOverrides[state.selectedPlanId]

@@ -227,6 +227,35 @@ describe("deterministic planning", () => {
     );
   });
 
+  it("rejects cross-dock-only outbound quantity edits from an inactive warehouse", () => {
+    const fastest = set.options[1];
+    const removedQuantityLb = fastest.allocations[2].quantityLb;
+    const crossDockOnlyEdit: PlanOption = {
+      ...fastest,
+      allocations: fastest.allocations.map((allocation, index) => ({
+        ...allocation,
+        quantityLb: index === 2 ? 0 : allocation.quantityLb,
+      })),
+      unallocatedLb: removedQuantityLb,
+      metrics: {
+        ...fastest.metrics,
+        quantityPlannedOutboundInTimeLb:
+          fastest.metrics.quantityPlannedOutboundInTimeLb - removedQuantityLb,
+      },
+    };
+
+    const validation = validatePlanOption(crossDockOnlyEdit, {
+      ...context,
+      warehouse: { ...context.warehouse, active: false },
+    });
+
+    expect(validation.capacity.warehouseStorage.plannedQuantityLb).toBe(0);
+    expect(validation.capacity.warehouseStaging.plannedQuantityLb).toBe(0);
+    expect(validation.capacity.vehiclePayload.plannedQuantityLb).toBe(800);
+    expect(issueCodes(validation)).toContain("WAREHOUSE_UNAVAILABLE");
+    expect(validation.approvable).toBe(false);
+  });
+
   it("rejects partner status, category, capacity, and expired demand", () => {
     const canceled = validatePlanOption(
       balanced,

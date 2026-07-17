@@ -97,6 +97,84 @@ describe("demo API transitions", () => {
     ).toBe(1_200);
   });
 
+  it("rejects batch changes for both draft and ready packing plans", async () => {
+    const ready = createPackingPlan(generatePlanSet().options[2]);
+    const draft = { ...ready, status: "draft" as const };
+
+    const [readyResponse, draftResponse] = await Promise.all([
+      completePacking(
+        jsonRequest("http://choicegrid.test/api/packing/PKG-104/complete", {
+          batchId: "BAT-001",
+          packingPlan: ready,
+        }),
+        { params: Promise.resolve({ id: "PKG-104" }) },
+      ),
+      completePacking(
+        jsonRequest("http://choicegrid.test/api/packing/PKG-104/complete", {
+          batchId: "BAT-001",
+          packingPlan: draft,
+        }),
+        { params: Promise.resolve({ id: "PKG-104" }) },
+      ),
+    ]);
+    const [readyPayload, draftPayload] = await Promise.all([
+      readyResponse.json(),
+      draftResponse.json(),
+    ]);
+
+    expect(readyResponse.status).toBe(409);
+    expect(draftResponse.status).toBe(409);
+    expect(readyPayload.error.code).toBe("INVALID_STATE_TRANSITION");
+    expect(draftPayload.error.code).toBe("INVALID_STATE_TRANSITION");
+  });
+
+  it("returns unique audit IDs across API complete, reopen, and recomplete cycles", async () => {
+    const startedResponse = await startPacking(
+      jsonRequest("http://choicegrid.test/api/packing/PKG-104/start", {
+        packingPlan: createPackingPlan(generatePlanSet().options[2]),
+      }),
+      { params: Promise.resolve({ id: "PKG-104" }) },
+    );
+    const started = await startedResponse.json();
+    const completedResponse = await completePacking(
+      jsonRequest("http://choicegrid.test/api/packing/PKG-104/complete", {
+        batchId: "BAT-001",
+        packingPlan: started.data.packingPlan,
+      }),
+      { params: Promise.resolve({ id: "PKG-104" }) },
+    );
+    const completed = await completedResponse.json();
+    const reopenedResponse = await completePacking(
+      jsonRequest("http://choicegrid.test/api/packing/PKG-104/complete", {
+        batchId: "BAT-001",
+        complete: false,
+        packingPlan: completed.data.packingPlan,
+      }),
+      { params: Promise.resolve({ id: "PKG-104" }) },
+    );
+    const reopened = await reopenedResponse.json();
+    const recompletedResponse = await completePacking(
+      jsonRequest("http://choicegrid.test/api/packing/PKG-104/complete", {
+        batchId: "BAT-001",
+        packingPlan: reopened.data.packingPlan,
+      }),
+      { params: Promise.resolve({ id: "PKG-104" }) },
+    );
+    const recompleted = await recompletedResponse.json();
+    const events = [
+      completed.data.auditEvent,
+      reopened.data.auditEvent,
+      recompleted.data.auditEvent,
+    ];
+
+    expect(events.map((event) => event.eventType)).toEqual([
+      "packing_batch_completed",
+      "packing_batch_reopened",
+      "packing_batch_completed",
+    ]);
+    expect(new Set(events.map((event) => event.id))).toHaveLength(3);
+  });
+
   it("supports the created recovery packing plan without synthesizing it", async () => {
     const recoveryPlan = createRecoveryOption(generatePlanSet().options[2]);
     const packingPlan = createPackingPlan(recoveryPlan, "PKG-105");

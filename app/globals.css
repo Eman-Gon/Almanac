@@ -1,39 +1,79 @@
 @import "tailwindcss";
 
+/* Hallmark · macrostructure: Workbench (existing app IA preserved)
+ * theme: custom "Cold Chain" · genre: modern-minimal · scope: global design layer
+ * vibe: cold-chain telemetry, instrument split (dark rail / precision workspace)
+ * paper: #edf4f4 (light) · accent: #0d6e8c (cool cyan) · alarm: #cc3a2c / #a8630a
+ * type: Instrument Sans (UI) + Martian Mono (figures) · axes: light / grotesk-sans / cool
+ * pre-emit critique: P5 H4 E4 S5 R4 V4
+ * contrast: 28/28 AA — npm run check:contrast
+ */
+
+/* Cold Chain — ChoiceGrid's palette encodes temperature, not decoration.
+ *
+ * The product's governing variable is whether perishable inventory stays cold.
+ * So the workspace is cool by default: every neutral is a teal-shifted slate,
+ * and the primary action is an instrument cyan rather than a generic UI blue.
+ * Saturation is reserved for signal. Warmth on screen means something is at
+ * risk — amber for a constraint under pressure, red for a break in the chain.
+ * Do not introduce a warm hue for a non-urgent purpose; it spends the one
+ * contrast the interface relies on to say "look here".
+ *
+ * Token names are a palette ramp, not semantics: the slate family is the cool
+ * neutral ramp, the blue family is the instrument cyan, and the amber and red
+ * families are the alarm hues. Roles are used consistently — 200/300 are rules,
+ * --slate-600/700/900 are ink, --slate-50/100 are ground. Keep it that way.
+ *
+ * Every ink token below clears 4.5:1 on --white; verified by
+ * scripts/check-contrast.mjs. Re-point a value and re-run that script.
+ */
 :root {
-  --navy-950: #082744;
-  --navy-900: #17324d;
-  --navy-800: #123d66;
-  --blue-700: #1d4ed8;
-  --blue-600: #2563eb;
-  --blue-500: #3b82f6;
-  --blue-100: #dbeafe;
-  --blue-50: #eff6ff;
-  --blue-900: #1e3a8a;
-  --green-700: #17613a;
-  --green-600: #2e7d4f;
-  --green-100: #e4f3e8;
-  --amber-700: #9a5f12;
-  --amber-600: #b7791f;
+  /* Instrument chrome — the dark rail the workspace hangs off */
+  --navy-950: #06171d;
+  --navy-900: #0c2830;
+  --navy-800: #124049;
+  /* Instrument cyan — primary action and focus */
+  --blue-700: #0a5670;
+  --blue-600: #0d6e8c;
+  --blue-500: #1898bd;
+  --blue-100: #cfe9f2;
+  --blue-50: #f0f9fc;
+  --blue-900: #063b4f;
+  /* Cold-chain intact */
+  --green-700: #12614a;
+  --green-600: #1f7a5c;
+  --green-100: #dff2ea;
+  /* Alarm — constraint under pressure */
+  --amber-700: #8a4f08;
+  --amber-600: #a8630a;
   --amber-500: #f59e0b;
-  --amber-100: #fbefd9;
-  --red-700: #a92e29;
-  --red-600: #c2413b;
-  --red-100: #fde8e6;
-  --purple-600: #6d4c9a;
-  --purple-100: #ede7f5;
-  --slate-950: #0d172a;
-  --slate-900: #172033;
-  --slate-800: #1e293b;
-  --slate-700: #37465a;
-  --slate-600: #526071;
-  --slate-500: #6c7888;
-  --slate-400: #94a3b8;
-  --slate-300: #cbd5e1;
-  --slate-200: #dce3eb;
-  --slate-150: #e6ebf1;
-  --slate-100: #eef2f6;
-  --slate-50: #f7f9fb;
+  --amber-100: #fdefd4;
+  /* Alarm — chain broken */
+  --red-700: #a82520;
+  --red-600: #cc3a2c;
+  --red-100: #ffe7e2;
+  /* Advisory note */
+  --purple-600: #5a56a0;
+  --purple-100: #e8e8f6;
+  /* Rail-scoped accents. The chrome sits on --navy-950, so it needs its own
+   * cyan steps: the workspace's --blue-600 is tuned for contrast against white
+   * and goes muddy on a dark ground. */
+  --rail-active: #0e5f7a;
+  --rail-active-edge: rgba(24, 152, 189, 0.34);
+  --rail-accent: #4fc3e8;
+  /* Cool neutral ramp */
+  --slate-950: #071a1f;
+  --slate-900: #0d2129;
+  --slate-800: #16303a;
+  --slate-700: #2c4a55;
+  --slate-600: #4c666f;
+  --slate-500: #5f7a84;
+  --slate-400: #93a9b1;
+  --slate-300: #c4d5d9;
+  --slate-200: #d9e5e7;
+  --slate-150: #e5eeef;
+  --slate-100: #edf4f4;
+  --slate-50: #f6fbfb;
   --white: #ffffff;
   --sidebar-width: 244px;
   --header-height: 68px;
@@ -41,6 +81,13 @@
   --radius: 11px;
   --radius-lg: 14px;
   --transition: 180ms ease;
+  /* Type. --font-ui and --font-mono are injected by next/font in layout.tsx;
+   * the fallbacks keep the app legible if that ever fails to load. */
+  --type-ui: var(--font-ui, ui-sans-serif), -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --type-mono: var(--font-mono, ui-monospace), SFMono-Regular, Menlo, monospace;
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-reveal: 460ms;
 }
 
 * {
@@ -55,14 +102,25 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--slate-100);
   color: var(--slate-900);
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--type-ui);
   font-size: 14px;
   line-height: 1.45;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   font-variant-numeric: tabular-nums;
+  /* Instrument ground. A faint measurement grid under a cold wash that settles
+   * out by ~380px, so panels read as laid on a calibrated surface instead of
+   * floating on flat grey. Fixed attachment registers the grid to the viewport
+   * rather than the scroll, which is what makes it read as the surface itself. */
+  background-color: var(--slate-100);
+  background-image:
+    linear-gradient(180deg, rgba(13, 110, 140, 0.06) 0, rgba(13, 110, 140, 0) 380px),
+    linear-gradient(90deg, rgba(44, 74, 85, 0.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(44, 74, 85, 0.05) 1px, transparent 1px);
+  background-size: 100% 380px, 32px 32px, 32px 32px;
+  background-repeat: no-repeat, repeat, repeat;
+  background-attachment: fixed;
 }
 
 a {
@@ -83,8 +141,12 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* WCAG 2.2 SC 1.4.11 requires a focus indicator to reach 3:1 against its
+ * background. A translucent ring composites toward the ground and loses that:
+ * this outline at 38% alpha measured 1.79:1 on --white. Keep focus rings solid
+ * — scripts/check-contrast.mjs fails the build if an alpha ring reappears. */
 :focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.38);
+  outline: 3px solid var(--blue-600);
   outline-offset: 2px;
 }
 
@@ -167,8 +229,8 @@ a {
 }
 
 .nav-link-active {
-  border-color: rgba(96, 165, 250, 0.15);
-  background: #1b579a;
+  border-color: var(--rail-active-edge);
+  background: var(--rail-active);
   color: var(--white);
 }
 
@@ -192,7 +254,7 @@ a {
   width: 46px;
   height: 25px;
   border-radius: 999px;
-  background: #0877ef;
+  background: var(--blue-600);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
 }
 
@@ -231,7 +293,7 @@ a {
   border: 0;
   padding: 2px 0;
   background: transparent;
-  color: #68b8ff;
+  color: var(--rail-accent);
   cursor: pointer;
   font-size: 13px;
 }
@@ -263,8 +325,36 @@ a {
 .main-shell {
   min-height: 100dvh;
   margin-left: var(--sidebar-width);
-  background: var(--slate-100);
+  /* Transparent, not --slate-100: the instrument ground lives on body, and an
+   * opaque fill here would paint over it. */
+  background: transparent;
 }
+
+/* Page-load reveal. The shell's direct children settle in sequence so the eye
+ * lands on the header, then the primary panel, then supporting detail — one
+ * orchestrated arrival per navigation rather than scattered micro-animation.
+ * Capped at six steps; past that a stagger reads as lag instead of order.
+ * Only opacity and transform are animated, so this never triggers layout. */
+@keyframes instrument-settle {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.main-shell > * {
+  animation: instrument-settle var(--dur-reveal) var(--ease-out) backwards;
+}
+
+.main-shell > :nth-child(2) { animation-delay: 55ms; }
+.main-shell > :nth-child(3) { animation-delay: 110ms; }
+.main-shell > :nth-child(4) { animation-delay: 165ms; }
+.main-shell > :nth-child(5) { animation-delay: 220ms; }
+.main-shell > :nth-child(n + 6) { animation-delay: 275ms; }
 
 .mobile-menu-button,
 .sidebar-scrim {
@@ -573,6 +663,8 @@ a {
 
 .table-scroll {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 .data-table {
@@ -696,6 +788,7 @@ a {
   inset: 0;
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
 
 .map-streets path {
@@ -908,12 +1001,12 @@ a {
 }
 
 .map-marker-route {
-  box-shadow: 0 2px 5px rgba(23, 32, 51, 0.18), 0 0 0 2px rgba(37, 99, 235, 0.17);
+  box-shadow: 0 2px 5px rgba(23, 32, 51, 0.18), 0 0 0 2px rgba(13, 110, 140, 0.17);
 }
 
 .map-marker-selected {
   z-index: 7;
-  box-shadow: 0 2px 6px rgba(23, 32, 51, 0.22), 0 0 0 4px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 2px 6px rgba(23, 32, 51, 0.22), 0 0 0 4px rgba(13, 110, 140, 0.28);
 }
 
 .marker-slate { color: var(--slate-700); }
@@ -1102,9 +1195,10 @@ a {
 
 .map-eyebrow {
   color: var(--blue-700);
+  font-family: var(--type-mono);
   font-size: 9px;
-  font-weight: 750;
-  letter-spacing: 0.65px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 
@@ -1482,7 +1576,7 @@ a {
 .map-interactive .map-canvas::before { display: none; }
 
 .map-interactive .map-canvas:focus-visible {
-  box-shadow: inset 0 0 0 3px rgba(37, 99, 235, 0.48);
+  box-shadow: inset 0 0 0 3px var(--blue-600);
 }
 
 .map-interactive .map-streets {
@@ -1618,6 +1712,15 @@ a {
 
 .map-marker-wrap-labeled { z-index: 8; }
 
+.map-marker-label-anchor {
+  position: absolute;
+  z-index: 8;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  transition: left 160ms ease, top 160ms ease;
+}
+
 .map-marker-control {
   position: absolute;
   top: 0;
@@ -1653,10 +1756,10 @@ a {
 }
 
 .map-marker-pin svg { transform: rotate(45deg); }
-.map-marker-control.map-marker-route .map-marker-pin { box-shadow: 0 3px 8px rgba(23, 32, 51, 0.2), 0 0 0 3px rgba(37, 99, 235, 0.18); }
-.map-marker-control.map-marker-selected .map-marker-pin { box-shadow: 0 3px 10px rgba(23, 32, 51, 0.24), 0 0 0 5px rgba(37, 99, 235, 0.3); }
+.map-marker-control.map-marker-route .map-marker-pin { box-shadow: 0 3px 8px rgba(23, 32, 51, 0.2), 0 0 0 3px rgba(13, 110, 140, 0.18); }
+.map-marker-control.map-marker-selected .map-marker-pin { box-shadow: 0 3px 10px rgba(23, 32, 51, 0.24), 0 0 0 5px rgba(13, 110, 140, 0.3); }
 .map-marker-control:focus-visible { outline: none; }
-.map-marker-control:focus-visible .map-marker-pin { outline: 3px solid rgba(37, 99, 235, 0.6); outline-offset: 4px; }
+.map-marker-control:focus-visible .map-marker-pin { outline: 3px solid var(--blue-600); outline-offset: 4px; }
 
 .map-marker-sequence-badge {
   position: absolute;
@@ -1727,7 +1830,7 @@ a {
 
 .map-marker-label-selected {
   border-color: var(--blue-600);
-  box-shadow: 0 3px 12px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 3px 12px rgba(13, 110, 140, 0.2);
 }
 
 .map-workspace .map-detail-card {
@@ -2213,7 +2316,7 @@ a {
 .field textarea:focus,
 .field select:focus {
   border-color: var(--blue-600);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 3px rgba(13, 110, 140, 0.12);
 }
 
 .field input::placeholder,
@@ -2650,7 +2753,7 @@ a {
 .plan-card-selected {
   border: 2px solid var(--blue-600);
   padding: 13px;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.06);
+  box-shadow: 0 0 0 3px rgba(13, 110, 140, 0.06);
 }
 
 .plan-card-heading {
@@ -3233,7 +3336,7 @@ a {
   background: var(--white);
   padding: 14px;
   color: var(--slate-950);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--type-mono);
 }
 
 .batch-label > span:first-child {
@@ -3986,7 +4089,7 @@ a {
 .scenario-option > span:first-child { display: grid; min-width: 0; gap: 2px; }
 .scenario-option strong { font-size: 12px; font-weight: 650; }
 .scenario-option small { color: rgba(255, 255, 255, 0.63); font-size: 10px; line-height: 1.25; }
-.scenario-option-active { border-color: rgba(96, 165, 250, 0.38); background: rgba(37, 99, 235, 0.18); }
+.scenario-option-active { border-color: var(--rail-active-edge); background: rgba(13, 110, 140, 0.28); }
 .scenario-option-preview { background: transparent; color: rgba(255, 255, 255, 0.72); cursor: not-allowed; font: inherit; }
 .scenario-option-preview:disabled { opacity: 0.76; }
 .scenario-badge { flex: 0 0 auto; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 999px; padding: 2px 5px; color: rgba(255, 255, 255, 0.62); font-size: 9px; font-weight: 700; line-height: 1.2; text-transform: uppercase; }
@@ -4043,7 +4146,12 @@ a {
 .kpi-label-red::before { background: var(--red-600); }
 .kpi-label-amber::before { background: var(--amber-500); }
 .kpi-label-blue::before { background: var(--blue-600); }
-.dashboard-refactor-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr); gap: 18px; }
+/* align-items: start — grid items default to stretching to the tallest row peer, which
+ * inflated the Active mission panel to the height of the network snapshot beside it. With
+ * no mission approved that produced ~200px of dead space in the most prominent panel on
+ * the screen, at exactly the moment the operator has the most left to do. Panels now size
+ * to their content: whitespace groups, it does not pad. */
+.dashboard-refactor-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr); gap: 18px; align-items: start; }
 .dashboard-refactor-lower { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 18px; }
 .mission-summary-card { display: flex; align-items: center; justify-content: space-between; gap: 15px; min-height: 118px; padding: 16px; border: 1px solid var(--slate-200); border-radius: 10px; color: inherit; text-decoration: none; }
 .mission-summary-card:hover, .mission-summary-card:focus-visible { border-color: var(--blue-600); background: #eff6ff; }
@@ -4279,7 +4387,11 @@ a {
 @media (max-width: 620px) {
   .urgent-offer-card { grid-template-columns: auto minmax(0, 1fr); padding: 16px; }
   .urgent-offer-card .button { grid-column: 1 / -1; justify-self: stretch; }
-  .refactor-kpi-grid { grid-template-columns: 1fr; }
+  /* Compound selector on purpose: these cards carry both .kpi-grid and
+   * .refactor-kpi-grid, and the plain .kpi-grid mobile rule further down the
+   * file has equal specificity, so it would otherwise win on source order and
+   * force two columns at 375px — which overflows the KPI value out of its card. */
+  .kpi-grid.refactor-kpi-grid { grid-template-columns: 1fr; }
   .network-snapshot-grid { grid-template-columns: 1fr; }
   .refactor-kpi-card { min-height: 70px; }
 }
@@ -4421,6 +4533,10 @@ a {
     scroll-behavior: auto !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    /* Delay must be zeroed alongside duration: a staggered animation with a
+     * `backwards` fill holds its from-state for the delay, so a non-zero delay
+     * would leave content invisible even once the duration collapses. */
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
   }
 }
@@ -4670,7 +4786,7 @@ a {
 .communication-form input:focus,
 .communication-form textarea:focus {
   border-color: var(--blue-500);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  box-shadow: 0 0 0 3px rgba(13, 110, 140, 0.12);
 }
 
 .communication-confirmation {
@@ -4827,3 +4943,369 @@ a {
     flex-direction: column;
   }
 }
+
+/* Phone + Expo WebView affordances (hero flow) */
+html {
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.mobile-menu-button {
+  touch-action: manipulation;
+}
+
+.table-scroll {
+  position: relative;
+}
+
+.table-scroll::after {
+  content: "Swipe for more columns";
+  display: none;
+  position: sticky;
+  left: 0;
+  bottom: 0;
+  width: max-content;
+  margin: 6px 0 0;
+  padding: 4px 8px;
+  border: 1px solid var(--slate-200);
+  border-radius: 999px;
+  background: var(--slate-50);
+  color: var(--slate-600);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+
+@media (max-width: 680px) {
+  .table-scroll::after {
+    display: inline-flex;
+  }
+
+  .missions-table {
+    min-width: 560px;
+  }
+
+  .allocation-table {
+    min-width: 640px;
+  }
+
+  .packing-table {
+    min-width: 720px;
+  }
+
+  .plan-card-grid,
+  .refactor-plan-card-grid {
+    scroll-padding-inline: 12px;
+  }
+}
+
+@media (max-width: 500px) {
+  .page-content {
+    padding-bottom: calc(28px + env(safe-area-inset-bottom));
+  }
+
+  .sticky-action-bar {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-menu-button {
+    top: calc(12px + env(safe-area-inset-top));
+  }
+}
+
+
+/* ─── Provenance channel ──────────────────────────────────────────────────────
+ * Where a number came from, readable without reading it.
+ *
+ * docs/SCREEN_SPECIFICATIONS.md:433-437 requires every result to declare itself as
+ * Calculated from scenario / Simulated estimate / Seeded assumption. Today the app
+ * renders a recalculated pound figure and a fixed scenario constant identically, so an
+ * operator cannot tell which numbers answer to their edit.
+ *
+ * The rule TEXTURE carries the meaning, not the hue: solid = calculated, dashed =
+ * estimated, dotted = advisory. DESIGN_SYSTEM.md:45 forbids colour alone, and this has
+ * to survive greyscale, colour-blindness, and peripheral vision. Hue is a second,
+ * redundant channel.
+ *
+ * These borders are deliberately cool. Warmth is reserved for risk (see the Cold Chain
+ * header at the top of this file) and provenance is not a risk signal.
+ */
+.prov {
+  border-left: 3px solid var(--blue-600);
+  padding-left: 11px;
+}
+
+.prov-calculated { border-left-style: solid; border-left-color: var(--blue-600); }
+.prov-simulated { border-left-style: dashed; border-left-color: var(--slate-500); }
+.prov-seeded { border-left-style: dashed; border-left-color: var(--slate-400); }
+
+/* Reserved. Advisory, never authoritative — dotted reads as "not load-bearing".
+ * Purple is the palette's existing advisory-note hue and carries no risk meaning. */
+.prov-model { border-left-style: dotted; border-left-color: var(--purple-600); }
+
+.prov-label {
+  display: block;
+  margin-top: 3px;
+  color: var(--slate-500);
+  font-family: var(--type-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.prov-model .prov-label { color: var(--purple-600); }
+
+/* Inline variant for table cells, where a bordered block does not fit. */
+.prov-tag {
+  display: inline-block;
+  border-bottom: 2px solid var(--blue-600);
+  color: var(--slate-500);
+  font-family: var(--type-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  line-height: 1.6;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.prov-tag-calculated { border-bottom-style: solid; border-bottom-color: var(--blue-600); }
+.prov-tag-simulated { border-bottom-style: dashed; border-bottom-color: var(--slate-500); }
+.prov-tag-seeded { border-bottom-style: dashed; border-bottom-color: var(--slate-400); }
+.prov-tag-model { border-bottom-style: dotted; border-bottom-color: var(--purple-600); color: var(--purple-600); }
+
+/* ─── Score inspector ─────────────────────────────────────────────────────────
+ * AI_AGENT_CONTRACTS.md:169 lists "Hiding score components" as prohibited, and D-006
+ * requires weights stay inspectable. Every allocation already carries all ten factors
+ * on allocation.score; the UI simply threw them away and printed the total.
+ *
+ * This is inline rather than a drawer on purpose: auditability is a feature, not a debug
+ * view (constraint #2), and a modal would put the evidence one context-switch away from
+ * the number it explains.
+ */
+.score-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--slate-300);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  background: var(--white);
+  color: var(--slate-900);
+  cursor: pointer;
+  font-family: var(--type-mono);
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color var(--transition), background var(--transition);
+}
+
+.score-cell:hover { border-color: var(--blue-600); background: var(--blue-50); }
+.score-cell[aria-expanded="true"] { border-color: var(--blue-600); background: var(--blue-50); }
+.score-cell svg { color: var(--slate-500); }
+
+.score-inspector-row > td {
+  border-top: 0;
+  background: var(--slate-50);
+  padding: 0 14px 14px;
+}
+
+.score-inspector {
+  display: grid;
+  gap: 10px;
+}
+
+.score-inspector-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--slate-200);
+  padding-bottom: 8px;
+}
+
+.score-inspector-head strong { font-size: 13px; }
+
+.score-config-version {
+  color: var(--slate-500);
+  font-family: var(--type-mono);
+  font-size: 10px;
+}
+
+.score-factors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(184px, 1fr));
+  gap: 2px 18px;
+}
+
+.score-factor {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 1px solid var(--slate-150);
+  padding: 5px 0;
+}
+
+.score-factor dt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--slate-700);
+  font-size: 12px;
+}
+
+.score-weight {
+  color: var(--slate-500);
+  font-family: var(--type-mono);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.score-factor dd {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--type-mono);
+  font-size: 12px;
+}
+
+/* Raw sub-score is the input; the contribution is what actually reaches the total.
+ * Both are shown so the arithmetic can be reproduced, not trusted. */
+.score-raw { color: var(--slate-500); font-weight: 400; }
+.score-contrib { min-width: 42px; color: var(--slate-900); font-weight: 600; text-align: right; }
+
+.score-factor-penalty .score-contrib { color: var(--red-700); }
+
+.score-inspector-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-top: 1px solid var(--slate-300);
+  padding-top: 8px;
+  font-size: 13px;
+}
+
+.score-inspector-total > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.score-inspector-total strong { font-family: var(--type-mono); font-size: 15px; }
+
+/* The comparison table declares each metric's derivation once on the row header rather
+ * than on every cell — the derivation is a property of the metric, not of the plan. */
+.comparison-table th .prov-tag {
+  display: block;
+  width: fit-content;
+  margin-top: 3px;
+}
+
+/* ─── Time-criticality ────────────────────────────────────────────────────────
+ * The risk deadline sat as the first of five visually identical facts on the decision
+ * strip. At-risk inventory has a clock on it and the urgency has to be readable
+ * peripherally, so the deadline gets a warm edge, a warm icon, and a severity tag.
+ *
+ * Warmth is the palette's risk channel (see the Cold Chain header), and this is the one
+ * place on the screen that has earned it. The tag text carries the severity for anyone
+ * who cannot see the hue — never colour alone (DESIGN_SYSTEM.md:45).
+ *
+ * Driven by productLot.riskLevel. The scenario seeds no "now", so this encodes seeded
+ * severity rather than a live countdown — a ticking clock would invent data the API does
+ * not expose and would make the E2E suite non-deterministic.
+ */
+.decision-summary-deadline {
+  position: relative;
+}
+
+.decision-summary-deadline.risk-high { border-left: 3px solid var(--red-600); }
+.decision-summary-deadline.risk-medium { border-left: 3px solid var(--amber-600); }
+.decision-summary-deadline.risk-low { border-left: 3px solid var(--slate-300); }
+
+.decision-summary-deadline.risk-high > svg { color: var(--red-600); }
+.decision-summary-deadline.risk-medium > svg { color: var(--amber-600); }
+
+.decision-summary-deadline.risk-high strong { color: var(--red-700); }
+
+.deadline-risk-tag {
+  align-self: center;
+  margin-left: auto;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-family: var(--type-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.risk-high .deadline-risk-tag { background: var(--red-100); color: var(--red-700); }
+.risk-medium .deadline-risk-tag { background: var(--amber-100); color: var(--amber-700); }
+.risk-low .deadline-risk-tag { background: var(--slate-100); color: var(--slate-600); }
+
+/* ─── Approval record ─────────────────────────────────────────────────────────
+ * docs/PRIVACY_AND_SAFETY.md:99-105 requires the approver, timestamp, original
+ * recommendation, final action, and edit reason to be recorded and visible; :158-170
+ * requires audit history to be visible on the impact or mission screen. Both lived
+ * inside a collapsed accordion, which made auditability a debug view.
+ *
+ * Divergence from the recommendation is marked, not scolded: METRICS_AND_EVIDENCE.md:250
+ * is explicit that "an override is not automatically an error; it demonstrates human
+ * control". So a divergence gets the advisory hue, never the alarm hues — nothing here
+ * is at risk, and warmth is reserved for things that are.
+ */
+.approval-record {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--slate-200);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.approval-record > div {
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  background: var(--white);
+  padding: 10px 12px;
+}
+
+.approval-record > div > span {
+  color: var(--slate-600);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.approval-record > div > strong {
+  color: var(--slate-950);
+  font-size: 14px;
+}
+
+.approval-record > div > small { color: var(--slate-500); font-size: 11px; }
+
+.approval-record-diverged { box-shadow: inset 3px 0 0 var(--purple-600); }
+.approval-record-diverged > strong { color: var(--purple-600); }
+
+.approval-reason {
+  display: grid;
+  gap: 3px;
+  margin-top: 12px;
+  border-left: 3px solid var(--slate-300);
+  padding-left: 11px;
+}
+
+.approval-reason > span {
+  color: var(--slate-600);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.approval-reason > p { margin: 0; color: var(--slate-900); font-size: 13px; }

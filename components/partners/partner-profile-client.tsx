@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, MapPinned, Snowflake } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
+import { LoadingState } from "@/components/shared/loading-state";
 import { Panel } from "@/components/shared/panel";
 import type { PartnerAgency } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
@@ -22,9 +23,13 @@ function formatReceivingWindow(partner: PartnerAgency): string {
 }
 
 export function PartnerProfileClient({ partner }: { partner: PartnerAgency }) {
-  const { state } = useDemoState();
+  const { state, hydrated } = useDemoState();
+
+  if (!hydrated) return <LoadingState label="Loading saved partner state…" />;
+
   const status = state.partnerStatusOverrides[partner.id] ?? partner.status;
   const StatusIcon = status === "available" || status === "limited" ? CheckCircle2 : AlertTriangle;
+  const demand = partner.demandSignals[0];
 
   return (
     <>
@@ -49,7 +54,7 @@ export function PartnerProfileClient({ partner }: { partner: PartnerAgency }) {
           <div><span>Receiving window</span><strong>{formatReceivingWindow(partner)}</strong></div>
         </section>
         <div className="partner-grid">
-          <Panel title="Current demand"><div className="profile-stat"><strong>{partner.demandSignals[0].desiredQuantityLb} lb</strong><span>Confirmed produce demand · {partner.demandSignals[0].urgency} urgency</span></div><div className="profile-list"><p><strong>Accepted categories</strong>{partner.acceptedCategories.join(", ")}</p><p><strong>Preferred usability</strong>{partner.preferredTags.join(", ").replaceAll("_", " ")}</p></div></Panel>
+          <Panel title="Current demand"><div className="profile-stat"><strong>{demand?.desiredQuantityLb ?? "—"} lb</strong><span>{demand ? `Confirmed produce demand · ${demand.urgency} urgency` : "Demand unknown"}</span></div><div className="profile-list"><p><strong>Accepted categories</strong>{partner.acceptedCategories.join(", ")}</p><p><strong>Preferred usability</strong>{partner.preferredTags.join(", ").replaceAll("_", " ")}</p></div></Panel>
           <Panel title="Decision factors"><div className="factor-grid"><div><strong>{partner.recentServiceGap}</strong><span>Recent service gap</span></div><div><strong>{partner.accessBurden}</strong><span>Access burden</span></div><div><strong>{partner.refusalRisk}</strong><span>Refusal risk</span></div></div><div className="source-label">Scenario indicators are separately inspectable</div></Panel>
           <Panel title="Operational notes"><div className="profile-list">{partner.notes.map((note) => <p key={note.id}><strong>{note.authorRole}</strong>{note.text}</p>)}</div></Panel>
         </div>

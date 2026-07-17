@@ -59,6 +59,9 @@ When this file summarizes a topic and a detailed companion contract is more spec
 | File | Purpose |
 |---|---|
 | [`docs/SCOPE_AND_NON_GOALS.md`](docs/SCOPE_AND_NON_GOALS.md) | MVP boundary, stretch scope, and explicit exclusions |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | System shape, hosted clients, Expo WebView companion, and domain layers |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | Vercel hosting steps and optional server-only env vars |
+| [`mobile/README.md`](mobile/README.md) | Expo Go WebView shell setup and manual device checks |
 | [`docs/USER_FLOWS.md`](docs/USER_FLOWS.md) | Primary workflow, alternate paths, approval points, and disruptions |
 | [`docs/SCREEN_SPECIFICATIONS.md`](docs/SCREEN_SPECIFICATIONS.md) | Route-by-route UI requirements and acceptance criteria |
 | [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) | Visual rules, components, statuses, map semantics, and accessibility |

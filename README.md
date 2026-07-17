@@ -77,11 +77,50 @@ npm run test
 npm run test:e2e
 npm run build
 npm run demo:check
+npm run check:contrast
 ```
 
-The final command reports immutable seed readiness; it cannot clear a browser's `localStorage`. Use **Reset scenario** in the app to clear browser demo state and return to `/dashboard`.
+`demo:check` reports immutable seed readiness; it cannot clear a browser's `localStorage`. Use **Reset scenario** in the app to clear browser demo state and return to `/dashboard`.
+
+`check:contrast` verifies the Cold Chain palette in `app/globals.css` against WCAG AA. Run it after re-pointing any colour token; it exits non-zero if an ink/ground pair drops below its minimum.
 
 After `npm run build`, use `npm run start` to serve the production build. `npm run test:watch` starts Vitest in watch mode.
+
+---
+
+## Deploy (hosted web)
+
+Host the Next.js app on Vercel for a public demo URL. Full steps: [`docs/DEPLOY.md`](docs/DEPLOY.md).
+
+```bash
+npx vercel
+```
+
+Or import the GitHub repo in the Vercel dashboard. No env vars are required for the judged hero. Optional server-only `LLM_*` / `VAPI_*` keys can be set in the Vercel project settings. Demo state remains per-browser `localStorage` and does not sync across users.
+
+[`vercel.json`](vercel.json) pins the Next.js framework and a default region; framework defaults otherwise apply.
+
+---
+
+## Expo Go companion
+
+[`mobile/`](mobile/) is a native **WebView shell** over the hosted web app (not a React Native rewrite of the control tower).
+
+```bash
+cd mobile
+cp .env.example .env
+# set EXPO_PUBLIC_WEB_URL to your Vercel URL or LAN IP
+npm install
+npx expo start
+```
+
+Open with Expo Go. Details: [`mobile/README.md`](mobile/README.md).
+
+From the repo root you can also run:
+
+```bash
+npm run mobile
+```
 
 ---
 
@@ -180,6 +219,11 @@ app/
 ├── partners/
 └── api/
 
+mobile/                 # Expo Go WebView companion
+├── App.tsx
+├── app.json
+└── README.md
+
 components/
 ├── inventory/
 ├── execution/
@@ -204,6 +248,8 @@ data/
 
 state/
 scripts/
+docs/
+└── DEPLOY.md
 
 tests/
 ├── unit/
@@ -217,6 +263,8 @@ tests/
 Start with:
 
 - `AGENTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/DEPLOY.md`
 - `docs/SCOPE_AND_NON_GOALS.md`
 - `docs/USER_FLOWS.md`
 - `docs/DATA_MODEL.md`
