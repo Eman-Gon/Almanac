@@ -11,7 +11,7 @@ export type WarehouseWithStagingCapacity = Warehouse & {
 };
 
 export type PlanValidationContext = {
-  offeredQuantityLb: number;
+  availableInventoryQuantityLb: number;
   productLot: ProductLot;
   warehouse: WarehouseWithStagingCapacity;
   partners: readonly PartnerAgency[];
@@ -409,12 +409,13 @@ export function assessPlanCapacity(
     }
   }
 
-  const vehicleLoadLb =
-    plan.allocations.reduce(
+  const vehicleLoadLb = plan.allocations
+    .filter((allocation) => allocation.destinationType !== "warehouse")
+    .reduce(
       (total, allocation) =>
         total + nonnegativeFiniteQuantity(allocation.quantityLb),
       0,
-    ) + nonnegativeFiniteQuantity(plan.inspectionHoldLb);
+    );
   const vehiclePayload = usage(vehicleLoadLb, vehicle.capacityLb);
 
   if (vehicle.status === "unavailable" || vehicle.status === "maintenance") {

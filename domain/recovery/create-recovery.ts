@@ -1,10 +1,17 @@
 import { partners, scenario } from "@/data/seed/scenario";
 import { createMission, createPackingPlan } from "@/domain/execution/create-execution";
-import { estimatedHouseholdsSupported } from "@/domain/metrics/calculate";
+import { modeledHouseholdEquivalents } from "@/domain/metrics/calculate";
 import { withDerivedCapacityMetrics } from "@/domain/planning/generate-plans";
-import { calculateDestinationScore } from "@/domain/scoring/destination-score";
+import {
+  acceptanceHistorySignal,
+  calculateDestinationScore,
+} from "@/domain/scoring/destination-score";
 import type { Allocation, AuditEvent, Mission, PackingPlan, PlanOption } from "@/domain/types";
 
+const alternatePartnerSeed = partners.find((partner) => partner.id === "PAR-004");
+if (!alternatePartnerSeed) {
+  throw new Error("Recovery requires alternate partner PAR-004.");
+}
 const alternateScore = calculateDestinationScore({
   documentedNeed: 100,
   usabilityMatch: 100,
@@ -12,6 +19,10 @@ const alternateScore = calculateDestinationScore({
   availableCapacity: 95,
   recentServiceGap: 100,
   equityPriority: 100,
+  historicalAcceptance: acceptanceHistorySignal(
+    alternatePartnerSeed,
+    "produce",
+  ).score,
   travelPenalty: 5,
   spoilagePenalty: 2,
   refusalRiskPenalty: 2,
@@ -91,7 +102,9 @@ export function createRecoveryOption(original: PlanOption): PlanOption {
   }
 
   const inspectionHoldLb = original.inspectionHoldLb + addedInspectionHoldLb;
-  const quantityDistributedInTimeLb = revisedAllocations.reduce(
+  const quantityPlannedOutboundInTimeLb = revisedAllocations
+    .filter((allocation) => allocation.destinationType !== "warehouse")
+    .reduce(
     (total, allocation) => total + allocation.quantityLb,
     0,
   );
@@ -106,13 +119,13 @@ export function createRecoveryOption(original: PlanOption): PlanOption {
     inspectionHoldLb,
     metrics: {
       ...original.metrics,
-      quantityDistributedInTimeLb,
+      quantityPlannedOutboundInTimeLb,
       expectedSpoilageLb: Math.max(
         original.metrics.expectedSpoilageLb,
         inspectionHoldLb,
       ),
-      estimatedHouseholdsSupported: estimatedHouseholdsSupported(
-        quantityDistributedInTimeLb,
+      modeledHouseholdEquivalents: modeledHouseholdEquivalents(
+        quantityPlannedOutboundInTimeLb,
         scenario.householdWeightLb,
       ),
       totalMiles: 28.6,

@@ -58,6 +58,12 @@ A performance measure comparing committed and actual product, quantity, timing, 
 ### Product lot
 A quantity of one product sharing relevant arrival, condition, source, and shelf-life attributes.
 
+### At-risk inventory lot
+An existing product lot already received into the food-bank warehouse that may not move before its staff-entered or modeled risk deadline. This is the ChoiceGrid hero starting point.
+
+### Agency acceptance history
+A category-specific synthetic summary of accepted, refused, and short-receipt outcomes with an explicit sample size. It informs a recommendation but never overrides current capacity, availability, temperature, or receiving-window constraints.
+
 ### Shelf life
 The expected period during which a product remains usable under stated storage conditions. ChoiceGrid treats this as an estimate requiring staff judgment.
 
@@ -139,10 +145,10 @@ The arrangement of stations, materials, workers, and tasks for a packing run.
 Placing required product and materials near a dock, route, or production line before execution.
 
 ### Mission
-An approved operational pickup and delivery plan.
+An approved operational warehouse-load and partner-delivery plan. The ChoiceGrid hero begins at `WH-001` and contains no donor pickup.
 
 ### Route stop
-One donor, warehouse, pantry, or other location in a mission sequence.
+The warehouse origin or a partner destination in the hero mission sequence.
 
 ### Receiving window
 The time interval during which a destination can accept a delivery.

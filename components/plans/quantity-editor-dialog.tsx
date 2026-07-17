@@ -3,6 +3,7 @@
 import { AlertTriangle, Scale, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getDestinationName } from "@/domain/planning/generate-plans";
+import { productLot } from "@/data/seed/scenario";
 import { validatePlanOption } from "@/domain/planning/quantity";
 import { scenarioValidationContext } from "@/domain/planning/scenario-context";
 import type { PlanOption } from "@/domain/types";
@@ -45,7 +46,7 @@ export function QuantityEditorDialog({
     const total =
       allocations.reduce((sum, allocation) => sum + allocation.quantityLb, 0) +
       plan.inspectionHoldLb +
-      plan.declinedLb;
+      plan.unallocatedLb;
     if (!reason.trim()) errors.push("Enter a reason for the allocation change.");
     return { candidate, errors, total };
   }, [plan, quantities, reason]);
@@ -65,7 +66,7 @@ export function QuantityEditorDialog({
       }}>
         <div className="dialog-header">
           <div className="dialog-icon purple"><Scale size={22} aria-hidden="true" /></div>
-          <div><h2>Edit allocations</h2><p>Capacity and quantity conservation recalculate immediately.</p></div>
+          <div><h2>Edit outbound allocations</h2><p>Capacity and inventory conservation recalculate immediately.</p></div>
           <button className="icon-button" type="button" onClick={close} aria-label="Close quantity editor"><X size={18} /></button>
         </div>
         <div className="dialog-body">
@@ -77,8 +78,8 @@ export function QuantityEditorDialog({
               </label>
             ))}
           </div>
-          <div className={`quantity-total ${validation.total === 1_200 ? "total-valid" : "total-invalid"}`}>
-            <span>Accounted quantity</span><strong>{validation.total.toLocaleString()} / 1,200 lb</strong>
+          <div className={`quantity-total ${validation.total === productLot.availableQuantityLb ? "total-valid" : "total-invalid"}`}>
+            <span>Available inventory accounted</span><strong>{validation.total.toLocaleString()} / {productLot.availableQuantityLb.toLocaleString()} lb</strong>
           </div>
           <label className="field">
             <span>Reason for change</span>

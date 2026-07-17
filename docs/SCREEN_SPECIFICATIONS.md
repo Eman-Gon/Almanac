@@ -15,7 +15,7 @@
 ### Primary navigation
 
 - Dashboard
-- Donations
+- Inventory
 - Plans
 - Map
 - Missions
@@ -35,7 +35,7 @@ Every data screen must support:
 
 The root demo-state provider must finish validating browser storage before rendering the shell or any action control. During that gate, show **Loading saved demo state…** so a click cannot mutate the temporary seed state.
 
-Unknown dynamic IDs render the intentional shared not-found state with a dashboard escape. Donor and warehouse labels must never link to `/partners/[id]`; only actual partner or partner-program destinations use partner-profile links.
+Unknown dynamic IDs render the intentional shared not-found state with a dashboard escape. Warehouse labels never link to `/partners/[id]`; only actual partner or partner-program destinations use partner-profile links.
 
 ---
 
@@ -61,15 +61,15 @@ Provide a shift-start view of urgent operational issues and entry into the hero 
 ### Seeded alert
 
 ```text
-Urgent donation offer
-1,200 lb strawberries
-Pickup required before 1:00 PM
-Estimated urgency: high
+At-risk inventory
+LOT-104 · 1,200 lb strawberries
+Already at WH-001 · refrigerated
+Seeded spoilage risk: high
 ```
 
 ### Actions
 
-- Open donation
+- Open inventory lot
 - View mission
 - Open full map
 - Reset demo
@@ -77,82 +77,90 @@ Estimated urgency: high
 ### Acceptance criteria
 
 - Urgent alert is visible without scrolling on common laptop size.
-- Clicking it navigates to `/donations/DON-104`.
+- Clicking it navigates to `/inventory/LOT-104`.
 - KPI values derive from current state.
 
 ---
 
-## 2. Donation Intake
+## At-Risk Inventory List
 
-**Route:** `/donations/new`
-
-### Purpose
-
-Allow a user to enter a structured offer or paste a natural-language message.
-
-### Required fields
-
-- Donor
-- Message or description
-- Product
-- Quantity and unit
-- Pickup location
-- Pickup window
-- Storage requirement
-- Condition notes
-- Optional image placeholder
-
-### Actions
-
-- Parse offer
-- Load demo offer
-- Clear
-- Save draft
-
-### Validation
-
-- Message or required structured fields must be present.
-- Quantity must be positive.
-- Pickup window must be valid.
-
----
-
-## 3. Donation Details
-
-**Route:** `/donations/[id]`
+**Route:** `/inventory`
 
 ### Purpose
 
-Review extracted information before planning.
+Keep the single operational hero lot prominent while providing believable synthetic inventory context.
 
-### Layout
+### Required components
 
-- Left: original donor message
-- Right: structured fields
-- Bottom: agent activity and missing information
+- One active `LOT-104` row linked to the inventory-review workflow
+- Eight recent synthetic lot-history rows with quantity, temperature class, outcome, and terminal status
+- A visible `Mock history · display only` label
 
-### Required elements
-
-- Donation status
-- Product lot summary
-- Field-level confidence
-- Donor reliability summary
-- Warehouse capacity preview
-- Missing-question list
-- Audit timeline
-
-### Actions
-
-- Edit field
-- Confirm information
-- Generate plans
-- Return to dashboard
+Historical rows are not interactive operational records and must not affect dashboard KPIs, planning, impact, or demo state.
 
 ### Acceptance criteria
 
-- Unknown data is visibly marked.
-- Original message is never replaced by the parsed version.
-- Generate-plans button is disabled until required data is complete.
+- Exactly one lot is labeled operational.
+- Historical quantities use pounds and approved inventory statuses.
+- The active strawberry row remains keyboard accessible and navigates to `/inventory/LOT-104`.
+
+---
+
+## Communication Test Center (isolated experiment)
+
+**Route:** `/communications`
+
+### Purpose
+
+Evaluate a human-approved transport preview without allowing it to change an operational decision. This route is excluded from primary navigation and the judged hero.
+
+### Required components
+
+- Voice-call and SMS channel choices
+- Test contact name and E.164 test number
+- Staff-entered approved message
+- Separate approved voicemail message for voice calls
+- Explicit authorization checkbox before sending
+- Preview-only result when Vapi is not fully configured
+- Provider status for a live voice request when a Vapi call ID is available
+
+### Guardrails
+
+- The server keeps Vapi credentials out of the browser.
+- Live requests require `VAPI_TEST_CALLS_ENABLED=true` and match `VAPI_TEST_TO_NUMBER` exactly.
+- A call response is informational and unverified; it cannot accept a donation, alter allocation, certify food safety, or dispatch a mission.
+
+---
+
+## 2. Inventory Lot Details
+
+**Route:** `/inventory/[id]`
+
+### Purpose
+
+Review an existing lot already received at the warehouse before outbound planning.
+
+### Required fields
+
+- Lot ID and product
+- Warehouse location
+- Physical and available quantity in pounds
+- Received time and risk deadline
+- Temperature requirement
+- Staff-entered condition status and notes
+- Risk level and missing-data state
+
+### Actions
+
+- Confirm missing fact
+- Generate outbound plans
+- Return to inventory
+
+### Validation
+
+- Quantity must be positive.
+- Risk deadline and received time must be valid.
+- Planning is blocked until temperature and staff condition status are confirmed.
 
 ---
 
@@ -171,6 +179,7 @@ Compare complete operational plans and obtain human approval.
 - Map preview
 - Assumptions drawer
 - Destination ranking table
+- Historical acceptance evidence with accepted/refused/short-receipt counts and sample size
 - Excluded-destination explanation
 - Agent activity timeline
 - Approval panel
@@ -211,7 +220,8 @@ Require:
 - Total quantities reconcile.
 - Approval creates mission and packing plan.
 - Edits change quantities only; identity, allocation metadata, and authoritative metrics are rebuilt from the canonical option.
-- Distributed pounds, households, storage, and staging update after edits. Route miles, spoilage, labor, need-match, equity, and refusal risk remain labeled seeded strategy estimates.
+- Planned outbound pounds, modeled household-equivalents, storage, and staging update after edits. Route miles, spoilage, labor, need-match, equity, and refusal risk remain labeled seeded strategy estimates.
+- Sparse history is labeled low-confidence and cannot override current capacity, temperature, availability, or receiving windows.
 
 ---
 
@@ -225,7 +235,6 @@ Provide the spatial context behind allocation decisions.
 
 ### Required layers
 
-- Donors
 - Warehouse
 - Partner agencies
 - Vehicles
@@ -234,7 +243,6 @@ Provide the spatial context behind allocation decisions.
 
 ### Marker semantics
 
-- Donor: blue
 - Warehouse: purple
 - Available partner: green
 - Capacity-constrained partner: amber
@@ -243,10 +251,13 @@ Provide the spatial context behind allocation decisions.
 
 Do not rely on color alone; include icons, labels, or patterns.
 
+On the full map, every current route stop shows its sequence and full location name. At phone widths, numbered pins replace on-canvas name labels to avoid collisions, while the synchronized list immediately below preserves every full route-stop name and quantity. Nearby context remains icon-only until selected so the default map stays legible. No location detail is open on initial render.
+
 ### Popup contents
 
 - Name
 - Type
+- Planned warehouse load/departure or partner delivery when the location is on the mission route
 - Demand level
 - Storage capacity
 - Receiving window
@@ -259,12 +270,18 @@ Do not rely on color alone; include icons, labels, or patterns.
 - Toggle demand partners
 - Toggle warehouse capacity
 - Toggle vehicles
+- Zoom in, zoom out, and reset to the fitted route
+- Pan by dragging after zoom or with arrow keys while the map has focus
 - Open partner profile
 
 ### Acceptance criteria
 
 - Map renders with local seed data.
 - Route display does not require a live routing API.
+- Zoom and pan are presentation-only; they do not change route geometry, distance, stop order, quantities, or metrics.
+- A replacement route is never synthesized from URL state; `MSN-105` remains unavailable on the map until human approval creates the persisted mission.
+- The default desktop view keeps all current route-stop names and sequence visible while withholding detailed facts until selection; the phone layout keeps sequence on the map and full names in the adjacent synchronized list.
+- The synchronized route list shows planned mission quantities separately from requested demand.
 - Every layer checkbox immediately updates both the schematic map and its visible legend/list.
 - Keyboard users can access a synchronized location list.
 
@@ -315,7 +332,7 @@ Translate the approved plan into warehouse action. The implemented IDs are `PKG-
 
 ### Purpose
 
-Show the approved pickup and delivery sequence.
+Show the approved warehouse-origin delivery sequence.
 
 ### Required components
 
@@ -331,7 +348,7 @@ Show the approved pickup and delivery sequence.
 
 ### Actions
 
-- Mark pickup complete
+- Mark warehouse load complete
 - Mark stop complete
 - Trigger disruption
 - View the packing plan for the current mission (`PKG-104` or `PKG-105`)
@@ -342,7 +359,7 @@ Show the approved pickup and delivery sequence.
 - Mission stop quantities match plan allocations.
 - Completed stops cannot be accidentally edited.
 - Only the first pending stop is enabled; out-of-order completion is blocked.
-- Planned route totals match the strategy template: 18.4 miles Warehouse First, 45.7 Direct Distribution, and 24.8 Mixed Plan.
+- Hold for Later is blocked with 0 outbound miles; executable route totals match 45.7 miles for Fastest Agency Release and 24.8 miles for Balanced Release.
 - Disruption creates a recoverable state, not silent mutation.
 
 ---
@@ -361,7 +378,7 @@ Create a controlled live-demo failure.
 - Truck breakdown — disabled preview
 - Cold capacity lost — disabled preview
 - Driver unavailable — disabled preview
-- Pickup deadline shortened — disabled preview
+- Agency receiving window shortened — disabled preview
 
 Only the named partner cancellation is executable in the MVP. Every other control is disabled and visibly labeled `Preview`.
 
@@ -394,11 +411,11 @@ Summarize calculated scenario outcomes and demonstrate trust.
 
 ### Required metrics
 
-- Pounds offered
+- Existing inventory available
 - Pounds accepted
-- Pounds assigned in time
+- Pounds planned outbound before the risk deadline
 - Estimated spoilage avoided
-- Estimated households supported
+- Modeled household-equivalents
 - Miles
 - Long-term refrigerated-storage utilization
 - Refrigerated-staging utilization
@@ -444,6 +461,7 @@ Explain why an agency is or is not a suitable destination.
 - Product preferences and restrictions
 - Recent allocations
 - Refusal or short-receipt notes
+- Accepted/refused/short-receipt counts and sample size by product category
 - Access and service-gap indicators
 
 ### Actions

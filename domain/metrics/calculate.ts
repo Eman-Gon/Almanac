@@ -43,12 +43,12 @@ export function refrigeratedStagingUtilizationPct(
   );
 }
 
-export function estimatedHouseholdsSupported(
-  distributedQuantityLb: number,
+export function modeledHouseholdEquivalents(
+  plannedOutboundQuantityLb: number,
   poundsPerHousehold: number,
 ): number {
   if (poundsPerHousehold <= 0) return 0;
-  return Math.round(distributedQuantityLb / poundsPerHousehold);
+  return Math.round(plannedOutboundQuantityLb / poundsPerHousehold);
 }
 
 export function spoilageAvoidancePct(
@@ -70,9 +70,9 @@ export function totalRouteMiles(
 
 export function planImpact(plan: PlanOption, poundsPerHousehold: number) {
   return {
-    poundsAssignedInTime: plan.metrics.quantityDistributedInTimeLb,
-    estimatedHouseholdsSupported: estimatedHouseholdsSupported(
-      plan.metrics.quantityDistributedInTimeLb,
+    poundsPlannedOutboundInTime: plan.metrics.quantityPlannedOutboundInTimeLb,
+    modeledHouseholdEquivalents: modeledHouseholdEquivalents(
+      plan.metrics.quantityPlannedOutboundInTimeLb,
       poundsPerHousehold,
     ),
     expectedSpoilageLb: plan.metrics.expectedSpoilageLb,

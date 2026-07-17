@@ -1,5 +1,4 @@
 import {
-  donation,
   partners,
   productLot,
   vehicles,
@@ -8,7 +7,7 @@ import {
 import type { PlanValidationContext } from "@/domain/planning/quantity";
 
 export const scenarioValidationContext: PlanValidationContext = {
-  offeredQuantityLb: donation.quantityLb,
+  availableInventoryQuantityLb: productLot.availableQuantityLb,
   productLot,
   warehouse,
   partners,

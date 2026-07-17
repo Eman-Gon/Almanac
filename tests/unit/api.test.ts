@@ -41,8 +41,8 @@ describe("demo API transitions", () => {
       ...mixed,
       metrics: {
         ...mixed.metrics,
-        quantityDistributedInTimeLb: 1,
-        estimatedHouseholdsSupported: 9_999,
+        quantityPlannedOutboundInTimeLb: 1,
+        modeledHouseholdEquivalents: 9_999,
         totalMiles: 1,
       },
       allocations: mixed.allocations.map((allocation) => {
@@ -64,8 +64,8 @@ describe("demo API transitions", () => {
 
     expect(response.status).toBe(200);
     expect(payload.data.approvedPlan.allocations.map((item: { quantityLb: number }) => item.quantityLb)).toEqual([440, 300, 400]);
-    expect(payload.data.approvedPlan.metrics.quantityDistributedInTimeLb).toBe(1_140);
-    expect(payload.data.approvedPlan.metrics.estimatedHouseholdsSupported).toBe(380);
+    expect(payload.data.approvedPlan.metrics.quantityPlannedOutboundInTimeLb).toBe(1_140);
+    expect(payload.data.approvedPlan.metrics.modeledHouseholdEquivalents).toBe(380);
     expect(payload.data.approvedPlan.metrics.totalMiles).toBe(24.8);
     expect(payload.data.packingPlan.batches.map((item: { quantityLb: number }) => item.quantityLb)).toEqual([440, 300, 400, 60]);
   });

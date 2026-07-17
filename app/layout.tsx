@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s · ChoiceGrid",
   },
   description:
-    "Human-approved allocation and disruption recovery for urgent food donations.",
+    "Human-approved warehouse inventory allocation and disruption recovery for food banks.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

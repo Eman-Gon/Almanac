@@ -67,7 +67,7 @@ Food can be unusable because of:
 
 ### Spoilage is a multi-stage supply-chain problem
 
-Shelf life is consumed during donor holding, pickup, receiving, inspection, storage, allocation, packing, transportation, pantry storage, and recipient pickup.
+Shelf life is consumed across the full chain. ChoiceGrid's authoritative MVP boundary begins after receiving and staff condition review, at storage, allocation, packing, outbound transportation, and agency receiving; upstream donor holding and pickup remain outside the hero.
 
 **Implementation implication:** every perishable lot needs a risk window, storage requirement, current location, and movement priority.
 
@@ -134,12 +134,12 @@ An efficiency-only system can repeatedly favor easy, close, and well-staffed des
 | Product category | Existing coverage | Build implication |
 |---|---|---|
 | Pantry discovery and reservations | Plentiful, Vivery | Do not build only a public pantry map |
-| Donation posting and volunteer pickup | MealConnect, Food Rescue Hero | Add acceptance, urgency, and destination decisions |
+| Donation posting, matching, pickup coordination, and records | MealConnect, Food Rescue Hero, Careit | Do not rebuild the marketplace; focus on the reviewed decision and recovery workflow |
 | Client records and program administration | Link2Feed | Do not rebuild case management |
 | Pantry inventory and online ordering | PantrySoft | Focus on multi-location allocation and recovery |
 | Humanitarian scenario optimization | WFP Optimus | Borrow plan comparison and transparent tradeoffs |
 
-The defensible gap is the closed loop from urgent donation to explainable allocation, packing, route, disruption recovery, and impact.
+Based on the reviewed public pages and authoritative hackathon-operator direction, ChoiceGrid's **product wedge** is the closed loop from at-risk inventory already in the warehouse to explainable outbound plans informed by current constraints and agency acceptance history, human approval, packing, warehouse-origin delivery, disruption recovery, and audit. The integration and demand case still require broader operator validation; this is not proof that existing products lack private or upcoming capabilities.
 
 ---
 

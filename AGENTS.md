@@ -4,9 +4,11 @@
 
 This repository is a hackathon prototype for **ChoiceGrid**, an AI-assisted food-bank allocation and disruption-recovery control tower. Every coding agent must preserve the same product story:
 
-> An urgent food donation arrives. ChoiceGrid helps staff determine where it can be used, compares explainable plans, requires human approval, creates packing and delivery instructions, and replans when conditions change.
+> A perishable inventory lot is already inside the food-bank warehouse and is at risk of spoilage. ChoiceGrid helps staff use existing inventory and agency history to compare explainable outbound plans, requires human approval, creates packing and delivery instructions from the warehouse, and replans when conditions change.
 
 Do not turn the project into a generic chatbot, pantry locator, case-management system, or full warehouse-management platform.
+
+The authoritative hackathon direction is **warehouse-inventory first**. A new donor offer, donor pickup coordination, Vapi outreach, and driver scheduling are not part of the hero workflow. They may remain isolated experiments only when they do not appear in primary navigation, seed-state calculations, or the judged demo.
 
 > **Product brief:** After reading this file, read `CHOICEGRID_PRODUCT_SPEC.md` for the complete product north star, hero scenario, MVP workflow, and companion-document guide.
 
@@ -35,15 +37,17 @@ Research explains **why** the product exists. Approved contracts define **how** 
 ## Product rules
 
 1. **Human approval is mandatory.** Agents may recommend, explain, draft, rank, and simulate. They may not silently approve donations, declare food safe, dispatch vehicles, or contact partners.
-2. **Use AI only where it adds value.** Natural-language extraction and explanation may use an LLM. Quantities, capacity, routes, scores, and metrics must be deterministic and testable.
+2. **Use AI only where it adds value.** Explanation and note normalization may use an LLM. Inventory quantities, capacity, routes, scores, acceptance-history calculations, and metrics must be deterministic and testable.
 3. **Never fabricate operational facts.** Unknown data must be marked `unknown`, `needs_confirmation`, or `low_confidence`.
 4. **No real recipient data.** Use synthetic or aggregated demand profiles only.
 5. **No medical diagnosis.** Dietary matching uses declared categories and staff-approved product tags.
 6. **No automated food-safety decision.** The system may flag condition or urgency and request inspection.
 7. **Every recommendation must be explainable.** Show contributing factors, assumptions, exclusions, confidence, and alternatives.
 8. **Every demo metric must be calculated.** Do not hard-code impressive numbers unless they are clearly part of the seeded scenario and derived from documented assumptions.
-9. **The map supports decisions.** It must show more than proximity: receiving windows, cold capacity, urgency, demand, and routes.
+9. **The map supports decisions.** It must show more than proximity: warehouse origin, receiving windows, cold capacity, urgency, demand, historical acceptance, and outbound routes.
 10. **The hero workflow comes first.** Finish the strawberry scenario before stretch features.
+11. **Existing inventory is the starting point.** The hero lot has already been received into `WH-001`; do not add a donor pickup stop or make upstream donation intake a prerequisite.
+12. **Agency history is decision evidence, not a verdict.** Show sample size, accepted/refused/short-receipt counts, and uncertainty; current capacity and receiving windows remain hard constraints.
 
 ---
 
@@ -125,9 +129,9 @@ If the actual commands differ, update both `README.md` and this file in the same
 
 At minimum, test:
 
-- Donation-message parsing schema
+- Inventory-lot schema and missing-data handling
 - Capacity constraints
-- Destination-score calculations
+- Destination-score calculations, including historical agency acceptance and refusal signals
 - Plan totals and conservation of quantity
 - Human-approval state transition
 - Partner cancellation replanning
@@ -163,7 +167,7 @@ After coding:
 - Replacing the core ChoiceGrid workflow with another product
 - Adding real recipient PII or medical information
 - Removing human approval
-- Letting an LLM compute authoritative quantities or safety decisions
+- Letting an LLM compute authoritative quantities, historical acceptance rates, or safety decisions
 - Making live external routing or data services mandatory for the demo
 - Renaming core statuses or entities without updating all contracts and tests
 - Claiming real-world impact from synthetic data

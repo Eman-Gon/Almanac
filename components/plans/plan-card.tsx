@@ -1,88 +1,72 @@
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Clock3,
-  HeartHandshake,
-  MapPin,
-  Snowflake,
-  Sparkle,
-  UsersRound,
-} from "lucide-react";
-import { validatePlanOption } from "@/domain/planning/quantity";
+import { AlertTriangle, CheckCircle2, Clock3, MapPin, UsersRound } from "lucide-react";
+import { productLot } from "@/data/seed/scenario";
+import { reconcilePlanQuantities, validatePlanOption } from "@/domain/planning/quantity";
 import { scenarioValidationContext } from "@/domain/planning/scenario-context";
 import type { PlanOption } from "@/domain/types";
 
 const descriptions: Record<PlanOption["strategy"], string> = {
-  warehouse_first: "Receive at the warehouse before outbound distribution.",
-  direct_distribution: "Deliver directly to three partner agencies.",
-  mixed: "Balance direct delivery, refrigerated staging, and inspection hold.",
+  hold_for_later: "Keep the full lot in long-term cold storage for a later release.",
+  fastest_release: "Prioritize same-day outbound release across agency receiving windows.",
+  balanced_release: "Balance agency need, route miles, staging, and a small inspection hold.",
   custom: "Custom staff-edited allocation strategy.",
 };
 
-const metricRows = [
-  { key: "quantityDistributedInTimeLb", label: "In time", icon: Clock3, format: (value: number) => `${value.toLocaleString()} lb` },
-  { key: "expectedSpoilageLb", label: "Hold / loss", icon: AlertTriangle, format: (value: number) => `${value.toLocaleString()} lb` },
-  { key: "totalMiles", label: "Miles", icon: MapPin, format: (value: number) => `${value.toFixed(1)} mi` },
-  { key: "staffMinutes", label: "Staff estimate", icon: UsersRound, format: (value: number) => `${value} min` },
-  { key: "coldCapacityUtilizationPct", label: "Cold storage", icon: Snowflake, format: (value: number) => `${value}%` },
-  { key: "refrigeratedStagingUtilizationPct", label: "Cold staging", icon: Snowflake, format: (value: number) => `${value}%` },
-  { key: "needMatchScore", label: "Need model", icon: HeartHandshake, format: (value: number) => `${value} / 100` },
-] as const;
+function capacityLabel(plan: PlanOption): string {
+  if (plan.metrics.coldCapacityUtilizationPct > 100) return "Over capacity";
+  if (plan.metrics.coldCapacityUtilizationPct >= 80) return "Near capacity";
+  return "Within capacity";
+}
 
 export function PlanCard({
   plan,
   selected,
   disabled = false,
   onSelect,
+  onViewDetails,
 }: {
   plan: PlanOption;
   selected: boolean;
   disabled?: boolean;
   onSelect: () => void;
+  onViewDetails?: () => void;
 }) {
   const validation = validatePlanOption(plan, scenarioValidationContext);
-  const recommended = plan.strategy === "mixed";
+  const reconciliation = reconcilePlanQuantities(plan, productLot.availableQuantityLb);
+  const recommended = plan.strategy === "balanced_release";
+  const hasWarnings = plan.risks.some((risk) => !risk.blocking);
+  const statusLabel = recommended
+    ? "Recommended"
+    : !validation.approvable
+      ? "Infeasible"
+      : hasWarnings
+        ? "Feasible with warnings"
+        : "Feasible";
+  const StatusIcon = recommended || validation.approvable ? CheckCircle2 : AlertTriangle;
 
   return (
-    <article className={`plan-card ${selected ? "plan-card-selected" : ""}`}>
+    <article className={`plan-card refactor-plan-card ${selected ? "plan-card-selected" : ""}`}>
       <div className="plan-card-heading">
-        <h2>{plan.name}</h2>
-        {recommended ? (
-          <span className="plan-status recommended"><Sparkle size={14} aria-hidden="true" />Recommended</span>
-        ) : validation.approvable ? (
-          <span className="plan-status feasible"><CheckCircle2 size={14} aria-hidden="true" />Feasible</span>
-        ) : (
-          <span className="plan-status conflict"><AlertTriangle size={14} aria-hidden="true" />Capacity conflict</span>
-        )}
+        <div><h2>{plan.name}</h2><span className="need-match-badge"><UsersRound size={13} aria-hidden="true" />Community need match {plan.metrics.needMatchScore}/100</span></div>
+        <span className={`plan-status ${recommended ? "recommended" : validation.approvable ? "feasible" : "conflict"}`}><StatusIcon size={14} aria-hidden="true" />{statusLabel}</span>
       </div>
       <p className="plan-description">{descriptions[plan.strategy]}</p>
       <div className={`plan-risk ${validation.approvable ? "plan-risk-neutral" : "plan-risk-critical"}`}>
         {validation.approvable ? <CheckCircle2 size={15} aria-hidden="true" /> : <AlertTriangle size={15} aria-hidden="true" />}
-        {validation.displayMessage ?? "All hard constraints pass."}
+        <span>{validation.displayMessage ?? "All hard constraints pass."}</span>
       </div>
-      <dl className="plan-metric-list">
-        {metricRows.map((metric) => {
-          const Icon = metric.icon;
-          const value = plan.metrics[metric.key];
-          return (
-            <div key={metric.key}>
-              <dt><Icon size={14} strokeWidth={1.8} aria-hidden="true" />{metric.label}</dt>
-              <dd>{metric.format(value)}</dd>
-            </div>
-          );
-        })}
+      <dl className="plan-metric-list refactor-plan-metrics">
+        <div><dt><Clock3 size={14} aria-hidden="true" />Planned outbound before risk deadline</dt><dd>{reconciliation.quantityPlannedOutboundInTimeLb.toLocaleString()} lb</dd></div>
+        <div><dt><AlertTriangle size={14} aria-hidden="true" />Retained, held, or unallocated</dt><dd>{(reconciliation.retainedLongTermLb + reconciliation.inspectionHoldLb + reconciliation.unallocatedLb).toLocaleString()} lb</dd></div>
+        <div><dt><MapPin size={14} aria-hidden="true" />Total miles</dt><dd>{plan.metrics.totalMiles.toFixed(1)} mi</dd></div>
+        <div><dt><UsersRound size={14} aria-hidden="true" />Estimated staff time</dt><dd>{plan.metrics.staffMinutes} min</dd></div>
       </dl>
-      <button
-        className={`button ${selected ? "button-primary" : "button-secondary"} plan-select-button`}
-        type="button"
-        onClick={onSelect}
-        disabled={disabled}
-        aria-pressed={selected}
-      >
-        {selected
-          ? disabled ? `${plan.name} approved` : `${plan.name} selected`
-          : disabled ? "Selection locked" : plan.strategy === "mixed" ? "Select Mixed Plan" : "Review plan"}
-      </button>
+      <div className="plan-capacity-language"><span>Cold-capacity use</span><strong>{capacityLabel(plan)}</strong></div>
+      <div className="plan-card-actions">
+        <button className="button button-secondary plan-select-button" type="button" onClick={onSelect} disabled={disabled || selected} aria-pressed={selected}>
+          Select plan
+        </button>
+        <button className="text-button" type="button" onClick={onViewDetails}>View plan details</button>
+      </div>
     </article>
   );
 }

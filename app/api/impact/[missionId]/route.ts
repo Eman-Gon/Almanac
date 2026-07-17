@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scenario } from "@/data/seed/scenario";
+import { productLot, scenario } from "@/data/seed/scenario";
 import { apiFailure, apiSuccess } from "@/domain/api/response";
 import { createMission } from "@/domain/execution/create-execution";
 import { spoilageAvoidancePct, totalRouteMiles } from "@/domain/metrics/calculate";
@@ -17,10 +17,12 @@ export async function GET(request: Request, context: { params: Promise<{ mission
   const mission = createMission(plan, missionId);
   return NextResponse.json(apiSuccess({
     projection: "seed_preview_not_persisted",
-    poundsOffered: 1_200,
-    poundsAssignedInTime: plan.metrics.quantityDistributedInTimeLb,
+    inventoryLotId: productLot.id,
+    existingInventoryAvailableLb: productLot.availableQuantityLb,
+    quantityPlannedOutboundInTimeLb: plan.metrics.quantityPlannedOutboundInTimeLb,
     inspectionHoldLb: plan.inspectionHoldLb,
-    estimatedHouseholdsSupported: plan.metrics.estimatedHouseholdsSupported,
+    unallocatedLb: plan.unallocatedLb,
+    modeledHouseholdEquivalents: plan.metrics.modeledHouseholdEquivalents,
     spoilageAvoidancePct: spoilageAvoidancePct(scenario.baselineExpectedSpoilageLb, plan.metrics.expectedSpoilageLb),
     totalMiles: totalRouteMiles(mission.routeLegs),
     replanningTimeSeconds: missionId === "MSN-105" ? scenario.modeledReplanningSeconds : null,

@@ -3,7 +3,7 @@
 **Status:** Approved hackathon direction  
 **Audience:** Coding agents, designers, QA agents, technical leads, and presentation agents  
 **Product type:** AI-assisted food-bank supply-chain decision and disruption-recovery prototype  
-**Primary scenario:** Urgent perishable donation allocation  
+**Primary scenario:** At-risk warehouse inventory allocation
 **Data:** Synthetic demo data only  
 **Last updated:** July 16, 2026
 
@@ -39,7 +39,9 @@ When this file summarizes a topic and a detailed companion contract is more spec
 | [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | Three-to-five-minute walkthrough, backup paths, and 90-second cut |
 | [`PITCH_DECK_OUTLINE.md`](PITCH_DECK_OUTLINE.md) | Evidence-safe slide outline and speaker notes |
 | [`BACKUP_DEMO_VIDEO.md`](BACKUP_DEMO_VIDEO.md) | Two-to-four-minute recording plan and shot list |
-| [`FOOD_BANK_INTERVIEW.md`](FOOD_BANK_INTERVIEW.md) | Time-boxed future operator-interview guide; no interview is claimed |
+| [`FOOD_BANK_INTERVIEW.md`](FOOD_BANK_INTERVIEW.md) | Operator discovery and observed-usability protocol; no interview is claimed |
+| [`PILOT_VALIDATION_PLAN.md`](PILOT_VALIDATION_PLAN.md) | Staged path from synthetic usability testing to historical replay and non-authoritative shadow evaluation |
+| [`SUBMISSION_READINESS_CHECKLIST.md`](SUBMISSION_READINESS_CHECKLIST.md) | Evidence-safe hackathon submission gate and open-criteria tracker |
 
 ### Context, research, and governance
 
@@ -73,12 +75,13 @@ When this file summarizes a topic and a detailed companion contract is more spec
 | File | Purpose |
 |---|---|
 | [`research/food_bank_hackathon_research_summary.md`](research/food_bank_hackathon_research_summary.md) | Full research report, analytics, competitor review, product opportunities, and sources |
+| [`research/validation/EVIDENCE_REGISTER.md`](research/validation/EVIDENCE_REGISTER.md) | De-identified register for completed interviews, observed usability, pilot commitments, and case evidence; initialized at zero |
 
 ---
 
 ## 3. Product in one sentence
 
-> **ChoiceGrid helps food-bank staff decide where an urgent perishable donation should go, turns the approved decision into a packing and delivery plan, and replans when conditions change.**
+> **ChoiceGrid helps food-bank staff move at-risk inventory already inside the warehouse before it spoils, using current agency constraints and historical acceptance to compare outbound plans, then replans when conditions change.**
 
 ### Tagline
 
@@ -92,7 +95,7 @@ When this file summarizes a topic and a detailed companion contract is more spec
 
 - A food-bank operations decision tool
 - A human-approved AI-agent workflow
-- A perishable-food allocation planner
+- An at-risk warehouse-inventory allocation planner
 - A demand and capacity map
 - A packing and cross-dock planner
 - A delivery mission planner
@@ -110,6 +113,7 @@ When this file summarizes a topic and a detailed companion contract is more spec
 - A production routing platform
 - A food-safety authority
 - An autonomous dispatcher
+- A donor-pickup or driver-scheduling product
 - A repository of real recipient medical data
 
 ---
@@ -149,7 +153,7 @@ One item may match several themes.
 
 ### Main product insight
 
-The repeated problem is not merely a lack of food. Food must also be:
+The repeated problem is not merely a lack of food. Existing warehouse inventory must also be:
 
 - Moved before it spoils
 - Compatible with cold-storage capacity
@@ -160,7 +164,7 @@ The repeated problem is not merely a lack of food. Food must also be:
 - Delivered through a feasible route
 - Reallocated when circumstances change
 
-ChoiceGrid connects these concerns into one workflow.
+ChoiceGrid connects these concerns after receiving, when staff are already sitting on inventory that must move. The authoritative hackathon direction is to avoid making upstream donor scheduling and pickup the product bottleneck.
 
 ---
 
@@ -178,8 +182,8 @@ The official prompt asks teams to use AI agents to improve food-bank supply chai
 
 ChoiceGrid directly demonstrates:
 
-- Donation intake
-- Shelf-life urgency
+- Existing-inventory risk triage
+- Shelf-life urgency after warehouse receiving
 - Cold-capacity checks
 - Partner allocation
 - Packing and cross-docking
@@ -204,11 +208,11 @@ The MVP may use one `demo_user`, but the experience should preserve these role l
 - Approves or overrides recommendations
 - Reviews impact
 
-### Donation coordinator
+### Inventory coordinator
 
-- Reviews the incoming offer
-- Confirms extracted fields
-- Resolves missing information
+- Reviews existing on-hand lots
+- Confirms quantity, risk deadline, temperature, and condition status
+- Resolves missing operational information
 - Initiates planning
 
 ### Warehouse lead
@@ -219,13 +223,13 @@ The MVP may use one `demo_user`, but the experience should preserve these role l
 
 ### Dispatcher
 
-- Reviews vehicles, drivers, receiving windows, and route
+- Reviews the assigned execution fixture, receiving windows, and route
 - Handles disruptions
 
 ### Partner-agency coordinator
 
 - Maintains agency capacity and availability
-- Reviews demand, product fit, and refusal history
+- Reviews demand, product fit, and category-specific acceptance/refusal history
 
 ---
 
@@ -321,22 +325,23 @@ Clearly distinguish:
 SCN-STRAWBERRY-001
 ```
 
-### Starting donor message
+### Starting inventory alert
 
 ```text
-Hi, Market Street Grocery has about 80 cases of strawberries available today,
-roughly 1,200 pounds. They need to be picked up before 1 PM and kept refrigerated.
-Please confirm quickly.
+LOT-104 · Strawberries · 1,200 lb available at WH-001
+Refrigerated · staff condition review recorded · high spoilage risk
+Allocate before the seeded risk deadline.
 ```
 
 ### Seeded facts
 
-- Donor: Market Street Grocery
+- Inventory lot: `LOT-104`, already received at `WH-001`
 - Product: strawberries
-- Quantity: **1,200 lb**
+- Available quantity: **1,200 lb**
 - Temperature: refrigerated
-- Pickup deadline: **1:00 PM**
-- Modeled risk deadline: **36 hours after offer**
+- Received time: seeded warehouse timestamp
+- Modeled risk deadline: **36 hours after the seeded inventory alert**
+- Condition status: staff-cleared for planning; **60 lb** remains a supervisor inspection hold
 - Long-term warehouse refrigerated-storage headroom: **420 lb**
 - Separate refrigerated short-dwell staging capacity: **500 lb**
 - Refrigerated vehicle capacity: **1,400 lb**
@@ -351,16 +356,16 @@ All values are synthetic.
 
 ## 10. Required plan alternatives
 
-### Option A — Warehouse First
+### Option A — Hold for Later
 
-- Attempt to receive most or all food at the warehouse
+- Attempt to keep most or all food in long-term warehouse storage
 - Surface the cold-capacity conflict
 - Show lower coordination complexity
 - Show higher modeled spoilage or handling risk
 - Mark the option warning or partially infeasible when appropriate
-- Use the seeded 18.4-mile warehouse route template
+- Use **0 outbound miles** because the blocked option creates no mission
 
-### Option B — Direct Distribution
+### Option B — Fastest Agency Release
 
 - Send most food directly to partner agencies
 - Use less warehouse capacity
@@ -368,7 +373,7 @@ All values are synthetic.
 - Show stronger immediate access
 - Use the seeded 45.7-mile direct route template
 
-### Option C — Mixed Plan
+### Option C — Balanced Release
 
 Recommended seeded plan:
 
@@ -380,7 +385,7 @@ Recommended seeded plan:
 | Inspection hold or modeled handling loss | **60 lb** |
 | **Total** | **1,200 lb** |
 
-The Mixed Plan should be recommended because it balances urgency, cold capacity, demand, receiving feasibility, route feasibility, service gaps, and refusal risk.
+Balanced Release should be recommended because it balances urgency, cold capacity, demand, receiving feasibility, route feasibility, service gaps, and historical acceptance/refusal evidence.
 
 Its seeded route template totals **24.8 miles**.
 
@@ -429,24 +434,22 @@ The replacement must satisfy capacity, temperature, time-window, and quantity-co
 
 Show:
 
-- Urgent donation alert
+- At-risk inventory alert
 - Pounds at high expiration risk
 - Long-term cold-storage and refrigerated-staging utilization
 - Active missions
 - Partner shortage indicators
 - Short shift-start briefing
 
-### 12.2 Donation intake and review
+### 12.2 Inventory-lot review
 
 Support:
 
-- Pasting a donor message
-- Loading the seeded offer
-- Structured extraction
-- Field-level confidence
-- Missing questions
-- Manual confirmation
-- Deterministic fallback when no LLM is configured
+- Loading `LOT-104` from existing warehouse inventory
+- Available quantity, received time, risk deadline, temperature, location, and condition status
+- Explicit missing or low-confidence operational facts
+- Manual staff confirmation and audit history
+- Deterministic risk facts and fallback explanation when no LLM is configured
 
 ### 12.3 Plan generation
 
@@ -454,6 +457,7 @@ Support:
 
 - Capacity assessment
 - Partner ranking
+- Category-specific historical acceptance/refusal evidence with sample size
 - Three complete alternatives
 - Quantity conservation
 - Temperature compatibility
@@ -472,7 +476,7 @@ Support:
 - Audit event
 - Idempotent approval
 
-Edits may change allocation quantities only. Rebuild identities and allocation metadata from the canonical option; recalculate distributed pounds, households, storage, and staging utilization, then rerun hard constraints. Route miles, expected spoilage, staff minutes, need-match, equity, and refusal risk remain labeled seeded strategy estimates.
+Edits may change allocation quantities only. Rebuild identities and allocation metadata from the canonical option; recalculate planned outbound pounds, modeled household-equivalents, storage, and staging utilization, then rerun hard constraints. Route miles, expected spoilage, staff minutes, need-match, equity, and refusal risk remain labeled seeded strategy estimates.
 
 ### 12.5 Packing and cross-dock plan
 
@@ -493,7 +497,6 @@ Plan approval creates `PKG-104` with `BAT-001`-series rows. Recovery creates `PK
 
 Show:
 
-- Donor
 - Warehouse
 - Partner agencies
 - Vehicle
@@ -502,6 +505,7 @@ Show:
 - Compatible cold capacity
 - Receiving windows
 - Partner status
+- Historical acceptance context with sample size
 - Accessible synchronized location list
 
 ### 12.7 Disruption recovery
@@ -516,9 +520,9 @@ Recovery approval must create both replacement warehouse instructions and a repl
 
 Calculate:
 
-- Pounds assigned in time
+- Pounds planned outbound before the risk deadline
 - Inspection hold or modeled loss
-- Estimated households supported
+- Modeled household-equivalents
 - Total miles
 - Staff minutes
 - Long-term cold-storage and refrigerated-staging utilization
@@ -532,6 +536,9 @@ Calculate:
 
 Do not build:
 
+- New-donation intake or donor pickup as the hero workflow
+- Donor, driver, or partner scheduling
+- Live Vapi outreach in the judged flow
 - Production authentication
 - Real recipient accounts
 - Real medical records
@@ -556,8 +563,8 @@ Do not build:
 | Route | Screen | Purpose |
 |---|---|---|
 | `/dashboard` | Operations Control Tower | See urgent issues and enter the scenario |
-| `/donations/new` | Donation Intake | Paste, enter, or load an offer |
-| `/donations/[id]` | Donation Details | Review source text, extracted fields, confidence, and missing data |
+| `/inventory` | At-Risk Inventory | Review operational and display-only lot context |
+| `/inventory/[id]` | Inventory Lot Details | Review on-hand quantity, risk facts, warehouse location, condition status, and audit data |
 | `/plans/[id]` | AI Decision Room | Compare, edit, select, and approve plans |
 | `/map` | Demand and Capacity Map | Understand demand, capacity, windows, vehicles, and routes |
 | `/packing/[id]` | Packing and Cross-Dock Plan | Translate approval into warehouse instructions |
@@ -575,7 +582,7 @@ Detailed screen requirements live in `docs/SCREEN_SPECIFICATIONS.md`.
 ```text
 /dashboard
     ↓
-/donations/DON-104
+/inventory/LOT-104
     ↓
 /plans/PLN-104
     ↓
@@ -595,8 +602,8 @@ Detailed screen requirements live in `docs/SCREEN_SPECIFICATIONS.md`.
 Product story:
 
 ```text
-Urgent alert
-→ understand the offer
+At-risk inventory alert
+→ understand the existing lot
 → compare alternatives
 → approve a plan
 → create warehouse and route instructions
@@ -612,8 +619,7 @@ The map is a decision surface, not decoration.
 
 ### Required data
 
-- Donor location
-- Warehouse
+- Warehouse origin
 - Partner agencies
 - Vehicle
 - Candidate and approved routes
@@ -622,6 +628,7 @@ The map is a decision surface, not decoration.
 - Receiving windows
 - Status: available, limited, unavailable, or canceled
 - Product-fit indicator
+- Historical acceptance signal and sample size
 - Optional service-gap layer
 
 ### Reliability
@@ -643,13 +650,12 @@ The implemented layer checkboxes toggle routes, demand partners, warehouse capac
 
 ChoiceGrid uses narrow agents with structured contracts.
 
-### Intake Agent
+### Inventory Risk Review Agent
 
-- Parses the donor message
-- Extracts explicit details
-- Identifies ambiguity
-- Drafts follow-up questions
-- Must not invent missing facts or accept the donation
+- Summarizes validated lot facts and risk signals
+- Identifies missing operational facts
+- Drafts staff follow-up questions
+- Must not invent shelf life, inspection results, or inventory
 
 ### Capacity Agent
 
@@ -668,6 +674,7 @@ Ranks destinations using:
 - Receiving-window fit
 - Compatible capacity
 - Recent service gap
+- Historical category acceptance and sample size
 - Travel
 - Access burden
 - Refusal risk
@@ -694,16 +701,14 @@ Ranks destinations using:
 - Requires human approval
 - Supersedes the old mission
 
-### Communication Agent
+### Optional Communication Draft Agent
 
 May draft:
 
-- Donor confirmation
 - Partner notice
-- Driver instructions
 - Disruption update
 
-All messages remain drafts until approved.
+All messages remain drafts until approved. Communication delivery, including Vapi, is outside the judged hero.
 
 ---
 
@@ -713,12 +718,13 @@ A possible MVP score:
 
 ```text
 Destination Score =
-30% documented need
-+ 20% product usability match
+25% documented need
++ 15% product usability match
 + 15% receiving-window compatibility
 + 15% compatible available capacity
++ 15% category-specific historical acceptance
 + 10% recent service gap
-+ 10% equity priority
++ 5% equity priority
 - travel penalty
 - spoilage penalty
 - refusal-risk penalty
@@ -727,6 +733,8 @@ Destination Score =
 Rules:
 
 - Keep score components visible.
+- Display accepted, refused, and short-receipt counts plus the sample size behind historical acceptance.
+- Mark sparse history low-confidence; never turn missing history into a positive claim.
 - Version the configuration, such as `score-v1`.
 - Quantity-only edits do not recompute this seeded destination score; keep the score labeled and rerun hard constraints.
 - A score cannot override a hard capacity, temperature, or time-window constraint.
@@ -739,15 +747,16 @@ Rules:
 Every plan must satisfy:
 
 ```text
-offered quantity
+available inventory
 =
-allocated quantity
-+ staging or warehouse quantity
+planned outbound allocation
++ retained long-term warehouse quantity
 + inspection hold
-+ redirected quantity
-+ declined quantity
-+ explicitly modeled loss
++ approved external transfer
++ explicitly unallocated quantity
 ```
+
+`expectedSpoilageLb` is a non-exclusive risk estimate over those physical buckets, not another conservation bucket. The seeded 60 lb inspection hold is treated as expected loss for impact but is counted only once in quantity conservation.
 
 Primary plan:
 
@@ -768,17 +777,12 @@ A plan is not approvable when:
 
 ## 20. State model
 
-### Donation
+### Inventory lot
 
 ```text
-draft
-→ needs_confirmation
-→ ready_for_planning
-→ plans_generated
-→ awaiting_approval
-→ approved / partially_accepted / declined / redirected
-→ in_execution
-→ closed
+available
+→ partially_allocated / allocated / inspection_hold
+→ distributed / disposed
 ```
 
 ### Mission
@@ -813,9 +817,7 @@ Detailed schemas are in `docs/DATA_MODEL.md`.
 
 At minimum, share typed representations for:
 
-- `DonationOffer`
 - `ProductLot`
-- `Donor`
 - `Warehouse`
 - `PartnerAgency`
 - `DemandSignal`
@@ -838,8 +840,6 @@ At minimum, share typed representations for:
 Use stable prefixed IDs such as:
 
 ```text
-DON-104
-DNR-001
 LOT-104
 PAR-012
 PLN-104
@@ -860,8 +860,7 @@ Use ISO 8601 timestamps and explicit units.
 Core operations should include:
 
 ```text
-POST /api/donations/parse
-GET  /api/donations/:id
+GET  /api/inventory/:id
 
 POST /api/plans/generate
 GET  /api/plans/:id
@@ -909,7 +908,7 @@ Rules:
 - A global hydration gate that validates saved state before rendering the shell or enabling actions
 - Local deterministic fixtures and domain services
 - A bundled schematic map and precomputed route geometry
-- Deterministic donation extraction fallback; no live LLM is required or currently invoked
+- Optional model-generated explanations with runtime validation and deterministic fallback; no live LLM is required
 - Vitest, Testing Library, and Playwright
 
 Required commands:
@@ -931,8 +930,8 @@ npm run demo:reset
 
 ## 24. What must genuinely work
 
-- Donation parsing into a validated schema
-- Confidence and missing-data handling
+- Inventory-lot schema validation
+- Missing and low-confidence operational-data handling
 - Capacity checks
 - Destination-score calculation
 - Three plan alternatives
@@ -949,8 +948,7 @@ npm run demo:reset
 
 ## 25. What may be simulated
 
-- Donor and partner records
-- Inventory and demand
+- Warehouse, inventory, partner, and demand records
 - Service-gap indicators
 - Vehicles and drivers
 - Route geometry
@@ -968,12 +966,12 @@ Synthetic and scenario-based values must be labeled.
 
 | Metric | Target |
 |---|---:|
-| Pounds offered | **1,200 lb** |
-| Pounds assigned or distributed in time | **1,140 lb** |
+| Existing inventory available | **1,200 lb** |
+| Pounds planned before the seeded risk deadline | **1,140 lb** |
 | Inspection hold or modeled loss | **60 lb** |
-| Estimated households supported | **380** |
+| Modeled household-equivalents | **380** |
 | Modeled spoilage avoidance | **94%** |
-| Replanning time | **11 seconds** |
+| Seeded disruption-to-recovery event interval | **11 seconds** |
 
 These are simulated estimates calculated from the seeded scenario.
 
@@ -985,17 +983,17 @@ These are simulated estimates calculated from the seeded scenario.
 
 Open `/dashboard`.
 
-> “A grocery store has offered 1,200 pounds of strawberries. Pickup must happen before 1:00 PM, and the food must stay refrigerated.”
+> “The food bank already has 1,200 pounds of strawberries in refrigerated inventory. They are not moving fast enough, so staff need a feasible outbound plan before the seeded risk deadline.”
 
 ### 15–30 seconds
 
 Show:
 
-- Original donor message
-- Extracted quantity
-- Deadline
-- Refrigeration
-- Confidence
+- Existing lot and warehouse location
+- Available quantity
+- Risk deadline and age
+- Refrigeration and staff condition status
+- Missing-data handling
 - Missing-data behavior
 
 Generate plans.
@@ -1004,9 +1002,9 @@ Generate plans.
 
 Compare:
 
-- Warehouse First
-- Direct Distribution
-- Mixed Plan
+- Hold for Later
+- Fastest Agency Release
+- Balanced Release
 
 Show:
 
@@ -1016,7 +1014,7 @@ Show:
 - Metrics
 - Excluded destinations
 
-Approve Mixed Plan.
+Show each agency's historical acceptance evidence and sample size, then approve Balanced Release.
 
 ### 50–65 seconds
 
@@ -1024,7 +1022,7 @@ Show:
 
 - Packing or cross-dock batches
 - Route
-- Vehicle
+- Warehouse-origin route and vehicle context
 - Receiving windows
 - Approval in audit history
 
@@ -1043,10 +1041,10 @@ Show:
 
 Show:
 
-- 1,140 pounds assigned in time
-- 380 estimated households supported
+- 1,140 pounds planned before the seeded risk deadline
+- 380 modeled household-equivalents using the seeded 3 lb assumption
 - 94% modeled spoilage avoidance
-- 11-second replan
+- 11-second seeded event interval, not compute time or observed staff time
 - Simulated-data label
 
 ---
@@ -1055,7 +1053,7 @@ Show:
 
 ### Schemas and data
 
-- Donation parser output
+- Inventory-lot schema
 - Required fields
 - Unit conversion
 - Agent envelope
@@ -1094,7 +1092,7 @@ Show:
 
 ```text
 dashboard
-→ donation
+→ inventory lot
 → plans
 → approval
 → mission
@@ -1109,11 +1107,11 @@ dashboard
 
 The MVP is complete when:
 
-- The dashboard shows the seeded offer.
-- The message can be parsed or loaded through fallback.
+- The dashboard shows the seeded at-risk warehouse lot.
+- Required lot facts are validated and missing data is explicit.
 - Three complete alternatives are generated; infeasible alternatives are visibly blocked and at least one option is feasible and approvable.
 - Quantity conservation passes.
-- The Mixed Plan can be approved.
+- Balanced Release can be approved.
 - Packing and mission records are created.
 - The map reflects the approved mission.
 - One disruption produces a valid recovery.
@@ -1149,7 +1147,7 @@ Build:
 - Demo reset
 - Domain errors
 
-### Phase 2 — Donation and planning
+### Phase 2 — Inventory and planning
 
 Read:
 
@@ -1161,7 +1159,7 @@ docs/METRICS_AND_EVIDENCE.md
 
 Build:
 
-- Intake parser and fallback
+- Inventory-lot review and fallback explanation
 - Capacity service
 - Destination score
 - Three plans
@@ -1290,7 +1288,7 @@ Do not:
 
 ### Recommended
 
-> “ChoiceGrid is a human-approved AI decision and recovery layer for urgent food donations. It interprets an offer, checks capacity and community need, compares operational plans, creates packing and delivery instructions, and replans when conditions change.”
+> “ChoiceGrid is a human-approved decision and recovery layer for at-risk food already inside a food-bank warehouse. It combines current constraints with agency acceptance history, compares outbound plans, creates packing and delivery instructions, and replans when conditions change.”
 
 ### Avoid
 
@@ -1314,7 +1312,7 @@ Do not:
 
 Build the smallest reliable product that proves this story:
 
-> **An urgent perishable donation arrives. ChoiceGrid structures it, compares feasible destinations and plans, obtains human approval, creates packing and route instructions, recovers from one disruption, and shows calculated impact.**
+> **An existing perishable lot is at risk inside the warehouse. ChoiceGrid compares feasible destinations using current constraints and agency history, obtains human approval, creates warehouse-origin packing and route instructions, recovers from one partner cancellation, and shows calculated impact.**
 
 Do not optimize for the number of features.
 

@@ -27,7 +27,8 @@ import type { PlanOption } from "@/domain/types";
 export { initialDemoState } from "@/domain/demo/demo-state";
 export type { DemoStage, DemoState } from "@/domain/demo/demo-state";
 
-const STORAGE_KEY = "choicegrid-demo-v2";
+const STORAGE_KEY = "choicegrid-demo-v3";
+const PREVIOUS_STORAGE_KEY = "choicegrid-demo-v2";
 const LEGACY_STORAGE_KEY = "choicegrid-demo-v1";
 
 type DemoContextValue = {
@@ -126,6 +127,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
 
   const resetScenario = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(PREVIOUS_STORAGE_KEY);
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
     setState((current) => createInitialDemoState(current.resetCount + 1));
   }, []);

@@ -38,8 +38,8 @@ No known critical or high-severity defect may remain in the primary scenario.
 
 ### Schemas
 
-- Valid donation extraction passes.
-- Missing required fields produce `needs_confirmation`.
+- Valid existing-inventory lot passes.
+- Missing available quantity, risk deadline, temperature, location, or condition status produces `needs_confirmation`.
 - Invalid units or negative quantities fail.
 - Agent output with extra unsafe fields is rejected or stripped according to schema policy.
 
@@ -58,14 +58,17 @@ No known critical or high-severity defect may remain in the primary scenario.
 - Score weights are versioned.
 - Increasing need raises the positive component.
 - Increasing refusal risk raises the penalty.
+- Stronger category-specific acceptance history raises its positive component when sample size is sufficient.
+- Sparse or missing history is labeled low-confidence and cannot become a fabricated positive signal.
+- Accepted/refused/short-receipt counts reconcile to the displayed sample size and rate.
 - Distance alone cannot dominate when documented score weights say otherwise.
 - Final score remains within display range.
 
 ### Planning
 
 - Three options are generated when feasible.
-- Offered quantity is fully accounted for.
-- Accepted quantity equals allocations plus hold and expected loss.
+- Available inventory is fully accounted for.
+- Available inventory equals outbound allocations plus retained, inspection-hold, external-transfer, and unallocated physical buckets. Expected spoilage is a non-exclusive risk metric and is not added again.
 - No duplicate allocation IDs.
 - Plan metrics match allocations.
 - Plan edits accept quantity changes only and rebuild identities and allocation metadata from the canonical option.
@@ -76,7 +79,7 @@ No known critical or high-severity defect may remain in the primary scenario.
 - Households estimate uses scenario conversion factor.
 - Spoilage-avoidance percentage handles zero baseline.
 - Miles equal route-leg total.
-- Warehouse First, Direct Distribution, and Mixed Plan missions total 18.4, 45.7, and 24.8 miles respectively.
+- Hold for Later is blocked with 0 outbound miles; Fastest Agency Release and Balanced Release total 45.7 and 24.8 miles respectively.
 - Capacity percentages are correct.
 - Rounding is consistent.
 - Quantity edits recalculate distributed pounds, households, storage, and staging; spoilage, labor, need-match, equity, refusal risk, and route miles remain labeled seeded strategy estimates.
@@ -97,12 +100,13 @@ No known critical or high-severity defect may remain in the primary scenario.
 
 ## Integration tests
 
-### Donation to plan
+### Inventory lot to plan
 
-- Parse donor message.
-- Confirm fields.
+- Load `LOT-104` already at `WH-001`.
+- Confirm required operational facts.
 - Generate plan set.
 - Verify agent runs and audit events.
+- Verify the map and mission contain no donor pickup.
 
 ### Plan approval
 
@@ -138,17 +142,19 @@ No known critical or high-severity defect may remain in the primary scenario.
 - Verify map GET returns a response labeled `seed_preview_not_persisted`.
 - Verify packing start accepts `PKG-104` and `PKG-105` only from `ready`; every other status returns `409 INVALID_STATE_TRANSITION`.
 - Verify packing completion requires an already-started plan, and repeating the current batch state returns `changed: false` with no audit event.
-- Verify mission events require the complete current mission, matching route and event type, `assigned | in_transit` status, and the first pending stop; out-of-order completion returns `409`.
+- Verify mission events require the complete current mission, matching route and event type, `assigned | in_transit` status, and the first pending stop; `warehouse_load_complete` targets `WH-001`, and out-of-order completion returns `409`.
 - Verify partner cancellation requires the current approved plan and eligible current `MSN-104` mission.
 - Verify recovery approval requires the linked current original plan, `PKG-104`, replanning `MSN-104` with its affected stop canceled, and matching disruption quantity; verify the response includes `PKG-105` and `MSN-105`.
 - Verify recovery creation begins at `11:18:00`, approval/replacements occur at `11:18:11`, and later recovery packing/mission actions use later timestamps.
 
-### Model fallback
+### Optional explanation fallback
 
-- Simulate failed LLM response.
-- Verify fallback extraction.
+- Simulate primary success and verify the primary model is recorded.
+- Simulate primary timeout, provider failure, invalid JSON, and missing required facts; verify the backup model is attempted.
+- Simulate both model attempts failing and verify deterministic lot-risk explanation.
 - Verify UI remains usable.
 - Verify agent run status is `fallback_used`.
+- Verify the response and UI distinguish primary, backup, and deterministic sources without exposing the API key.
 
 ---
 
@@ -160,11 +166,11 @@ No known critical or high-severity defect may remain in the primary scenario.
 - KPI cards show derived values
 - Alert navigation works
 
-### Donation details
+### Inventory details
 
-- Original message visible
-- Confidence labels visible
-- Missing fields disable planning
+- Existing lot, warehouse, risk deadline, available pounds, and condition status visible
+- Unknown or low-confidence labels visible
+- Missing required facts disable planning
 
 ### Decision room
 
@@ -176,6 +182,10 @@ No known critical or high-severity defect may remain in the primary scenario.
 ### Map
 
 - Marker list matches map locations
+- Current route markers show full names and stop order; nearby context labels appear only after selection
+- No detail panel is open until a marker or synchronized row is selected
+- Route rows distinguish planned mission quantity from requested demand
+- Zoom in, zoom out, reset, keyboard pan, and drag pan change presentation only and preserve route geometry and metrics
 - Route, demand, capacity, and vehicle layer toggles update the map and visible legend/list
 - Partner popup opens details
 - Color is not the only status indicator
@@ -190,11 +200,11 @@ No known critical or high-severity defect may remain in the primary scenario.
 
 - Direct navigation works for every documented primary route.
 - `/partners/PAR-001` renders the correct synthetic partner profile.
-- Unknown donation, plan, packing, mission, and partner IDs render the intentional not-found state; unknown API IDs return `404 NOT_FOUND`.
+- Unknown inventory-lot, plan, packing, mission, and partner IDs render the intentional not-found state; unknown API IDs return `404 NOT_FOUND`.
 - `/packing/PKG-104` and `/packing/PKG-105` show an intentional prerequisite state until their respective approvals create them.
 - The global hydration gate renders no action controls before saved browser state is validated.
 - Missions navigation and `/missions` resolve to `MSN-105` after recovery.
-- Warehouse and donor labels do not link to `/partners/*`.
+- Warehouse labels do not link to `/partners/*`.
 
 ---
 
@@ -204,9 +214,9 @@ No known critical or high-severity defect may remain in the primary scenario.
 
 1. Reset demo.
 2. Open dashboard.
-3. Open `DON-104`.
+3. Open `LOT-104` from `/inventory`.
 4. Generate plans.
-5. Approve Mixed Plan.
+5. Verify acceptance-history evidence and approve Balanced Release.
 6. Open mission.
 7. Trigger partner cancellation.
 8. Approve recovery.
@@ -214,9 +224,9 @@ No known critical or high-severity defect may remain in the primary scenario.
 10. Open impact.
 11. Verify target metrics and audit events.
 
-### E2E-002 — Missing information
+### E2E-002 — Missing inventory information
 
-1. Enter incomplete donor message.
+1. Load an inventory lot missing a required operational fact.
 2. Confirm plan generation disabled.
 3. Fill required field.
 4. Generate plans.
@@ -260,7 +270,7 @@ For the seeded demo on a typical laptop:
 - Plan generation with deterministic fixtures should complete in less than two seconds.
 - Replan should complete in less than two seconds when not intentionally showing a timer animation.
 - No screen should require a production network API; the map and route use bundled local rendering.
-- The application should remain usable with deterministic extraction fallback and the synchronized non-map location list.
+- The application should remain usable with a deterministic lot-risk explanation and the synchronized non-map location list.
 
 ---
 
@@ -268,14 +278,15 @@ For the seeded demo on a typical laptop:
 
 ### Dashboard
 
-- [ ] Urgent donation visible
+- [ ] At-risk inventory visible
 - [ ] KPIs calculated
 - [ ] Navigation works
 
-### Donation
+### Inventory
 
-- [ ] Original and extracted data visible
-- [ ] Confidence visible
+- [ ] Inventory list distinguishes the single active lot from display-only synthetic history
+- [ ] Existing lot and warehouse risk facts visible
+- [ ] Missing or low-confidence facts visible
 - [ ] Missing information handled
 
 ### Plans
@@ -284,6 +295,7 @@ For the seeded demo on a typical laptop:
 - [ ] Quantity conservation passes
 - [ ] Metrics and assumptions visible
 - [ ] Human approval recorded
+- [ ] Historical acceptance/refusal evidence shows counts and sample size
 
 ### Packing
 
@@ -296,6 +308,7 @@ For the seeded demo on a typical laptop:
 - [ ] Stops and route visible
 - [ ] Receiving windows visible
 - [ ] Vehicle capacity valid
+- [ ] Route begins at `WH-001` and contains no donor pickup
 
 ### Disruption
 

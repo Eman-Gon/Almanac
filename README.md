@@ -1,8 +1,8 @@
 # ChoiceGrid
 
-ChoiceGrid is an AI-assisted food-bank operations prototype for deciding where urgent food should go, how it should be packed, and how to recover when the plan changes.
+ChoiceGrid is an AI-assisted food-bank operations prototype for moving at-risk inventory already inside a warehouse, deciding which agencies can realistically take it, and recovering when the plan changes.
 
-The product is designed for food-bank allocation, warehouse, and transportation teams. The current build uses a deterministic structured-extraction fallback for the demo while keeping quantities, capacity, scoring, routing assumptions, and impact metrics deterministic and auditable.
+The product is designed for food-bank allocation, warehouse, and transportation teams. Inventory facts, agency history, capacity, scoring, routing assumptions, and impact metrics stay deterministic and auditable; an optional model may explain validated facts but is never required.
 
 ## Start here
 
@@ -13,15 +13,15 @@ Coding agents should read [`AGENTS.md`](AGENTS.md) first and then [`CHOICEGRID_P
 
 ## Hero scenario
 
-A grocery store offers **1,200 pounds of strawberries** that must be collected within two hours.
+The food bank already has **1,200 pounds of strawberries** at `WH-001`. The lot is not moving fast enough and is approaching a seeded spoilage-risk deadline.
 
 ChoiceGrid:
 
-1. Parses the donor message.
-2. Checks shelf-life urgency, warehouse cold capacity, partner demand, receiving windows, available vehicles, and recent service gaps.
-3. Compares three distribution plans.
+1. Reviews the existing lot, available pounds, risk deadline, refrigeration, and staff condition status.
+2. Checks warehouse capacity, partner demand, receiving windows, assigned execution capacity, service gaps, and category-specific acceptance/refusal history.
+3. Compares Hold for Later, Fastest Agency Release, and Balanced Release.
 4. Lets a staff member approve or edit one plan.
-5. Creates packing or cross-dock instructions and a route map.
+5. Creates packing or cross-dock instructions and a route beginning at `WH-001`, with no donor pickup.
 6. Replans when a partner cancels; additional disruption concepts are disabled previews.
 7. Calculates the scenario's operational and community impact.
 
@@ -51,7 +51,7 @@ ChoiceGrid:
 - Bundled schematic map and precomputed route geometry
 - Vitest, Testing Library, and Playwright
 
-The demo uses no production database, live routing service, map-tile service, or live LLM call.
+The demo requires no production database, live routing service, map-tile service, communications service, or live LLM call. Venice and Vapi experiments cannot block or alter the seeded workflow and are excluded from the judged hero.
 
 ---
 
@@ -87,16 +87,25 @@ After `npm run build`, use `npm run start` to serve the production build. `npm r
 
 ## Environment variables
 
-No environment variable is required for the current MVP. `.env.example` reserves these names for possible future integrations:
+No environment variable is required for the current MVP. To enable optional model explanations or isolated transport experiments, copy `.env.example` to `.env.local` and use newly generated server-side keys:
 
 ```text
+LLM_PROVIDER=venice
+LLM_BASE_URL=https://api.venice.ai/api/v1
 LLM_API_KEY=
-LLM_MODEL=
+LLM_MODEL=openai-gpt-4o-mini-2024-07-18
+LLM_BACKUP_MODEL=minimax-m25
+LLM_TIMEOUT_MS=12000
 NEXT_PUBLIC_DEMO_MODE=true
 NEXT_PUBLIC_MAP_TILE_URL=
+VAPI_API_KEY=
+VAPI_ASSISTANT_ID=
+VAPI_PHONE_NUMBER_ID=
+VAPI_TEST_TO_NUMBER=
+VAPI_TEST_CALLS_ENABLED=false
 ```
 
-The current application does not read these variables. Donation parsing always uses the validated deterministic fallback, and the map uses bundled local rendering.
+`LLM_API_KEY` is server-only and must never use a `NEXT_PUBLIC_` prefix. Optional model output may explain validated inventory facts but cannot create authoritative pounds, risk deadlines, acceptance rates, routes, or safety decisions. The hero uses deterministic fallback behavior when configuration is absent or attempts fail. Vapi remains disabled by default, excluded from primary navigation, and never changes operational state. The map always uses bundled local rendering.
 
 ---
 
@@ -106,9 +115,8 @@ The current application does not read these variables. Donation parsing always u
 |---|---|
 | `/` | Redirect to `/dashboard` |
 | `/dashboard` | Operations control tower |
-| `/donations` | List the seeded active offer |
-| `/donations/new` | Enter or paste a donation offer |
-| `/donations/[id]` | Review extracted donation details |
+| `/inventory` | List the seeded active lot plus display-only synthetic history |
+| `/inventory/[id]` | Review existing lot, risk, warehouse, and condition details |
 | `/plans` | Redirect to seeded plan set `PLN-104` |
 | `/plans/[id]` | Compare and approve plans |
 | `/map` | View demand, capacity, vehicles, and routes with functional layer toggles |
@@ -118,6 +126,7 @@ The current application does not read these variables. Donation parsing always u
 | `/simulate` | Trigger the executable partner-cancellation fixture; other controls are disabled previews |
 | `/impact` | Review calculated results and audit history |
 | `/partners/[id]` | Inspect a partner agency profile |
+| `/communications` | Isolated communication experiment; not part of primary navigation or judged workflow |
 
 Unknown dynamic IDs render the intentional shared not-found state. Only partner and partner-program destinations link to `/partners/[id]`.
 
@@ -126,8 +135,7 @@ Unknown dynamic IDs render the intentional shared not-found state. Only partner 
 ## Implemented API routes
 
 ```text
-POST /api/donations/parse
-GET  /api/donations/:id
+GET  /api/inventory/:id
 
 POST /api/plans/generate
 GET  /api/plans/:id
@@ -146,6 +154,9 @@ POST /api/missions/:id/events
 POST /api/missions/:id/disruptions
 POST /api/disruptions/:id/approve-recovery
 
+POST /api/communications/test
+GET  /api/communications/status/:id
+
 GET  /api/impact/:missionId
 POST /api/demo/reset
 ```
@@ -159,7 +170,7 @@ All routes use the shared response envelope documented in `docs/API_AND_STATE_CO
 ```text
 app/
 ├── dashboard/
-├── donations/
+├── inventory/
 ├── plans/
 ├── map/
 ├── packing/
@@ -170,7 +181,7 @@ app/
 └── api/
 
 components/
-├── donations/
+├── inventory/
 ├── execution/
 ├── layout/
 ├── partners/
@@ -219,11 +230,14 @@ Presentation support:
 - `PITCH_DECK_OUTLINE.md`
 - `BACKUP_DEMO_VIDEO.md`
 - `FOOD_BANK_INTERVIEW.md`
+- `PILOT_VALIDATION_PLAN.md`
+- `SUBMISSION_READINESS_CHECKLIST.md`
 
 Background research is in:
 
 - `docs/RESEARCH_INSIGHTS.md`
 - `research/food_bank_hackathon_research_summary.md`
+- `research/validation/EVIDENCE_REGISTER.md` — intentionally starts at zero until completed, consented operator validation exists
 
 ---
 
@@ -233,7 +247,7 @@ The MVP is ready when a presenter can complete the primary strawberry scenario f
 
 The following must genuinely work:
 
-- Structured donation extraction or deterministic fallback
+- Existing inventory-lot validation and deterministic fallback explanation
 - Plan calculations
 - Human approval
 - Quantity conservation
@@ -244,5 +258,7 @@ The following must genuinely work:
 - Canceled partner and stop state plus mission supersession
 - Calculated impact metrics
 - Audit trail
+- Category-specific agency acceptance/refusal evidence with sample size
+- Warehouse-origin mission with no donor pickup
 
 See `docs/TEST_AND_ACCEPTANCE_PLAN.md` for the full checklist.

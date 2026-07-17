@@ -28,59 +28,54 @@ Every output must be runtime-validated.
 
 ---
 
-## 1. Intake Agent
+## 1. Inventory Risk Review Agent
 
 ### Purpose
 
-Convert a donor message or form into a structured donation offer.
+Summarize a structured inventory lot already inside the warehouse, surface missing operational facts, and explain why it needs attention.
 
 ### Inputs
 
-- Raw donor message
-- Optional known donor ID
-- Current timestamp
-- Optional image metadata, not required for MVP
+- Runtime-validated `ProductLot`
+- Current warehouse and timestamp
+- Staff-entered condition status and notes
 
 ### Outputs
 
 ```ts
-interface IntakeOutput {
-  productDescription: string | null;
-  quantityLb: number | null;
-  temperatureClass: "ambient" | "refrigerated" | "frozen" | null;
-  pickupLocation: GeoLocation | null;
-  pickupWindow: TimeWindow | null;
-  estimatedRiskDeadline: string | null;
-  conditionNotes: string | null;
-  fields: ExtractedField[];
-  followUpQuestions: string[];
+interface InventoryRiskOutput {
+  inventoryLotId: string;
+  availableQuantityLb: number;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  riskDeadline: string | null;
+  conditionStatus: "staff_cleared" | "needs_confirmation" | "inspection_hold";
+  warnings: string[];
+  missingFields: string[];
+  explanation: string;
 }
 ```
 
 ### LLM responsibilities
 
-- Extract explicitly stated details
-- Normalize obvious units when conversion is known
-- Identify ambiguity
-- Draft follow-up questions
+- Summarize validated facts
+- Explain the named risk signals
+- Draft staff follow-up questions for missing fields
 
 ### Deterministic responsibilities
 
-- Unit conversion
-- Required-field validation
-- Timestamp validation
-- Donor lookup
+- Required-field and timestamp validation
+- Available-quantity and risk-deadline calculation
+- Warehouse lookup and temperature compatibility
 
 ### Prohibited behavior
 
-- Inventing an address
-- Guessing quantity from vague language without marking it low confidence
+- Inventing inventory, age, shelf life, inspection, or agency facts
 - Certifying shelf life or safety
-- Accepting the donation
+- Changing lot status or quantity
 
 ### Fallback
 
-Load the seeded `DON-104` extraction result and record `fallback_used`.
+Load a deterministic explanation for validated `LOT-104` facts and record `fallback_used`. The lot remains usable without an LLM.
 
 ---
 
@@ -92,7 +87,6 @@ Determine whether candidate handling paths are operationally feasible.
 
 ### Inputs
 
-- Donation offer
 - Product lot
 - Warehouse long-term refrigerated-storage headroom
 - Warehouse short-dwell refrigerated staging capacity
@@ -132,13 +126,14 @@ Fully deterministic. The agent label represents a bounded service, not an LLM ca
 
 ### Purpose
 
-Rank compatible destinations using documented need, usability, windows, capacity, service gaps, travel, urgency, and refusal risk.
+Rank compatible destinations using documented need, usability, windows, capacity, service gaps, travel, urgency, and category-specific historical acceptance/refusal evidence.
 
 ### Inputs
 
 - Product lot
 - Partner agencies
 - Demand signals
+- Agency acceptance histories with accepted, refused, and short-receipt counts plus sample size
 - Capacity assessment
 - Score-weight configuration
 - Route-distance matrix
@@ -165,6 +160,7 @@ For every recommended destination, state:
 - Top positive factors
 - Capacity and window fit
 - Relevant penalty
+- Historical acceptance signal and sample size
 - Any assumptions
 
 ### Prohibited behavior
@@ -183,7 +179,6 @@ Create three complete and feasible plan options.
 
 ### Inputs
 
-- Donation offer
 - Product lot
 - Capacity assessment
 - Destination ranking
@@ -192,9 +187,9 @@ Create three complete and feasible plan options.
 
 ### Required options
 
-1. Warehouse First
-2. Direct Distribution
-3. Mixed Plan
+1. Hold for Later
+2. Fastest Agency Release
+3. Balanced Release
 
 The planner may omit an option only if it is demonstrably infeasible, in which case it must explain why and provide another feasible option.
 
@@ -240,7 +235,7 @@ Convert an approved plan into a feasible stop sequence and map representation.
 ### Inputs
 
 - Approved allocations
-- Donor, warehouse, partner locations
+- Warehouse origin and partner locations
 - Receiving windows
 - Vehicle and driver
 - Precomputed distance and duration matrix
@@ -297,7 +292,7 @@ interface RecoveryOutput {
 
 ### Required behavior
 
-- Preserve only completed stops whose location and pickup/drop-off quantities are unchanged
+- Preserve only completed stops whose location and load/drop-off quantities are unchanged
 - Replan only remaining work
 - Mark the canceled partner and affected original stop `canceled`
 - Mark original mission as superseded after approval
@@ -314,7 +309,7 @@ After human approval, deterministic execution services create `PKG-105` and `MSN
 
 ---
 
-## 7. Communication Agent
+## Optional stretch agent: Communication Draft Agent
 
 ### Purpose
 
@@ -323,7 +318,7 @@ Draft operational messages after a human-approved decision.
 ### Inputs
 
 - Approved action
-- Recipient role: donor, driver, partner agency, warehouse lead
+- Recipient role: partner agency or warehouse lead
 - Relevant times, quantities, and instructions
 - Communication style configuration
 
@@ -351,6 +346,8 @@ interface CommunicationDraft {
 - Inventing contacts or commitments
 - Including unnecessary sensitive data
 
+This agent is outside the judged hero. Vapi or any other live delivery transport must remain disabled and absent from primary navigation; the MVP proves the approved decision and instructions, not outreach automation.
+
 ---
 
 ## Optional stretch agent: Notes-to-Action Agent
@@ -362,7 +359,7 @@ Convert driver, receiving, or refusal notes into structured follow-up suggestion
 ### Outputs may include
 
 - Issue category
-- Partner or donor needing follow-up
+- Partner or warehouse team needing follow-up
 - Repeated pattern
 - Suggested operational rule
 - Confidence
@@ -375,10 +372,10 @@ Every proposed rule requires human approval.
 
 | Failure | Required behavior |
 |---|---|
-| Model timeout | Use deterministic fallback and log warning |
-| Invalid JSON | Retry once with schema reminder, then fallback |
+| Primary model timeout or provider error | Try the configured backup once, then use deterministic fallback and log warnings |
+| Invalid JSON | Retry once using the configured backup with a schema reminder; if no backup exists, retry the primary once, then fallback |
 | Missing required field | Return `needs_confirmation` |
-| No feasible plan | Explain constraints and suggest partial acceptance or redirect |
+| No feasible plan | Explain constraints and suggest retention, partial outbound allocation, or an approved transfer path |
 | Route infeasible | Return warning or infeasible status; do not hide failure |
 | Score configuration missing | Load versioned default configuration |
 
@@ -401,9 +398,9 @@ Each run should record:
 The UI may show a simplified timeline:
 
 ```text
-Intake Agent parsed offer
+Inventory Agent reviewed lot risk
 Capacity Agent checked refrigeration
-Need Agent evaluated 10 partners
+Need Agent evaluated 10 partners and their category history
 Planning Agent generated 3 plans
 Routing Agent calculated mission
 ```

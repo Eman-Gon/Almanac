@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
@@ -12,7 +11,10 @@ import {
 } from "lucide-react";
 import { useMemo } from "react";
 import { PageHeader } from "@/components/layout/page-header";
+import { DetailsAccordion } from "@/components/shared/details-accordion";
+import { LoadingState } from "@/components/shared/loading-state";
 import { Panel } from "@/components/shared/panel";
+import { StickyActionBar } from "@/components/shared/sticky-action-bar";
 import { generatePlanSet, getDestinationName } from "@/domain/planning/generate-plans";
 import { useDemoState } from "@/state/demo-state";
 
@@ -32,13 +34,13 @@ export function PackingPlanClient({
   const packingPlan = state.packingPlans[packingPlanId];
 
   if (!hydrated) {
-    return <div className="route-state"><strong>Loading saved packing state…</strong></div>;
+    return <LoadingState label="Loading saved packing state…" />;
   }
 
   if (!packingPlan) {
     return (
       <>
-        <PageHeader title="Packing & Cross-Dock Plan" subtitle={`${packingPlanId} · Not created`} />
+        <PageHeader title="Packing plan" subtitle="No packing instructions have been created yet." breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Plans", href: "/plans/PLN-104" }, { label: "Packing" }]} backHref={packingPlanId === "PKG-105" ? "/simulate" : "/plans/PLN-104"} backLabel={packingPlanId === "PKG-105" ? "Back to recovery" : "Back to approved plan"} status={<span className="plain-status plain-status-amber">Not created</span>} />
         <div className="route-state">
           <strong>The packing plan has not been created yet.</strong>
           <span>{packingPlanId === "PKG-105" ? "Approve recovery before opening replacement packing instructions." : "Approve a feasible allocation plan before starting packing."}</span>
@@ -66,9 +68,12 @@ export function PackingPlanClient({
   return (
     <>
       <PageHeader
-        title="Packing & Cross-Dock Plan"
-        subtitle={`${packingPlan.id} · Derived from ${selectedPlan.name}`}
-        actions={<Link className="button button-ghost" href={packingPlanId === "PKG-105" ? "/simulate" : "/plans/PLN-104"}><ArrowLeft size={16} aria-hidden="true" />{packingPlanId === "PKG-105" ? "Back to recovery" : "Back to decision room"}</Link>}
+        title="Packing plan"
+        subtitle={`Derived from ${selectedPlan.name}`}
+        breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Plans", href: "/plans/PLN-104" }, { label: "Packing" }]}
+        backHref={packingPlanId === "PKG-105" ? "/simulate" : "/plans/PLN-104"}
+        backLabel={packingPlanId === "PKG-105" ? "Back to recovery" : "Back to approved plan"}
+        status={<span className="plain-status plain-status-green">{packingPlan.status.replace("_", " ")}</span>}
       />
       <div className="page-content execution-page">
         {historical ? <div className="guardrail-note"><CheckCircle2 size={18} aria-hidden="true" /><div><strong>Historical packing plan</strong><span>PKG-105 is active after recovery. Original batch history is read-only.</span></div></div> : null}
@@ -109,24 +114,16 @@ export function PackingPlanClient({
                 <div><PackageCheck aria-hidden="true" /><span><strong>Quantity locked</strong><small>Completion controls cannot change approved pounds.</small></span></div>
               </div>
             </Panel>
-            <Panel title="Label preview" className="label-preview-panel">
-              <div className="batch-label">
-                <span>CHOICEGRID · LOT-104</span>
-                <strong>STRAWBERRIES</strong>
-                <span>KEEP REFRIGERATED</span>
-                <div><small>Mission</small><b>{packingPlanId === "PKG-105" ? "MSN-105" : "MSN-104"}</b><small>Source</small><b>Synthetic demo</b></div>
-              </div>
-            </Panel>
+            <DetailsAccordion title="Label preview">
+              <div className="batch-label"><span>CHOICEGRID · LOT-104</span><strong>STRAWBERRIES</strong><span>KEEP REFRIGERATED</span><div><small>Mission</small><b>{packingPlanId === "PKG-105" ? "MSN-105" : "MSN-104"}</b><small>Source</small><b>Simulated scenario</b></div></div>
+            </DetailsAccordion>
           </div>
         </div>
 
-        <div className="sticky-action-rail">
-          <div><CheckCircle2 size={20} aria-hidden="true" /><span><strong>{completedCount} of {packingPlan.batches.length} batches checked</strong><small>Packing completion persists and does not change approved allocations.</small></span></div>
-          <div className="rail-actions">
-            {!started && !historical ? <button className="button button-secondary" type="button" onClick={() => startPacking(packingPlan.id)}>Start packing</button> : null}
-            <button className="button button-primary" type="button" onClick={() => router.push(packingPlanId === "PKG-105" ? "/missions/MSN-105" : "/missions/MSN-104")}>Open mission<ArrowRight size={16} aria-hidden="true" /></button>
-          </div>
-        </div>
+        <StickyActionBar status={<><CheckCircle2 size={20} aria-hidden="true" /><span><strong>{completedCount} of {packingPlan.batches.length} batches checked</strong><small>Packing completion persists and does not change approved allocations.</small></span></>}>
+          {!started && !historical ? <button className="button button-secondary" type="button" onClick={() => startPacking(packingPlan.id)}>Start packing</button> : null}
+          <button className="button button-primary" type="button" onClick={() => router.push(packingPlanId === "PKG-105" ? "/missions/MSN-105" : "/missions/MSN-104")}>{started ? "Continue to mission" : "Create mission"}<ArrowRight size={16} aria-hidden="true" /></button>
+        </StickyActionBar>
       </div>
     </>
   );
