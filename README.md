@@ -1,8 +1,10 @@
 # ChoiceGrid
 
-ChoiceGrid is an AI-assisted food-bank operations prototype for moving at-risk inventory already inside a warehouse, deciding which agencies can realistically take it, and recovering when the plan changes.
+ChoiceGrid is an AI-assisted food-bank operations prototype for moving surplus inventory already inside a warehouse, deciding which agencies can realistically take it based on historical acceptance, and recovering when the plan changes. The synthetic network models Alameda County: an Oakland warehouse and East Bay partner agencies.
 
 The product is designed for food-bank allocation, warehouse, and transportation teams. Inventory facts, agency history, capacity, scoring, routing assumptions, and impact metrics stay deterministic and auditable; an optional model may explain validated facts but is never required.
+
+Two workflows are visible in the product: the interactive **warehouse surplus release** hero flow, and a secondary **donation intake** flow (`/donations`) for capturing incoming donor offers. Intake never gates or feeds the hero workflow.
 
 ## Start here
 
@@ -154,8 +156,10 @@ VAPI_TEST_CALLS_ENABLED=false
 |---|---|
 | `/` | Redirect to `/dashboard` |
 | `/dashboard` | Operations control tower |
-| `/inventory` | List the seeded active lot plus display-only synthetic history |
-| `/inventory/[id]` | Review existing lot, risk, warehouse, and condition details |
+| `/inventory` | List surplus lots on hand (one interactive) plus display-only synthetic history |
+| `/inventory/[id]` | Review existing lot, days on hand, risk, and historical agency acceptance |
+| `/donations` | Secondary intake workflow: active offer, new-donation form, display-only history |
+| `/donations/new` | Capture a donor offer without turning uncertain details into operational facts |
 | `/plans` | Redirect to seeded plan set `PLN-104` |
 | `/plans/[id]` | Compare and approve plans |
 | `/map` | View demand, capacity, vehicles, and routes with functional layer toggles |

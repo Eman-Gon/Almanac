@@ -8,7 +8,7 @@ This repository is a hackathon prototype for **ChoiceGrid**, an AI-assisted food
 
 Do not turn the project into a generic chatbot, pantry locator, case-management system, or full warehouse-management platform.
 
-The authoritative hackathon direction is **warehouse-inventory first**. A new donor offer, donor pickup coordination, Vapi outreach, and driver scheduling are not part of the hero workflow. They may remain isolated experiments only when they do not appear in primary navigation, seed-state calculations, or the judged demo.
+The authoritative direction is **warehouse-inventory first**, and it is grounded in operator feedback: surplus already inside the warehouse that is not moving is the hero workflow. Donation intake is a visible secondary workflow (it appears in primary navigation at `/donations` so staff can capture incoming offers), but it must never gate, feed, or reorder the judged hero workflow or seed-state calculations. Donor pickup coordination, Vapi outreach, and driver scheduling remain isolated experiments outside the judged demo.
 
 > **Product brief:** After reading this file, read `CHOICEGRID_PRODUCT_SPEC.md` for the complete product north star, hero scenario, MVP workflow, and companion-document guide.
 

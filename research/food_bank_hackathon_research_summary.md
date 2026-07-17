@@ -1308,7 +1308,7 @@ These should be clearly labeled as **simulated scenario estimates**.
 - One primary product lot
 - One active donation plus display-only synthetic history
 - One executable partner-cancellation fixture plus disabled disruption previews
-- Synthetic Santa Clara County-area coordinates
+- Synthetic Alameda County-area coordinates
 - Aggregate community profiles
 - Precomputed route coordinates
 - Sample receiving and refusal notes

@@ -128,7 +128,7 @@ The hero dataset contains:
 - Category-specific synthetic agency acceptance/refusal/short-receipt history with explicit sample sizes
 - 8 display-only historical inventory-lot summaries excluded from planning, KPIs, and impact
 - 1 executable partner-cancellation fixture plus disabled disruption previews
-- Synthetic Santa Clara County-area coordinates and aggregate community profiles
+- Synthetic Alameda County-area coordinates and aggregate community profiles
 
 No real household, donor-contact, or recipient records are required.
 

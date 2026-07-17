@@ -3,9 +3,9 @@
 ## Status summary
 
 ```yaml
-last_updated: 2026-07-16
-completed_consented_sessions: 0
-organizations_represented: 0
+last_updated: 2026-07-17
+completed_consented_sessions: 1
+organizations_represented: 1
 written_pilot_commitments: 0
 historical_cases_replayed: 0
 live_shadow_cases_observed: 0
@@ -33,7 +33,7 @@ Add one row only after the participant has consented to de-identified notes.
 
 | Session ID | Date | Broad role | Organization label | Discovery completed | Usability completed | Quote permission | Continue interest | Sanitized summary status |
 |---|---|---|---|---|---|---|---|---|
-| _No completed sessions_ | | | | | | | | |
+| S-001 | 2026-07-17 | Warehouse / inventory operations | Withheld | Yes | No | None | Yes | Recorded below |
 
 ## Finding register
 
@@ -41,7 +41,9 @@ Record both supporting and contradicting findings. One session may contribute mu
 
 | Finding ID | Session ID | Type | Finding | Evidence basis | Severity | Product implication |
 |---|---|---|---|---|---|---|
-| _No findings recorded_ | | | | | | |
+| F-001 | S-001 | contradicts_assumption | Donor-side logistics (scheduling the donor, the driver, pickup, then internal sorting and quality checks) add too many steps to be the product's entry point | Reported workflow experience | High | Donation intake demoted to a secondary workflow; it never gates the hero flow |
+| F-002 | S-001 | supports_assumption | The core pain is surplus already in the warehouse that is not moving: "I'm sitting on this, waiting for it to move… it's too difficult to figure out through all the various rough data where it should go" | Reported workflow experience | High | Warehouse-surplus release confirmed as the hero workflow; days-on-hand surfaced |
+| F-003 | S-001 | new_requirement | Recommendations should lead with agencies that have historically taken the product, paired with the spoilage window ("it'll go bad in X days") | Reported workflow preference | Medium | Lot pages lead with historical acceptance evidence ranked by acceptance rate |
 
 Allowed `Type` values:
 

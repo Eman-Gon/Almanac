@@ -2,9 +2,11 @@
 
 ## Current evidence status
 
-No food-bank interview or operator usability session has occurred or is documented in this repository. This guide is a future validation tool and must not be described as completed research.
+One operator discovery interview has been completed (July 2026) and is recorded de-identified as session S-001 in [`research/validation/EVIDENCE_REGISTER.md`](research/validation/EVIDENCE_REGISTER.md). Its headline findings: donor-pickup coordination adds too many steps to be the entry point, and the core pain is surplus already in the warehouse that is not moving. Those findings now shape the product's inventory-first direction.
 
-Track only completed, consented sessions in [`research/validation/EVIDENCE_REGISTER.md`](research/validation/EVIDENCE_REGISTER.md).
+No moderated usability session (Part B) has occurred yet. This guide remains the tool for future sessions and must not be described as completed usability research.
+
+Track only completed, consented sessions in the evidence register.
 
 ## Recruitment target
 
