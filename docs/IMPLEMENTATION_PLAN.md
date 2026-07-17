@@ -317,7 +317,7 @@ Schemas and seed data
 - [ ] `.env.example` included
 - [ ] Demo reset documented
 - [ ] Seed data committed
-- [ ] Primary partner-cancellation scenario tested; disabled preview controls labeled honestly
+- [ ] Primary partner-cancellation scenario tested; selectable preview controls labeled honestly
 - [ ] Known limitations documented
 - [ ] Presentation laptop tested offline or with limited network
 - [ ] Source and metric labels reviewed

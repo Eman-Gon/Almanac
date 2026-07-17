@@ -27,6 +27,20 @@ ChoiceGrid:
 
 ---
 
+## Secondary multi-item scenario
+
+Choose **Multi-item Warehouse Day** from Demo controls or open
+`/inventory/preview`. It ranks separate peanut butter, cabbage, blueberries,
+and frozen-chicken lots, calculates a per-product conserving release preview,
+and groups compatible product lines into four synthetic agency outreach drafts.
+Frozen chicken remains in inspection hold until staff confirmation.
+
+This route is intentionally isolated: local approval reveals drafts but does
+not alter the Strawberry Rescue state, reserve inventory, contact anyone, or
+create packing, mission, route, impact, or audit records.
+
+---
+
 ## Product principles
 
 - Help workers make better decisions; do not attempt to replace them.
@@ -144,7 +158,7 @@ VAPI_TEST_TO_NUMBER=
 VAPI_TEST_CALLS_ENABLED=false
 ```
 
-`LLM_API_KEY` is server-only and must never use a `NEXT_PUBLIC_` prefix. Optional model output may explain validated inventory facts but cannot create authoritative pounds, risk deadlines, acceptance rates, routes, or safety decisions. The hero uses deterministic fallback behavior when configuration is absent or attempts fail. Vapi remains disabled by default, excluded from primary navigation, and never changes operational state. The map always uses bundled local rendering.
+`LLM_API_KEY` is server-only and must never use a `NEXT_PUBLIC_` prefix. Optional model output may explain validated inventory facts but cannot create authoritative pounds, risk deadlines, acceptance rates, routes, or safety decisions. The hero uses deterministic fallback behavior when configuration is absent or attempts fail. The user-facing `/communications` route is a deterministic local simulation that never calls Vapi or changes operational state. Legacy Vapi endpoints remain disabled by default, developer-only, and excluded from primary navigation. The map always uses bundled local rendering.
 
 ---
 
@@ -155,6 +169,7 @@ VAPI_TEST_CALLS_ENABLED=false
 | `/` | Redirect to `/dashboard` |
 | `/dashboard` | Operations control tower |
 | `/inventory` | List the seeded active lot plus display-only synthetic history |
+| `/inventory/preview` | Interactive secondary multi-item warehouse scenario with no operational mutations |
 | `/inventory/[id]` | Review existing lot, risk, warehouse, and condition details |
 | `/plans` | Redirect to seeded plan set `PLN-104` |
 | `/plans/[id]` | Compare and approve plans |
@@ -165,7 +180,7 @@ VAPI_TEST_CALLS_ENABLED=false
 | `/simulate` | Trigger the executable partner-cancellation fixture; other controls are disabled previews |
 | `/impact` | Review calculated results and audit history |
 | `/partners/[id]` | Inspect a partner agency profile |
-| `/communications` | Isolated communication experiment; not part of primary navigation or judged workflow |
+| `/communications` | Post-approval local voice-outreach simulator; no external delivery and not part of primary navigation or judged workflow |
 
 Unknown dynamic IDs render the intentional shared not-found state. Only partner and partner-program destinations link to `/partners/[id]`.
 

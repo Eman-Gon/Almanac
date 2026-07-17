@@ -1,39 +1,61 @@
 import { expect, test } from "@playwright/test";
 
-test("communication center requires confirmation and shows a safe Vapi preview", async ({ page }) => {
-  await page.route("**/api/communications/test", async (route) => {
-    await route.fulfill({
-      status: 201,
-      contentType: "application/json",
-      body: JSON.stringify({
-        data: {
-          mode: "preview",
-          channel: "voice",
-          provider: "vapi",
-          status: "preview_only",
-          communicationId: null,
-          toMasked: "+14••••0123",
-          messagePreview: "Approved test update.",
-          voicemailPreview: "Approved test voicemail.",
-          note: "No message was sent.",
-        },
-        error: null,
-        meta: { requestId: "e2e-communication", generatedAt: "2026-07-16T12:00:00-07:00", demoMode: true },
-      }),
-    });
+test("partner outreach stays post-approval, simulated, and operationally inert", async ({ page }) => {
+  const communicationRequests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/communications/")) {
+      communicationRequests.push(request.url());
+    }
   });
 
   await page.goto("/communications");
-  await expect(page.getByRole("heading", { name: "Partner Communications" })).toBeVisible();
-  await expect(page.getByText("Human-approved communication only")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Partner Outreach Simulator" }),
+  ).toBeVisible();
+  await expect(page.getByText("Plan approval required")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Run simulated outreach" }),
+  ).toHaveCount(0);
 
-  await page.getByLabel("Test number (E.164)").fill("+14155550123");
-  await page.getByRole("button", { name: "Place test call" }).click();
-  await expect(page.locator(".communication-form .form-error")).toContainText("Confirm that you are authorized");
+  await page.goto("/inventory/LOT-104");
+  await page.getByRole("button", { name: "Generate outbound plans" }).click();
+  await page.getByRole("button", { name: "Review and approve" }).click();
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "Approve & create outbound mission" }).click();
 
-  await page.getByLabel("I am authorized to contact this test number and approve this exact message.").check();
-  await page.getByRole("button", { name: "Place test call" }).click();
+  await page.goto("/communications");
+  await expect(page.getByText("Simulation only — no calls are placed")).toBeVisible();
+  await expect(page.getByText("One approval. 3 simulated partner conversations.")).toBeVisible();
+  await expect(page.getByText("Harbor Light Pantry", { exact: true })).toBeVisible();
+  await expect(page.getByText("Eastside Community Pantry", { exact: true })).toBeVisible();
+  await expect(page.getByText("Community Kitchen", { exact: true })).toBeVisible();
 
-  await expect(page.getByText("Preview only — nothing sent")).toBeVisible();
-  await expect(page.getByText("No message was sent.")).toBeVisible();
+  const beforeState = await page.evaluate(() =>
+    window.localStorage.getItem("choicegrid-demo-v3"),
+  );
+
+  await page.getByRole("button", { name: "Run simulated outreach" }).click();
+  await expect(page.getByRole("alert").filter({
+    hasText: "Confirm that you approve this local simulation",
+  })).toContainText(
+    "Confirm that you approve this local simulation",
+  );
+
+  await page.getByRole("checkbox", {
+    name: /I approve these exact scripts for a local simulation/,
+  }).check();
+  await page.getByRole("button", { name: "Run simulated outreach" }).click();
+
+  await expect(page.getByRole("status")).toContainText(
+    "3 synthetic responses created",
+  );
+  await expect(page.getByText("Synthetic acknowledgment")).toHaveCount(3);
+  await expect(page.getByText("Unverified · no commitment recorded")).toHaveCount(3);
+  await expect(page.getByText("0 operational changes")).toBeVisible();
+
+  const afterState = await page.evaluate(() =>
+    window.localStorage.getItem("choicegrid-demo-v3"),
+  );
+  expect(afterState).toBe(beforeState);
+  expect(communicationRequests).toEqual([]);
 });

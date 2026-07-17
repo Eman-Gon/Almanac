@@ -326,7 +326,7 @@ Draft operational messages after a human-approved decision.
 
 ```ts
 interface CommunicationDraft {
-  channel: "email" | "sms" | "in_app";
+  channel: "email" | "sms" | "in_app" | "voice_preview";
   subject?: string;
   body: string;
   factsUsed: string[];
@@ -339,14 +339,22 @@ interface CommunicationDraft {
 - Keep messages concise
 - Mark as draft
 - Require human send action
+- For `voice_preview`, require an approved plan plus a separate preview-authorization reason
+- Validate the local preview and every synthetic response with the versioned `voice-outreach-sim-v1` schema
 
 ### Prohibited behavior
 
 - Sending automatically
 - Inventing contacts or commitments
 - Including unnecessary sensitive data
+- Treating a synthetic response as a partner confirmation
+- Mutating inventory, plan, partner, packing, mission, audit, or impact state from a preview
 
-This agent is outside the judged hero. Vapi or any other live delivery transport must remain disabled and absent from primary navigation; the MVP proves the approved decision and instructions, not outreach automation.
+This agent is outside the judged hero. The `/communications` screen runs a
+deterministic, route-local voice simulation only after plan or recovery
+approval. It requests no phone number or microphone and calls no provider API.
+Vapi or any other live delivery transport remains disconnected from this user
+surface and absent from primary navigation.
 
 ---
 

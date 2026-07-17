@@ -17,6 +17,12 @@ export default function InventoryPage() {
         breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Inventory" }]}
         backHref="/dashboard"
         backLabel="Back to Dashboard"
+        actions={(
+          <Link className="button button-secondary" href="/inventory/preview">
+            Multi-item scenario
+            <ArrowRight size={16} aria-hidden="true" />
+          </Link>
+        )}
       />
       <div className="page-content list-page">
         <Panel

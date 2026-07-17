@@ -106,29 +106,70 @@ Historical rows are not interactive operational records and must not affect dash
 
 ---
 
-## Communication Test Center (isolated experiment)
+## Multi-item Warehouse Day (secondary scenario)
+
+**Route:** `/inventory/preview`
+
+### Purpose
+
+Show how ChoiceGrid can triage several warehouse lots and group compatible
+product lines without pretending the current single-lot mission contract can
+execute them together.
+
+### Required components
+
+- `Scenario preview · 0 operational changes` guardrail
+- Four typed lots: peanut butter, cabbage, blueberries, and frozen chicken
+- Calculated urgency ranking using the fixed scenario clock
+- Per-lot temperature, deadline, quantity, condition, storage pressure, and next action
+- A deterministic grouped release preview with per-lot conservation
+- Frozen chicken held for staff confirmation with no outbound allocation
+- Human checkbox before grouped partner outreach drafts become visible
+- Visible calculated/seeded provenance and `not sent` labels
+- Return action to the executable Strawberry Inventory Release
+
+### Acceptance criteria
+
+- The route reports 4 lots, 2,960 available lb, and three handling zones from fixture data.
+- Blueberries rank first; the result is deterministic and never uses `Date.now()`.
+- Planned outbound, retained, and inspection-hold pounds total 2,960 lb.
+- Aggregate conservation cannot hide a per-product substitution.
+- Partner capacity is cumulative across every product line in that partner's draft.
+- Approval is route-local and causes no network request or `DemoState` mutation.
+- Reload preserves the route-selected scenario label but clears local preview approval.
+- No preview control links to plan, packing, mission, dispatch, or live communications.
+- `/dashboard`, `/inventory`, and `/inventory/LOT-104` remain strawberry-first and unchanged.
+
+---
+
+## Partner Outreach Simulator (isolated experiment)
 
 **Route:** `/communications`
 
 ### Purpose
 
-Evaluate a human-approved transport preview without allowing it to change an operational decision. This route is excluded from primary navigation and the judged hero.
+Demonstrate how one approved warehouse-release plan could become consistent
+one-to-many partner voice scripts and structured responses without contacting
+anyone. This route is excluded from primary navigation and the judged hero.
 
 ### Required components
 
-- Voice-call and SMS channel choices
-- Test contact name and E.164 test number
-- Staff-entered approved message
-- Separate approved voicemail message for voice calls
-- Explicit authorization checkbox before sending
-- Preview-only result when Vapi is not fully configured
-- Provider status for a live voice request when a Vapi call ID is available
+- Pre-approval prerequisite state with a link back to plan review
+- Approved lot, warehouse, plan, recipient quantity, capacity, demand, and receiving-window facts
+- One deterministic generated voice script per approved partner allocation
+- Staff-entered reason and explicit checkbox authorizing the local simulation
+- One strict synthetic response and transcript per recipient
+- Preview-only audit timeline for draft, human authorization, and simulation
+- Visible `Simulation only`, `Synthetic response`, `Unverified`, and `0 operational changes` labels
 
 ### Guardrails
 
-- The server keeps Vapi credentials out of the browser.
-- Live requests require `VAPI_TEST_CALLS_ENABLED=true` and match `VAPI_TEST_TO_NUMBER` exactly.
-- A call response is informational and unverified; it cannot accept a donation, alter allocation, certify food safety, or dispatch a mission.
+- No phone number, microphone permission, provider request, call ID, or polling
+  appears in the simulator.
+- Scripts use only approved plan and canonical seeded facts.
+- Synthetic responses cannot accept food, alter an allocation, change partner
+  status, certify safety, dispatch a mission, or enter operational audit history.
+- The simulator remains usable when all Vapi and LLM variables are absent.
 
 ---
 
@@ -375,10 +416,10 @@ Create a controlled live-demo failure.
 ### Required scenario buttons
 
 - Eastside Community Pantry canceled — executable primary fixture
-- Truck breakdown — disabled preview
-- Cold capacity lost — disabled preview
-- Driver unavailable — disabled preview
-- Agency receiving window shortened — disabled preview
+- Truck breakdown — selectable preview; does not change the operational seed state
+- Cold capacity lost — selectable preview; does not change the operational seed state
+- Driver unavailable — selectable preview; does not change the operational seed state
+- Agency receiving window shortened — selectable preview; does not change the operational seed state
 
 Only the named partner cancellation is executable in the MVP. Every other control is disabled and visibly labeled `Preview`.
 

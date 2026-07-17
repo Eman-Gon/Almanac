@@ -230,11 +230,28 @@ The shared deterministic domain calculations—not rendered UI components or an 
 
 ---
 
-## Communication endpoints (isolated experiment, not hero scope)
+## Communication preview and developer endpoints (isolated experiment, not hero scope)
+
+The user-facing `/communications` route does not call an endpoint. It creates a
+strict `voice-outreach-sim-v1` preview in component-local state from the current
+human-approved plan and immutable scenario facts. The local transition is:
+
+```text
+draft → human preview authorization → simulated
+```
+
+It uses no E.164 number, microphone, provider ID, or call ID. It never reads or
+writes `DemoState`, and it cannot alter inventory, allocation, partner, packing,
+mission, audit, or impact state. Its responses are labeled synthetic and
+unverified.
 
 ### `POST /api/communications/test`
 
-These routes may remain for development evaluation but are excluded from primary navigation, seed-state transitions, and the judged workflow. They never schedule a donor, partner, vehicle, or driver. A test request still requires an E.164 test number, an approved message, and `confirmed: true`.
+These legacy routes remain for developer-only Vapi transport evaluation. The
+user-facing simulator does not import, call, or poll them. They are excluded
+from primary navigation, seed-state transitions, and the judged workflow. They
+never schedule a donor, partner, vehicle, or driver. A test request still
+requires an E.164 test number, an approved message, and `confirmed: true`.
 
 Voice requests use the configured Vapi assistant and phone number, enable Vapi voicemail detection, and provide the approved `voicemailMessage`. SMS requests use Vapi's outbound SMS transport with the exact approved message.
 
@@ -251,6 +268,29 @@ When the live gate is not complete, the endpoint returns a labeled `preview` res
 ### `GET /api/communications/status/:id`
 
 Returns the current Vapi status for a live voice test request. It returns a preview status without contacting Vapi while live test calls are disabled. The browser may poll this endpoint after a live request; no call status is persisted in the browser's operational demo state.
+
+---
+
+## Multi-item warehouse preview
+
+**Route:** `/inventory/preview`
+
+This secondary scenario has no mutation API. The browser reads a versioned,
+Zod-validated local fixture, then calculates urgency, candidate allocations,
+per-lot dispositions, reconciliation, and grouped outreach drafts with
+`inventory-urgency-v1` and `multi-item-match-v1`.
+
+- Every allocation retains `productLotId`.
+- Every lot conserves its available pounds independently.
+- Partner preview capacity is cumulative across that partner's product lines.
+- A lot with an uncleared condition receives no allocation.
+- Local approval reveals draft outreach but creates no provider request.
+- Reload clears preview approval and leaves `choicegrid-demo-v3` byte-for-byte unchanged.
+- No packing plan, mission, route, impact record, or operational audit event is created.
+
+The existing singular planning and mission APIs remain authoritative only for
+the Strawberry Rescue hero. The secondary route must not send plural lots into
+those endpoints until an approved multi-lot execution contract exists.
 
 ---
 

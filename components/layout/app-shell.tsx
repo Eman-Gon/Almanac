@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { multiItemScenario } from "@/data/seed/multi-item-scenario";
 import { scenario } from "@/data/seed/scenario";
 import { BrandMark } from "@/components/layout/brand-mark";
 import { useDemoState } from "@/state/demo-state";
@@ -47,12 +48,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { hydrated, resetScenario, state } = useDemoState();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedPreview, setSelectedPreview] = useState<string | null>(null);
+  const multiItemActive = pathname.startsWith("/inventory/preview");
+  const selectedScenario = multiItemActive
+    ? multiItemScenario.name
+    : selectedPreview ?? scenario.name;
   const missionHref = hydrated && state.stage === "recovered"
     ? "/missions/MSN-105"
     : "/missions/MSN-104";
 
   function reset() {
     resetScenario();
+    setSelectedPreview(null);
     setMenuOpen(false);
     router.push("/dashboard");
   }
@@ -105,7 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="scenario-label">Scenario</div>
               <details className="scenario-picker">
                 <summary className="scenario-select" aria-label="Open scenario selector" data-testid="scenario-selector">
-                  <span>{scenario.name}</span>
+                  <span>{selectedScenario}</span>
                   <ChevronDown size={16} aria-hidden="true" />
                 </summary>
                 <div className="scenario-menu" aria-label="Scenario options">
@@ -113,19 +120,41 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <span><strong>{scenario.name}</strong><small>Executable MVP scenario</small></span>
                     <span className="scenario-badge scenario-badge-active">Active</span>
                   </div>
+                  <Link
+                    className={`scenario-option scenario-option-preview ${multiItemActive ? "scenario-option-selected" : ""}`}
+                    href="/inventory/preview"
+                    aria-current={multiItemActive ? "page" : undefined}
+                    title="Open the interactive multi-item warehouse scenario"
+                    onClick={() => {
+                      setSelectedPreview(null);
+                      setMenuOpen(false);
+                    }}
+                  >
+                    <span>
+                      <strong>{multiItemScenario.name}</strong>
+                      <small>Interactive secondary scenario · route-local preview</small>
+                    </span>
+                    <span className={`scenario-badge ${multiItemActive ? "scenario-badge-selected" : ""}`}>
+                      {multiItemActive ? "Viewing" : "Open"}
+                    </span>
+                  </Link>
+                  <p className="scenario-menu-note">Disruption previews</p>
                   {scenarioPreviews.map((preview) => (
                     <button
-                      className="scenario-option scenario-option-preview"
+                      className={`scenario-option scenario-option-preview ${selectedPreview === preview ? "scenario-option-selected" : ""}`}
                       type="button"
-                      disabled
                       key={preview}
-                      title="Preview only; not executable in this MVP"
+                      aria-pressed={selectedPreview === preview}
+                      title="Select this scenario preview"
+                      onClick={() => setSelectedPreview(preview)}
                     >
-                      <span><strong>{preview}</strong><small>Preview only in the primary MVP flow</small></span>
-                      <span className="scenario-badge">Preview</span>
+                      <span><strong>{preview}</strong><small>Selectable preview · primary data remains seeded</small></span>
+                      <span className={`scenario-badge ${selectedPreview === preview ? "scenario-badge-selected" : ""}`}>
+                        {selectedPreview === preview ? "Selected" : "Preview"}
+                      </span>
                     </button>
                   ))}
-                  <p className="scenario-menu-note">Only Strawberry Inventory Release changes the demo state today.</p>
+                  <p className="scenario-menu-note">Strawberry Inventory Release remains the judged executable fixture. The multi-item route never changes its state.</p>
                 </div>
               </details>
               <button className="reset-button" type="button" onClick={reset}>

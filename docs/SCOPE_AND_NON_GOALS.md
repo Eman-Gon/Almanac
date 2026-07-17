@@ -71,7 +71,7 @@ Implement one fully working disruption:
 
 - Partner cancellation
 
-The system must produce a replacement allocation, packing plan, outbound mission, and audit record. Vehicle breakdown, cold-capacity loss, driver unavailability, and a shortened agency receiving window are disabled previews, not executable fixtures.
+The system must produce a replacement allocation, packing plan, outbound mission, and audit record. Vehicle breakdown, cold-capacity loss, driver unavailability, and a shortened agency receiving window are selectable previews, not executable fixtures.
 
 ### 8. Impact and audit
 
@@ -89,7 +89,9 @@ Only after the MVP passes the end-to-end demo:
 - Improved agency acceptance and short-receipt analysis
 - Shift-start briefing generated from current state
 - De-identified historical lot replay
+- Interactive multi-item warehouse triage with per-lot conservation and a route-local grouped release preview
 - Multilingual draft partner communications
+- Deterministic post-approval partner voice-outreach simulation, with no external delivery or operational-state mutation
 - Limited pantry or program substitution preferences
 - Cross-food-bank transfer option
 - Camera-assisted condition flagging
@@ -111,6 +113,7 @@ The MVP will not implement:
 - Live food-bank integrations, GPS tracking, or production route optimization
 - Automated food-safety approval
 - Full warehouse management, purchasing, billing, CRM, or volunteer scheduling
+- Simultaneous multi-lot packing, dispatch, shared vehicle routing, or operational capacity reservation
 - Public pantry reservations or eligibility determination
 - Multi-tenant deployment or compliance certification
 - Machine-learning forecasting trained on live history
@@ -125,6 +128,7 @@ The hero dataset contains:
 - 10 partner agencies
 - 3 vehicles and 4 synthetic drivers as execution context, not a scheduling product
 - 1 primary existing inventory lot: `LOT-104`
+- 1 secondary route-local fixture, `SCN-MULTI-ITEM-001`, with four independent synthetic lots; it never enters hero `DemoState`
 - Category-specific synthetic agency acceptance/refusal/short-receipt history with explicit sample sizes
 - 8 display-only historical inventory-lot summaries excluded from planning, KPIs, and impact
 - 1 executable partner-cancellation fixture plus disabled disruption previews
@@ -138,6 +142,8 @@ No real household, donor-contact, or recipient records are required.
 
 - The demo must run locally.
 - Core behavior must work without a live route, map, communications, or LLM service.
+- The isolated voice-outreach simulator must not request a phone number, microphone, or provider connection and must not change the approved plan or demo state.
+- The multi-item secondary scenario must reconcile every lot independently, label its coordinated plan as a preview, and never create packing, mission, partner-contact, or impact state.
 - Deterministic fallback explanations must keep the demo usable.
 - The production build must succeed and seed state must reset reliably.
 - A presenter must complete the hero flow without developer tools.

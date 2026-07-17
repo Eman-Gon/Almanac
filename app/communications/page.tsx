@@ -5,8 +5,8 @@ export default function CommunicationsPage() {
   return (
     <>
       <PageHeader
-        title="Partner Communications"
-        subtitle="Request a human-approved Vapi test call or SMS update for urgent information."
+        title="Partner Outreach Simulator"
+        subtitle="Preview one-to-many voice coordination from an approved warehouse-release plan without contacting anyone."
       />
       <div className="page-content">
         <CommunicationCenter />

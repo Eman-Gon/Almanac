@@ -162,6 +162,17 @@ Hosted deploy and Expo Go checks (manual after Vercel publish):
 - Verify agent run status is `fallback_used`.
 - Verify the response and UI distinguish primary, backup, and deterministic sources without exposing the API key.
 
+### Simulated partner voice outreach
+
+- Reject preview creation before plan approval.
+- Build one recipient from every positive approved partner or packing-program allocation.
+- Require an authorization reason and exact-script confirmation before simulation.
+- Reject phone numbers, provider IDs, call IDs, and live mode in the preview schema.
+- Validate one synthetic response per recipient with `commitmentRecorded: false`.
+- Keep repeated authorization and simulation idempotent.
+- Assert the approved plan and complete persisted `DemoState` remain unchanged.
+- Assert the user-facing simulator makes no `/api/communications/*` request.
+
 ---
 
 ## Component tests
@@ -201,6 +212,15 @@ Hosted deploy and Expo Go checks (manual after Vercel publish):
 - Simulated labels visible
 - Metrics update after replan
 - Audit events ordered
+
+### Partner outreach simulator
+
+- Pre-approval state links back to plan review
+- Approved warehouse, lot, quantities, capacity, demand, and windows render
+- Generated scripts are reviewable by keyboard
+- Explicit simulation authorization is required
+- Results are labeled synthetic, unverified, and operationally inert
+- No phone, microphone, provider, or live-send control is rendered
 
 ### Routes and links
 
@@ -294,6 +314,19 @@ For the seeded demo on a typical laptop:
 - [ ] Existing lot and warehouse risk facts visible
 - [ ] Missing or low-confidence facts visible
 - [ ] Missing information handled
+
+### Multi-item secondary scenario
+
+- [ ] Scenario selector navigates to `/inventory/preview` and remains correct after reload
+- [ ] Four typed lots total 2,960 lb across ambient, refrigerated, and frozen handling
+- [ ] Urgency ranking is deterministic from the fixed scenario clock
+- [ ] Every lot conserves allocated, retained, and inspection-hold pounds independently
+- [ ] Product substitution fails even when aggregate pounds match
+- [ ] Partner capacity is cumulative across grouped product lines
+- [ ] Frozen chicken receives no allocation before staff condition confirmation
+- [ ] Human authorization is required before grouped drafts appear
+- [ ] No fetch, packing, mission, route, impact, audit, or `DemoState` mutation occurs
+- [ ] Default dashboard, inventory list, and primary Strawberry Rescue E2E still pass
 
 ### Plans
 
