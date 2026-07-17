@@ -125,14 +125,60 @@ Required behavior:
 
 ---
 
-## Disabled previews
+## Secondary scenario: Multi-item Warehouse Day
+
+**Scenario ID:** `SCN-MULTI-ITEM-001`
+
+**Route:** `/inventory/preview`
+
+This is an interactive, route-local portfolio preview. It demonstrates several
+simultaneous warehouse lots without replacing the Strawberry Rescue hero or
+claiming that the singular packing and mission contracts can execute them.
+
+### Starting lots
+
+| Lot | Product | Available | Handling | Risk deadline | Condition |
+|---|---|---:|---|---|---|
+| `LOT-M201` | Peanut butter | 900 lb | Ambient | Jul 30 · 5:00 PM | Staff cleared |
+| `LOT-M202` | Cabbage | 760 lb | Refrigerated | Jul 16 · 9:00 AM | Staff cleared |
+| `LOT-M203` | Blueberries | 620 lb | Refrigerated | Jul 15 · 6:30 PM | Staff cleared |
+| `LOT-M204` | Frozen chicken | 680 lb | Frozen | Jul 16 · 2:00 PM | Needs confirmation |
+| **Total** |  | **2,960 lb** | 3 zones |  |  |
+
+The fixed scenario clock is Jul 15 at 10:45 AM. `inventory-urgency-v1`
+calculates the ranking from deadline pressure (55%), seeded risk signal (30%),
+and compatible storage pressure (15%). The deterministic order is blueberries,
+cabbage, frozen chicken, then peanut butter. Urgency never certifies safety.
+
+### Coordinated release preview
+
+`multi-item-match-v1` produces:
+
+| Partner | Product lines | Total |
+|---|---|---:|
+| Harbor Light Pantry | 320 lb blueberries + 300 lb peanut butter | 620 lb |
+| Eastside Community Pantry | 300 lb blueberries + 300 lb cabbage | 600 lb |
+| Community Kitchen | 300 lb cabbage | 300 lb |
+| Northside Family Resource Center | 600 lb peanut butter | 600 lb |
+| **Planned outbound** |  | **2,120 lb** |
+
+Another 160 lb cabbage remains at the warehouse. All 680 lb frozen chicken
+stays in inspection hold until staff confirmation. Each lot reconciles
+independently, and grouped outreach drafts remain hidden until a local human
+checkpoint. Approval reveals drafts only: no inventory is reserved, no contact
+is made, and no packing, route, mission, impact, or operational audit record is
+created.
+
+---
+
+## Selectable previews
 
 - Vehicle breakdown
 - Cold-capacity loss
 - Driver unavailable
 - Agency receiving window shortened
 
-These are not executable. Donor scheduling, donor pickup, driver scheduling, and Vapi outreach are not demo steps.
+These can be selected from the demo controls without changing the operational seed state. They remain preview-only until deterministic fixtures and recovery flows are implemented. Donor scheduling, donor pickup, driver scheduling, and Vapi outreach are not demo steps.
 
 ---
 

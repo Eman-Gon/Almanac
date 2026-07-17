@@ -4090,10 +4090,13 @@ a {
 .scenario-option strong { font-size: 12px; font-weight: 650; }
 .scenario-option small { color: rgba(255, 255, 255, 0.63); font-size: 10px; line-height: 1.25; }
 .scenario-option-active { border-color: var(--rail-active-edge); background: rgba(13, 110, 140, 0.28); }
-.scenario-option-preview { background: transparent; color: rgba(255, 255, 255, 0.72); cursor: not-allowed; font: inherit; }
-.scenario-option-preview:disabled { opacity: 0.76; }
+.scenario-option-preview { background: transparent; color: rgba(255, 255, 255, 0.72); cursor: pointer; font: inherit; }
+.scenario-option-preview:hover, .scenario-option-preview:focus-visible { border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.06); color: var(--white); }
+.scenario-option-preview:focus-visible { outline: 2px solid var(--blue-500); outline-offset: 2px; }
+.scenario-option-selected { border-color: var(--blue-500); background: rgba(37, 99, 235, 0.22); color: var(--white); }
 .scenario-badge { flex: 0 0 auto; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 999px; padding: 2px 5px; color: rgba(255, 255, 255, 0.62); font-size: 9px; font-weight: 700; line-height: 1.2; text-transform: uppercase; }
 .scenario-badge-active { border-color: rgba(134, 239, 172, 0.42); color: #a7f3d0; }
+.scenario-badge-selected { border-color: rgba(147, 197, 253, 0.55); color: #bfdbfe; }
 .scenario-menu-note { margin: 3px 8px 2px; color: rgba(255, 255, 255, 0.58); font-size: 10px; line-height: 1.35; }
 .demo-user { margin-top: 0; }
 

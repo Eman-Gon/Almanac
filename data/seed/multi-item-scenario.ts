@@ -1,0 +1,188 @@
+import { warehouse } from "@/data/seed/scenario";
+import {
+  MultiItemScenarioSchema,
+  type MultiItemScenario,
+} from "@/domain/inventory/multi-item-portfolio";
+
+const fixture = {
+  id: "SCN-MULTI-ITEM-001",
+  name: "Multi-item Warehouse Day",
+  version: "multi-item-preview-v1",
+  warehouseId: warehouse.id,
+  warehouseName: warehouse.name,
+  referenceTime: "2026-07-15T10:45:00-07:00",
+  storageHeadroomLb: {
+    ambient: warehouse.dryCapacityLb - warehouse.occupiedDryLb,
+    refrigerated:
+      warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb,
+    frozen: warehouse.frozenCapacityLb - warehouse.occupiedFrozenLb,
+  },
+  lots: [
+    {
+      id: "LOT-M201",
+      sourceType: "existing_inventory",
+      productName: "Peanut butter",
+      category: "shelf_stable",
+      quantityLb: 900,
+      availableQuantityLb: 900,
+      temperatureClass: "ambient",
+      receivedAt: "2026-07-14T09:15:00-07:00",
+      riskDeadline: "2026-07-30T17:00:00-07:00",
+      riskLevel: "low",
+      conditionStatus: "staff_cleared",
+      usabilityTags: ["easy_open", "family_meal_component"],
+      currentLocationId: warehouse.id,
+      status: "available",
+    },
+    {
+      id: "LOT-M202",
+      sourceType: "existing_inventory",
+      productName: "Cabbage",
+      category: "produce",
+      quantityLb: 760,
+      availableQuantityLb: 760,
+      temperatureClass: "refrigerated",
+      receivedAt: "2026-07-14T15:20:00-07:00",
+      riskDeadline: "2026-07-16T09:00:00-07:00",
+      riskLevel: "high",
+      conditionStatus: "staff_cleared",
+      usabilityTags: [
+        "requires_refrigeration",
+        "vegan_program",
+        "family_meal_component",
+      ],
+      currentLocationId: warehouse.id,
+      status: "available",
+    },
+    {
+      id: "LOT-M203",
+      sourceType: "existing_inventory",
+      productName: "Blueberries",
+      category: "produce",
+      quantityLb: 620,
+      availableQuantityLb: 620,
+      temperatureClass: "refrigerated",
+      receivedAt: "2026-07-15T06:40:00-07:00",
+      riskDeadline: "2026-07-15T18:30:00-07:00",
+      riskLevel: "critical",
+      conditionStatus: "staff_cleared",
+      usabilityTags: [
+        "no_cook",
+        "requires_refrigeration",
+        "culturally_preferred",
+      ],
+      currentLocationId: warehouse.id,
+      status: "available",
+    },
+    {
+      id: "LOT-M204",
+      sourceType: "existing_inventory",
+      productName: "Frozen chicken",
+      category: "protein",
+      quantityLb: 680,
+      availableQuantityLb: 680,
+      temperatureClass: "frozen",
+      receivedAt: "2026-07-15T07:10:00-07:00",
+      riskDeadline: "2026-07-16T14:00:00-07:00",
+      riskLevel: "high",
+      conditionStatus: "needs_confirmation",
+      usabilityTags: ["requires_freezer", "family_meal_component"],
+      currentLocationId: warehouse.id,
+      status: "inspection_hold",
+    },
+  ],
+  partners: [
+    {
+      id: "PAR-001",
+      name: "Harbor Light Pantry",
+      capacityLb: 700,
+      temperatureCapabilities: ["ambient", "refrigerated"],
+      receivingWindow: {
+        start: "2026-07-15T12:00:00-07:00",
+        end: "2026-07-15T15:00:00-07:00",
+      },
+      demands: [
+        {
+          productLotId: "LOT-M203",
+          desiredQuantityLb: 320,
+          urgency: "critical",
+          historyConfidence: "high",
+          source: "synthetic_aggregate",
+        },
+        {
+          productLotId: "LOT-M201",
+          desiredQuantityLb: 300,
+          urgency: "medium",
+          historyConfidence: "medium",
+          source: "synthetic_aggregate",
+        },
+      ],
+    },
+    {
+      id: "PAR-002",
+      name: "Eastside Community Pantry",
+      capacityLb: 600,
+      temperatureCapabilities: ["refrigerated"],
+      receivingWindow: {
+        start: "2026-07-15T11:30:00-07:00",
+        end: "2026-07-15T14:00:00-07:00",
+      },
+      demands: [
+        {
+          productLotId: "LOT-M203",
+          desiredQuantityLb: 300,
+          urgency: "critical",
+          historyConfidence: "medium",
+          source: "synthetic_aggregate",
+        },
+        {
+          productLotId: "LOT-M202",
+          desiredQuantityLb: 300,
+          urgency: "high",
+          historyConfidence: "medium",
+          source: "synthetic_aggregate",
+        },
+      ],
+    },
+    {
+      id: "PAR-003",
+      name: "Community Kitchen",
+      capacityLb: 500,
+      temperatureCapabilities: ["refrigerated"],
+      receivingWindow: {
+        start: "2026-07-15T12:00:00-07:00",
+        end: "2026-07-15T16:00:00-07:00",
+      },
+      demands: [
+        {
+          productLotId: "LOT-M202",
+          desiredQuantityLb: 300,
+          urgency: "high",
+          historyConfidence: "high",
+          source: "synthetic_aggregate",
+        },
+      ],
+    },
+    {
+      id: "PAR-004",
+      name: "Northside Family Resource Center",
+      capacityLb: 600,
+      temperatureCapabilities: ["ambient"],
+      receivingWindow: {
+        start: "2026-07-15T13:00:00-07:00",
+        end: "2026-07-15T16:30:00-07:00",
+      },
+      demands: [
+        {
+          productLotId: "LOT-M201",
+          desiredQuantityLb: 600,
+          urgency: "medium",
+          historyConfidence: "unknown",
+          source: "synthetic_aggregate",
+        },
+      ],
+    },
+  ],
+} satisfies MultiItemScenario;
+
+export const multiItemScenario = MultiItemScenarioSchema.parse(fixture);

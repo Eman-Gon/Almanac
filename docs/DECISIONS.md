@@ -106,7 +106,7 @@ This file records important project decisions so coding agents do not repeatedly
 ## D-012 — Primary disruption is partner cancellation
 
 **Status:** Accepted
-**Decision:** Eastside Community Pantry cancellation is the one fully implemented recovery event. Truck breakdown and the other disruption controls remain disabled previews.
+**Decision:** Eastside Community Pantry cancellation is the one fully implemented recovery event. Truck breakdown and the other disruption controls are selectable previews, but do not change the operational seed state until deterministic fixtures are implemented.
 **Reason:** It visibly changes both allocation and route while remaining straightforward to seed.
 **Consequence:** The internal event is `partner_canceled`; the affected partner and route stop become `canceled`; other disruption buttons must not be presented as executable fixtures.
 
@@ -168,6 +168,26 @@ This file records important project decisions so coding agents do not repeatedly
 **Reason:** The product's governing variable is whether perishable inventory stays cold, so the palette should carry that meaning rather than decorate. Warmth is the one contrast the interface relies on to say "look here", and spending it on ornament makes at-risk states unreadable. The application previously specified no typeface at all and fell back to the system stack, which gave figures no tabular, instrument-grade treatment and left the shell looking untuned.
 **Alternatives considered:** Keep the earlier generic navy/blue palette and only adjust contrast; use a single typeface for both UI and figures; leave typography on the system stack.
 **Consequence:** `scripts/check-contrast.mjs` enforces the palette across 28 pairs at WCAG AA and exits non-zero on regression; run `npm run check:contrast` after any token change. This supersedes the palette section of `DESIGN_SYSTEM.md`, which now documents the shipped tokens as authoritative rather than suggested. Per D-009, a token or type change must move the CSS and the docs together.
+
+---
+
+## D-019 — Simulate partner voice outreach without external delivery
+
+**Status:** Accepted
+**Decision:** ChoiceGrid may expose a direct-route-only partner voice-outreach simulation after a human-approved plan or recovery. It creates deterministic scripts and clearly synthetic responses from approved allocations and canonical seeded facts. It never requests a phone number or microphone, calls or polls a provider, records a commitment, or mutates operational state.
+**Reason:** One-to-many voice coordination demonstrates how staff could reduce repetitive outreach while keeping the warehouse-inventory workflow, exact quantities, and human control intact. A local simulation proves the interaction without making a live communications dependency part of the product.
+**Alternatives considered:** Put Vapi in the judged flow; collect live pre-plan capacity; clone a staff member's voice; leave the obsolete donor-first test form as the communication experience.
+**Consequence:** `/communications` remains absent from primary navigation and the judged demo. It requires an approved plan plus a separate preview-authorization reason, validates output with `voice-outreach-sim-v1`, labels all responses synthetic and unverified, and leaves `DemoState`, product metrics, and operational audit history byte-for-byte unchanged. Legacy Vapi endpoints remain developer-only and disconnected from this user surface.
+
+---
+
+## D-020 — Add multi-item triage as an isolated secondary scenario
+
+**Status:** Accepted
+**Decision:** ChoiceGrid exposes `SCN-MULTI-ITEM-001` at `/inventory/preview` with four separate warehouse lots, deterministic urgency ranking, per-lot reconciliation, cumulative partner preview capacity, a human checkpoint, and grouped outreach drafts. Strawberry Rescue remains the only executable packing, mission, disruption, and impact workflow.
+**Reason:** Real warehouse staff may face peanut butter, cabbage, blueberries, chicken, and other overstock together. Demonstrating portfolio triage strengthens the product story, but the current `PlanSet`, packing, mission, and route contracts are singular and cannot safely represent mixed-product execution.
+**Alternatives considered:** Replace the hero with multiple products; add untyped rows that only look operational; force aggregate pounds into the single-lot mission model; defer all multi-item evidence.
+**Consequence:** The secondary route uses `multi-item-preview-v1`, `inventory-urgency-v1`, and `multi-item-match-v1`, never `Date.now()`. Every allocation carries a `productLotId`; equal aggregate totals cannot hide product substitution. Frozen chicken stays in inspection hold pending staff confirmation. Local approval reveals drafts but never mutates `choicegrid-demo-v3`, reserves pounds, contacts partners, or creates packing, mission, route, impact, or operational audit records.
 
 ---
 

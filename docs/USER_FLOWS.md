@@ -142,7 +142,7 @@ Out-of-order completion is rejected and creates no audit event.
 
 ## Flow 7 — Additional disruption previews
 
-Vehicle breakdown, cold-capacity loss, driver unavailability, and a shortened agency receiving window are disabled previews. Driver scheduling, donor scheduling, and donor pickup are not executable workflows.
+Vehicle breakdown, cold-capacity loss, driver unavailability, and a shortened agency receiving window are selectable previews that do not change the operational seed state. Driver scheduling, donor scheduling, and donor pickup are not executable workflows.
 
 ---
 
@@ -165,3 +165,35 @@ From a marker or plan row, user opens a partner profile showing current windows,
 ## Flow 10 — Demo reset
 
 The presenter uses **Reset scenario** to restore `LOT-104`, agency history, capacities, partner statuses, and the unapproved baseline. The in-app action clears versioned browser state; `npm run demo:check` verifies immutable fixtures but cannot clear browser storage.
+
+---
+
+## Flow 11 — Simulated partner voice outreach (isolated stretch flow)
+
+1. User opens `/communications` directly; it remains absent from primary navigation.
+2. Before plan approval, the screen shows a prerequisite state and cannot run.
+3. After plan or recovery approval, the screen derives recipient scripts from the active approved allocations and canonical partner facts.
+4. User reviews every exact script, enters an authorization reason, and confirms a local simulation.
+5. ChoiceGrid produces deterministic synthetic responses and transcripts with no network request.
+6. The screen labels every response unverified and confirms that operational state did not change.
+
+The flow never requests contact information, records audio, calls a provider,
+or writes its preview timeline into `DemoState`.
+
+---
+
+## Flow 12 — Multi-item warehouse triage (secondary scenario)
+
+1. User opens **Demo controls** and selects **Multi-item Warehouse Day**.
+2. ChoiceGrid navigates to `/inventory/preview`; the route, not temporary UI state, identifies the scenario.
+3. User reviews four independent lots ranked by the deterministic scenario clock, risk signal, and compatible storage pressure.
+4. Selecting a lot reveals its condition, handling, headroom, deadline, and explanation.
+5. ChoiceGrid calculates one grouped release preview while conserving every `productLotId` independently.
+6. Frozen chicken remains entirely in inspection hold because staff confirmation is missing.
+7. User reviews the four-lot reconciliation, checks the human-authorization control, and approves the local preview.
+8. ChoiceGrid reveals four grouped agency outreach drafts labeled synthetic and not sent.
+9. Reload clears local approval but keeps the route-selected scenario label; Strawberry Rescue state is unchanged.
+10. User returns to `/dashboard` to continue the executable hero.
+
+The flow does not generate operational plans, packing work, missions, routes,
+impact claims, audit events, or partner contact.

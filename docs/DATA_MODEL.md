@@ -139,6 +139,50 @@ type UsabilityTag =
 
 ---
 
+## Multi-item portfolio preview
+
+The secondary `SCN-MULTI-ITEM-001` route validates normal `ProductLot` records
+but keeps its coordination model separate from operational `PlanSet`, `PackingPlan`,
+`Mission`, and `DemoState` contracts.
+
+```ts
+interface MultiItemScenarioPreview {
+  id: "SCN-MULTI-ITEM-001";
+  version: "multi-item-preview-v1";
+  warehouseId: EntityId;
+  referenceTime: ISODateTime;
+  storageHeadroomLb: Record<TemperatureClass, number>;
+  lots: ProductLot[];
+  partners: PreviewPartnerCapacity[];
+}
+
+interface MultiItemAllocationPreview {
+  productLotId: EntityId;
+  destinationId: EntityId;
+  quantityLb: number;
+  demandHistoryConfidence: Confidence;
+}
+
+interface MultiItemLotDisposition {
+  productLotId: EntityId;
+  retainedQuantityLb: number;
+  inspectionHoldLb: number;
+}
+```
+
+Every preview lot must reconcile independently:
+
+```text
+allocated lb + retained lb + inspection-hold lb = available lb
+```
+
+Equal aggregate pounds do not pass when products are exchanged between lot IDs.
+Condition status is a separate planning gate; a blocked lot keeps its own pounds
+in inspection hold. The preview may group calculated allocation lines by agency
+only after a separate local human checkpoint. It records no commitment.
+
+---
+
 ## Locations
 
 ```ts
@@ -481,6 +525,38 @@ interface OperationalNote {
 
 ---
 
+## Simulated voice outreach (isolated stretch model)
+
+The hidden `/communications` experiment may create a route-local preview only
+after a plan or recovery is human-approved. It is not stored in `DemoState`,
+does not represent a partner commitment, and cannot change inventory,
+allocations, packing, missions, partner status, audit history, or impact.
+
+```ts
+interface VoiceOutreachPreview {
+  id: EntityId;
+  mode: "simulation";
+  status: "draft" | "approved" | "simulated";
+  provider: null;
+  communicationId: null;
+  modelOrRuleset: "voice-outreach-sim-v1";
+  inventoryLotId: EntityId;
+  warehouseId: EntityId;
+  approvedPlanOptionId: EntityId;
+  approvalReason: string | null;
+  recipients: VoiceOutreachRecipient[];
+  responses: SimulatedOutreachResponse[];
+  mutatesOperationalState: false;
+}
+```
+
+Recipient scripts use only the canonical approved allocation, lot, warehouse,
+partner capacity, demand, and receiving-window facts. Synthetic responses use
+`confidence: "unknown"`, `source: "synthetic_fixture"`, and
+`commitmentRecorded: false`.
+
+---
+
 ## Invariants
 
 1. Quantities must be nonnegative.
@@ -501,6 +577,7 @@ interface OperationalNote {
 16. The hero mission originates at `WH-001` and contains no donor pickup stop.
 17. Historical acceptance is always shown with its sample size and cannot override current capacity, temperature, availability, or receiving-window constraints.
 18. `availableQuantityLb` cannot exceed the lot's physical `quantityLb`.
+19. A voice-outreach simulation may read an approved plan but cannot write to operational state, call a provider, or record a partner commitment.
 
 ---
 
