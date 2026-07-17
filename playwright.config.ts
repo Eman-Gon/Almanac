@@ -5,6 +5,10 @@ export default defineConfig({
   fullyParallel: false,
   retries: process.env.CI ? 2 : 0,
   reporter: "list",
+  // The dev server compiles routes on demand, and the webServer readiness probe
+  // only warms /dashboard. A long flow that visits ~20 further routes pays the
+  // first-compile cost mid-test, so the 30s default leaves no headroom.
+  timeout: 90_000,
   use: {
     baseURL: "http://127.0.0.1:3000",
     trace: "on-first-retry",
