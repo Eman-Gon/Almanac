@@ -25,10 +25,10 @@ npm run typecheck
 npm run test
 npm run test:e2e
 npm run build
-npm run demo:reset
+npm run demo:check
 ```
 
-`npm run demo:reset` verifies immutable fixture readiness. Use the in-app **Reset scenario** control when a test or rehearsal must clear browser demo state.
+`npm run demo:check` verifies immutable fixture readiness. Use the in-app **Reset scenario** control when a test or rehearsal must clear browser demo state.
 
 No known critical or high-severity defect may remain in the primary scenario.
 

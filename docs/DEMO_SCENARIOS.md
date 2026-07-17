@@ -153,7 +153,7 @@ These are calculated or seeded synthetic scenario values, not observed impact.
 
 ## Demo reset and contingency
 
-`npm run demo:reset` verifies immutable fixtures. The in-app **Reset scenario** clears browser state and restores `LOT-104`, original capacities, agency histories and statuses, no approval, no disruption, and baseline audit events.
+`npm run demo:check` verifies immutable fixtures. The in-app **Reset scenario** clears browser state and restores `LOT-104`, original capacities, agency histories and statuses, no approval, no disruption, and baseline audit events.
 
 If an optional model explanation fails, use the deterministic lot-risk explanation. If the map fails, use the synchronized route list. If browser state is unclear, use the in-app reset.
 

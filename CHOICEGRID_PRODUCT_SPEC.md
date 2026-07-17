@@ -921,10 +921,10 @@ npm run typecheck
 npm run test
 npm run test:e2e
 npm run build
-npm run demo:reset
+npm run demo:check
 ```
 
-`npm run demo:reset` reports immutable fixture readiness from the terminal. It cannot clear a browser's versioned `localStorage`; use the in-app **Reset scenario** action for that reset.
+`npm run demo:check` validates immutable fixture readiness from the terminal. It cannot clear a browser's versioned `localStorage`; use the in-app **Reset scenario** action for that reset.
 
 ---
 

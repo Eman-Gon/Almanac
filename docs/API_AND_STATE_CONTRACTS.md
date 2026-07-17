@@ -260,7 +260,7 @@ Returns the current Vapi status for a live voice test request. It returns a prev
 
 - Returns the starting scenario, inventory lot, and dashboard summary.
 - Is idempotent.
-- Does not mutate a browser's local state. The in-app reset control clears the versioned browser demo state; `npm run demo:reset` reports immutable seed readiness from the terminal.
+- Does not mutate a browser's local state. The in-app reset control clears the versioned browser demo state; `npm run demo:check` validates immutable seed readiness from the terminal.
 
 ---
 

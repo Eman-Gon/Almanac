@@ -23,7 +23,7 @@
 - [ ] Run `npm run test`.
 - [ ] Run `npm run test:e2e`.
 - [ ] Run `npm run build`.
-- [ ] Run `npm run demo:reset`, then use **Reset scenario** in the browser.
+- [ ] Run `npm run demo:check`, then use **Reset scenario** in the browser.
 - [ ] Rehearse the 90-second and full demo paths.
 - [ ] Put a source footer on every external evidence slide.
 - [ ] Label the Strawberry Rescue inputs and outcomes as synthetic.

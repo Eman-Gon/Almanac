@@ -16,7 +16,7 @@ export function ConfidenceIndicator({ confidence }: { confidence: Confidence }) 
         ? CircleHelp
         : AlertCircle;
   return (
-    <span className={`confidence confidence-${confidence}`}>
+    <span className={`confidence confidence-${confidence}`} role="status" aria-label={`${labels[confidence]} confidence`}>
       <Icon size={14} strokeWidth={2} aria-hidden="true" />
       {labels[confidence]}
     </span>

@@ -164,4 +164,4 @@ From a marker or plan row, user opens a partner profile showing current windows,
 
 ## Flow 10 — Demo reset
 
-The presenter uses **Reset scenario** to restore `LOT-104`, agency history, capacities, partner statuses, and the unapproved baseline. The in-app action clears versioned browser state; `npm run demo:reset` verifies immutable fixtures but cannot clear browser storage.
+The presenter uses **Reset scenario** to restore `LOT-104`, agency history, capacities, partner statuses, and the unapproved baseline. The in-app action clears versioned browser state; `npm run demo:check` verifies immutable fixtures but cannot clear browser storage.

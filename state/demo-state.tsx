@@ -22,6 +22,7 @@ import {
   triggerPartnerCancellation,
   type DemoState,
 } from "@/domain/demo/demo-state";
+import { scenarioContext } from "@/domain/planning/scenario-context";
 import type { PlanOption } from "@/domain/types";
 
 export { initialDemoState } from "@/domain/demo/demo-state";
@@ -90,7 +91,7 @@ export function DemoStateProvider({ children }: { children: ReactNode }) {
         ? {
             ...current,
             stage: "plans_generated",
-            selectedPlanId: "OPT-003",
+            selectedPlanId: scenarioContext.ids.primaryOptionId,
             fallbackUsed: true,
           }
         : current,

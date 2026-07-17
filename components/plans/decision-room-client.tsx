@@ -36,7 +36,7 @@ import {
   validatePlanOption,
 } from "@/domain/planning/quantity";
 import { scenarioValidationContext } from "@/domain/planning/scenario-context";
-import type { PlanOption } from "@/domain/types";
+import type { PlanOption, PlanSet } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
 
 function formatTime(value: string): string {
@@ -211,21 +211,37 @@ function ComparisonTable({ options }: { options: PlanOption[] }) {
   );
 }
 
-export function DecisionRoomClient() {
+export function DecisionRoomClient({
+  planSet: providedPlanSet,
+  loading = false,
+  errorMessage = null,
+}: {
+  planSet?: PlanSet | null;
+  loading?: boolean;
+  errorMessage?: string | null;
+} = {}) {
   const router = useRouter();
   const { state, selectPlan, editPlan, approvePlan } = useDemoState();
-  const [planSet] = useState(generatePlanSet);
+  const [planSet] = useState<PlanSet | null>(() =>
+    providedPlanSet === undefined ? generatePlanSet() : providedPlanSet,
+  );
   const [approvalOpen, setApprovalOpen] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [detailsPlan, setDetailsPlan] = useState<PlanOption | null>(null);
   const options = useMemo(
-    () => planSet.options.map((option) => state.planOverrides[option.id] ?? option),
-    [planSet.options, state.planOverrides],
+    () => (planSet?.options ?? []).map((option) => state.planOverrides[option.id] ?? option),
+    [planSet, state.planOverrides],
   );
-  const selectedPlan = useMemo(
-    () => state.approvedPlan ?? options.find((option) => option.id === state.selectedPlanId) ?? options[2],
+  const resolvedPlan = useMemo<PlanOption | null>(
+    () => state.approvedPlan ?? options.find((option) => option.id === state.selectedPlanId) ?? options[2] ?? null,
     [options, state.approvedPlan, state.selectedPlanId],
   );
+
+  if (loading) return <div className="route-state" role="status"><strong>Loading plan alternatives…</strong></div>;
+  if (errorMessage) return <div className="route-state" role="alert"><strong>Plan alternatives could not be loaded.</strong><span>{errorMessage}</span></div>;
+  if (!resolvedPlan) return <div className="route-state"><strong>No plan alternatives are available.</strong><span>Return to the inventory lot and generate plans before approval.</span></div>;
+
+  const selectedPlan = resolvedPlan;
   const validation = validatePlanOption(selectedPlan, scenarioValidationContext);
   const selectedReconciliation = reconcilePlanQuantities(selectedPlan, productLot.availableQuantityLb);
   const routeLocationIds = [

@@ -76,7 +76,7 @@ npm run typecheck
 npm run test
 npm run test:e2e
 npm run build
-npm run demo:reset
+npm run demo:check
 ```
 
 The final command reports immutable seed readiness; it cannot clear a browser's `localStorage`. Use **Reset scenario** in the app to clear browser demo state and return to `/dashboard`.

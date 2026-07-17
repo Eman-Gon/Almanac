@@ -1,5 +1,5 @@
-import { drivers, partners, productLot, vehicles, warehouse } from "@/data/seed/scenario";
 import { getDestinationName } from "@/domain/planning/generate-plans";
+import { scenarioContext, type ChoiceGridScenarioContext } from "@/domain/planning/scenario-context";
 import type { AuditEvent, Mission, PackingPlan, PlanOption } from "@/domain/types";
 
 function stagingFor(plan: PlanOption, destinationId: string): string {
@@ -8,8 +8,8 @@ function stagingFor(plan: PlanOption, destinationId: string): string {
   return "Cross-dock outbound · Lane B";
 }
 
-function receivingWindowFor(destinationId: string) {
-  const partner = partners.find((candidate) => candidate.id === destinationId);
+function receivingWindowFor(destinationId: string, context: ChoiceGridScenarioContext) {
+  const partner = context.partners.find((candidate) => candidate.id === destinationId);
   const window = partner?.receivingWindows[0];
   if (!window) {
     throw new Error(`Receiving window for partner ${destinationId} was not found.`);
@@ -19,9 +19,10 @@ function receivingWindowFor(destinationId: string) {
 
 export function createPackingPlan(
   plan: PlanOption,
-  packingPlanId: "PKG-104" | "PKG-105" = "PKG-104",
+  packingPlanId = scenarioContext.ids.primaryPackingPlanId,
+  context: ChoiceGridScenarioContext = scenarioContext,
 ): PackingPlan {
-  const batchNumberOffset = packingPlanId === "PKG-105" ? 100 : 0;
+  const batchNumberOffset = packingPlanId === context.ids.recoveryPackingPlanId ? 100 : 0;
   const batches: PackingPlan["batches"] = plan.allocations.map((allocation, index) => ({
     id: `BAT-${String(batchNumberOffset + index + 1).padStart(3, "0")}`,
     destinationId: allocation.destinationId,
@@ -29,23 +30,23 @@ export function createPackingPlan(
     quantityLb: allocation.quantityLb,
     priority: index + 1,
     stagingLocation: stagingFor(plan, allocation.destinationId),
-    temperatureClass: "refrigerated",
+    temperatureClass: context.productLot.temperatureClass,
     instruction:
       allocation.handling === "pack"
-        ? `Place in refrigerated staging for ${getDestinationName(allocation.destinationId)} meal-kit line.`
-        : `Cross-dock directly to the outbound lane for ${getDestinationName(allocation.destinationId)}.`,
+        ? `Place in refrigerated staging for ${getDestinationName(allocation.destinationId, context)} meal-kit line.`
+        : `Cross-dock directly to the outbound lane for ${getDestinationName(allocation.destinationId, context)}.`,
     status: "pending",
   }));
 
   if (plan.inspectionHoldLb > 0) {
     batches.push({
       id: `BAT-${String(batchNumberOffset + batches.length + 1).padStart(3, "0")}`,
-      destinationId: warehouse.id,
-      productLotId: productLot.id,
+      destinationId: context.warehouse.id,
+      productLotId: context.productLot.id,
       quantityLb: plan.inspectionHoldLb,
       priority: batches.length + 1,
       stagingLocation: "Refrigerated inspection bay · Hold 2",
-      temperatureClass: "refrigerated",
+      temperatureClass: context.productLot.temperatureClass,
       instruction: "Hold for supervisor inspection; do not release automatically.",
       status: "pending",
     });
@@ -109,86 +110,39 @@ function scaleRouteLegs(
   });
 }
 
-function initialRouteLegs(targetMiles: number): Mission["routeLegs"] {
-  return scaleRouteLegs([
-    {
-      fromStopId: "STP-001",
-      toStopId: "STP-002",
-      distanceMiles: 7.8,
-      durationMinutes: 18,
-      polyline: [
-        [warehouse.location.latitude, warehouse.location.longitude],
-        [37.4323, -121.8996],
-      ],
-    },
-    {
-      fromStopId: "STP-002",
-      toStopId: "STP-003",
-      distanceMiles: 5.2,
-      durationMinutes: 14,
-      polyline: [
-        [37.4323, -121.8996],
-        [37.3551, -121.8241],
-      ],
-    },
-    {
-      fromStopId: "STP-003",
-      toStopId: "STP-004",
-      distanceMiles: 5.4,
-      durationMinutes: 15,
-      polyline: [
-        [37.3551, -121.8241],
-        [37.3189, -121.8861],
-      ],
-    },
-  ], targetMiles);
+function locationPoint(locationId: string, context: ChoiceGridScenarioContext): [number, number] {
+  const location = locationId === context.warehouse.id
+    ? context.warehouse.location
+    : context.partners.find((partner) => partner.id === locationId)?.location;
+  return [location?.latitude ?? 0, location?.longitude ?? 0];
 }
 
-function recoveryRouteLegs(targetMiles: number): Mission["routeLegs"] {
-  return scaleRouteLegs([
-    {
-      fromStopId: "STP-101",
-      toStopId: "STP-102",
-      distanceMiles: 7.8,
-      durationMinutes: 18,
-      polyline: [
-        [warehouse.location.latitude, warehouse.location.longitude],
-        [37.4323, -121.8996],
-      ],
-    },
-    {
-      fromStopId: "STP-102",
-      toStopId: "STP-103",
-      distanceMiles: 8.1,
-      durationMinutes: 21,
-      polyline: [
-        [37.4323, -121.8996],
-        [37.3895, -121.9632],
-      ],
-    },
-    {
-      fromStopId: "STP-103",
-      toStopId: "STP-104",
-      distanceMiles: 6.3,
-      durationMinutes: 17,
-      polyline: [
-        [37.3895, -121.9632],
-        [37.3189, -121.8861],
-      ],
-    },
-  ], targetMiles);
+function routeLegs(
+  stops: Mission["stops"],
+  targetMiles: number,
+  template: ChoiceGridScenarioContext["routes"]["primary"],
+  context: ChoiceGridScenarioContext,
+): Mission["routeLegs"] {
+  return scaleRouteLegs(stops.slice(0, -1).map((stop, index) => ({
+    fromStopId: stop.id,
+    toStopId: stops[index + 1].id,
+    distanceMiles: template[index]?.distanceMiles ?? 0,
+    durationMinutes: template[index]?.durationMinutes ?? 1,
+    polyline: [locationPoint(stop.locationId, context), locationPoint(stops[index + 1].locationId, context)],
+  })), targetMiles);
 }
 
 export function createMission(
   plan: PlanOption,
-  missionId: "MSN-104" | "MSN-105" = "MSN-104",
+  missionId = scenarioContext.ids.primaryMissionId,
+  context: ChoiceGridScenarioContext = scenarioContext,
 ): Mission {
-  const recovery = missionId === "MSN-105";
+  const recovery = missionId === context.ids.recoveryMissionId;
   const warehouseAllocationLb = plan.allocations
-    .filter((allocation) => allocation.destinationId === warehouse.id)
+    .filter((allocation) => allocation.destinationId === context.warehouse.id)
     .reduce((total, allocation) => total + allocation.quantityLb, 0);
   const deliveryAllocations = plan.allocations.filter(
-    (allocation) => allocation.destinationId !== warehouse.id,
+    (allocation) => allocation.destinationId !== context.warehouse.id,
   );
   const outboundLoadLb = deliveryAllocations.reduce(
     (total, allocation) => total + allocation.quantityLb,
@@ -198,9 +152,9 @@ export function createMission(
     {
       id: recovery ? "STP-101" : "STP-001",
       sequence: 1,
-      locationId: warehouse.id,
+      locationId: context.warehouse.id,
       locationType: "warehouse",
-      arrivalWindow: warehouse.dockWindows[0],
+      arrivalWindow: context.warehouse.dockWindows[0],
       quantityPickupLb: outboundLoadLb,
       quantityDropoffLb: 0,
       status: "pending",
@@ -218,7 +172,7 @@ export function createMission(
       sequence: index + 2,
       locationId: allocation.destinationId,
       locationType: "partner" as const,
-      arrivalWindow: receivingWindowFor(allocation.destinationId),
+      arrivalWindow: receivingWindowFor(allocation.destinationId, context),
       quantityPickupLb: 0,
       quantityDropoffLb: allocation.quantityLb,
       status: "pending" as const,
@@ -230,23 +184,23 @@ export function createMission(
 
   return {
     id: missionId,
-    inventoryLotId: productLot.id,
+    inventoryLotId: context.productLot.id,
     approvedPlanOptionId: plan.id,
-    vehicleId: vehicles[0].id,
-    driverId: drivers[0].id,
+    vehicleId: context.vehicle.id,
+    driverId: context.driver.id,
     stops,
     routeLegs: recovery
-      ? recoveryRouteLegs(plan.metrics.totalMiles)
+      ? routeLegs(stops, plan.metrics.totalMiles, context.routes.recovery, context)
       : plan.strategy === "hold_for_later"
         ? []
-        : initialRouteLegs(plan.metrics.totalMiles),
+        : routeLegs(stops, plan.metrics.totalMiles, context.routes.primary, context),
     status: "assigned",
     createdAt: recovery
-      ? "2026-07-15T11:18:11-07:00"
-      : "2026-07-15T10:50:00-07:00",
+      ? context.timeline.recoveryApprovedAt
+      : context.timeline.planApprovedAt,
     updatedAt: recovery
-      ? "2026-07-15T11:18:11-07:00"
-      : "2026-07-15T10:50:00-07:00",
+      ? context.timeline.recoveryApprovedAt
+      : context.timeline.planApprovedAt,
   };
 }
 
@@ -285,6 +239,7 @@ export function getNextCompletableMissionStopId(mission: Mission): string | null
 export function createApprovalAuditEvent(
   plan: PlanOption,
   reason?: string,
+  context: ChoiceGridScenarioContext = scenarioContext,
 ): AuditEvent {
   return {
     id: "AUD-102",
@@ -293,9 +248,9 @@ export function createApprovalAuditEvent(
     entityId: plan.id,
     actorType: "human",
     actorId: "demo_user",
-    occurredAt: "2026-07-15T10:50:00-07:00",
+    occurredAt: context.timeline.planApprovedAt,
     previousState: { status: plan.status },
-    newState: { status: "approved", missionId: "MSN-104", packingPlanId: "PKG-104" },
+    newState: { status: "approved", missionId: context.ids.primaryMissionId, packingPlanId: context.ids.primaryPackingPlanId },
     reason: reason || "Best balance of urgency, capacity, and documented need.",
   };
 }

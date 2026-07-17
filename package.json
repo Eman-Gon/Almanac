@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "demo:reset": "node scripts/demo-reset.mjs"
+    "demo:check": "node scripts/demo-check.mjs"
   },
   "dependencies": {
     "lucide-react": "1.24.0",

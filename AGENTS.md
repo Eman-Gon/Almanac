@@ -81,7 +81,7 @@ npm run typecheck
 npm run test
 npm run test:e2e
 npm run build
-npm run demo:reset
+npm run demo:check
 ```
 
 If the actual commands differ, update both `README.md` and this file in the same change.

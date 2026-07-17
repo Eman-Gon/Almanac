@@ -1,30 +1,25 @@
 import { z } from "zod";
-import { baselineAuditEvents, scenario } from "@/data/seed/scenario";
-import {
-  createApprovalAuditEvent,
-  createMission,
-  createPackingPlan,
-  getNextCompletableMissionStopId,
-  setMissionStopComplete,
-  setPackingBatchCompletion,
-  startPackingPlan,
-} from "@/domain/execution/create-execution";
+import { baselineAuditEvents } from "@/data/seed/scenario";
 import {
   applyCanonicalAllocationEdit,
   generatePlanSet,
 } from "@/domain/planning/generate-plans";
-import {
-  createRecoveryOption,
-  createRecoveryPackingPlan,
-  preserveCompletedMissionWork,
-} from "@/domain/recovery/create-recovery";
+import { scenarioContext } from "@/domain/planning/scenario-context";
 import {
   AuditEventSchema,
   MissionSchema,
   PackingPlanSchema,
   PlanOptionSchema,
 } from "@/domain/schemas/core";
-import type { AuditEvent, Mission, PlanOption } from "@/domain/types";
+import {
+  approvePlanTransition,
+  approveRecoveryTransition,
+  completeMissionStopTransition,
+  setPackingBatchTransition,
+  startPackingTransition,
+  triggerPartnerCancellationTransition,
+} from "@/domain/workflow/transitions";
+import type { AuditEvent, PlanOption } from "@/domain/types";
 
 export const DemoStageSchema = z.enum([
   "initial",
@@ -84,7 +79,7 @@ export function createInitialDemoState(resetCount = 0): DemoState {
   return {
     version: 2,
     stage: "initial",
-    selectedPlanId: "OPT-003",
+    selectedPlanId: scenarioContext.ids.primaryOptionId,
     planOverrides: {},
     allocationEditReason: "",
     approvedPlan: null,
@@ -147,7 +142,7 @@ export function editPlan(
         entityId: recalculated.id,
         actorType: "human",
         actorId: "demo_user",
-        occurredAt: "2026-07-15T10:49:00-07:00",
+        occurredAt: scenarioContext.timeline.planEditedAt,
         previousState: {
           allocations: previousPlan.allocations.map(({ destinationId, quantityLb }) => ({
             destinationId,
@@ -172,55 +167,9 @@ export function approvePlan(
   reason: string,
 ): DemoState {
   if (state.approvedPlan) return state;
-
-  const canonical = generatePlanSet().options.find((option) => option.id === plan.id);
-  const normalizedPlan = canonical
-    ? applyCanonicalAllocationEdit(canonical, plan)
-    : null;
-  if (!normalizedPlan) return state;
-
-  const approvedPlan: PlanOption = {
-    ...normalizedPlan,
-    status: "approved",
-  };
-  const mission = createMission(approvedPlan);
-  const packingPlan = createPackingPlan(approvedPlan);
-  const lifecycleEvents: AuditEvent[] = [
-    createApprovalAuditEvent(normalizedPlan, reason),
-    auditEvent({
-      id: "AUD-102A",
-      eventType: "mission_created",
-      entityType: "Mission",
-      entityId: mission.id,
-      occurredAt: "2026-07-15T10:50:00-07:00",
-      newState: { status: "draft", approvedPlanOptionId: approvedPlan.id },
-    }),
-    auditEvent({
-      id: "AUD-102B",
-      eventType: "mission_approved",
-      entityType: "Mission",
-      entityId: mission.id,
-      actorType: "human",
-      actorId: "demo_user",
-      occurredAt: "2026-07-15T10:50:01-07:00",
-      previousState: { status: "draft" },
-      newState: { status: "approved" },
-      reason: reason || "Approved with the selected allocation plan.",
-    }),
-    auditEvent({
-      id: "AUD-102C",
-      eventType: "mission_assigned",
-      entityType: "Mission",
-      entityId: mission.id,
-      occurredAt: "2026-07-15T10:50:02-07:00",
-      previousState: { status: "approved" },
-      newState: {
-        status: "assigned",
-        vehicleId: mission.vehicleId,
-        driverId: mission.driverId,
-      },
-    }),
-  ];
+  const transition = approvePlanTransition({ planSetId: plan.planSetId, optionId: plan.id, submittedOption: plan, reason });
+  if (!transition.ok) return state;
+  const { approvedPlan, mission, packingPlan, auditEvents } = transition.value;
 
   return {
     ...state,
@@ -231,36 +180,22 @@ export function approvePlan(
     packingPlans: { ...state.packingPlans, [packingPlan.id]: packingPlan },
     activePackingPlanId: packingPlan.id,
     missions: { ...state.missions, [mission.id]: mission },
-    auditEvents: [...state.auditEvents, ...lifecycleEvents],
+    auditEvents: [...state.auditEvents, ...auditEvents],
   };
 }
 
 export function startPacking(state: DemoState, packingPlanId: string): DemoState {
-  if (state.stage === "recovered" && packingPlanId !== "PKG-105") return state;
+  if (state.stage === "recovered" && packingPlanId !== scenarioContext.ids.recoveryPackingPlanId) return state;
   const currentPackingPlan = state.packingPlans[packingPlanId];
-  if (!currentPackingPlan || currentPackingPlan.status === "complete") return state;
-  if (currentPackingPlan.status === "in_progress") return state;
-  const packingPlan = startPackingPlan(currentPackingPlan);
+  if (!currentPackingPlan) return state;
+  const transition = startPackingTransition(currentPackingPlan);
+  if (!transition.ok) return state;
+  const { packingPlan, auditEvent: event } = transition.value;
   return {
     ...state,
     packingPlans: { ...state.packingPlans, [packingPlanId]: packingPlan },
     activePackingPlanId: packingPlanId,
-    auditEvents: [
-      ...state.auditEvents,
-      auditEvent({
-        id: `AUD-${packingPlanId}-START`,
-        eventType: "packing_started",
-        entityType: "PackingPlan",
-        entityId: currentPackingPlan.id,
-        actorType: "human",
-        actorId: "demo_user",
-        occurredAt: packingPlanId === "PKG-105"
-          ? "2026-07-15T11:19:00-07:00"
-          : "2026-07-15T10:52:00-07:00",
-        previousState: { status: currentPackingPlan.status },
-        newState: { status: "in_progress" },
-      }),
-    ],
+    auditEvents: [...state.auditEvents, event],
   };
 }
 
@@ -270,36 +205,18 @@ export function setPackingBatchComplete(
   batchId: string,
   complete: boolean,
 ): DemoState {
-  if (state.stage === "recovered" && packingPlanId !== "PKG-105") return state;
+  if (state.stage === "recovered" && packingPlanId !== scenarioContext.ids.recoveryPackingPlanId) return state;
   const currentPackingPlan = state.packingPlans[packingPlanId];
   if (!currentPackingPlan) return state;
-  const batch = currentPackingPlan.batches.find((candidate) => candidate.id === batchId);
-  if (!batch || (batch.status === "complete") === complete) return state;
-  const packingPlan = setPackingBatchCompletion(currentPackingPlan, batchId, complete);
-  const transitionNumber = state.auditEvents.filter(
-    (event) => event.entityId === batchId,
-  ).length + 1;
+  const transition = setPackingBatchTransition(currentPackingPlan, batchId, complete);
+  if (!transition.ok || !transition.value.changed || !transition.value.auditEvent) return state;
+  const { packingPlan, auditEvent: event } = transition.value;
 
   return {
     ...state,
     packingPlans: { ...state.packingPlans, [packingPlanId]: packingPlan },
     activePackingPlanId: packingPlanId,
-    auditEvents: [
-      ...state.auditEvents,
-      auditEvent({
-        id: `AUD-PKG-${batchId}-${transitionNumber}`,
-        eventType: complete ? "packing_batch_completed" : "packing_batch_reopened",
-        entityType: "PackingBatch",
-        entityId: batchId,
-        actorType: "human",
-        actorId: "demo_user",
-        occurredAt: packingPlanId === "PKG-105"
-          ? "2026-07-15T11:19:30-07:00"
-          : "2026-07-15T10:53:00-07:00",
-        previousState: { status: batch.status },
-        newState: { status: complete ? "complete" : "pending", packingPlanStatus: packingPlan.status },
-      }),
-    ],
+    auditEvents: [...state.auditEvents, event],
   };
 }
 
@@ -310,144 +227,56 @@ export function completeMissionStop(
 ): DemoState {
   const mission = state.missions[missionId];
   if (!mission) return state;
-  if (mission.status !== "assigned" && mission.status !== "in_transit") return state;
   const stop = mission.stops.find((candidate) => candidate.id === stopId);
-  if (!stop || stop.status === "complete" || stop.status === "canceled") return state;
-  if (getNextCompletableMissionStopId(mission) !== stopId) return state;
-  const updatedMission = setMissionStopComplete(mission, stopId);
+  if (!stop) return state;
+  const eventType = stop.quantityPickupLb > 0 ? "pickup_complete" : "delivery_complete";
+  const transition = completeMissionStopTransition(mission, stopId, eventType);
+  if (!transition.ok) return state;
 
   return {
     ...state,
     missions: {
       ...state.missions,
-      [missionId]: updatedMission,
+      [missionId]: transition.value.mission,
     },
-    auditEvents: [
-      ...state.auditEvents,
-      auditEvent({
-        id: `AUD-${missionId}-${stopId}`,
-        eventType:
-          stop.locationType === "warehouse" && stop.quantityPickupLb > 0
-            ? "warehouse_load_complete"
-            : "delivery_complete",
-        entityType: "RouteStop",
-        entityId: stopId,
-        actorType: "human",
-        actorId: "demo_user",
-        occurredAt: missionId === "MSN-105"
-          ? "2026-07-15T11:20:00-07:00"
-          : "2026-07-15T11:00:00-07:00",
-        previousState: { status: stop.status },
-        newState: { status: "complete", missionStatus: updatedMission.status },
-      }),
-    ],
+    auditEvents: [...state.auditEvents, transition.value.event],
   };
 }
 
 export function triggerPartnerCancellation(state: DemoState): DemoState {
-  if (!state.approvedPlan || !state.missions["MSN-104"]) return state;
+  const originalMission = state.missions[scenarioContext.ids.primaryMissionId];
+  if (!state.approvedPlan || !originalMission) return state;
   if (state.stage !== "approved") return state;
-
-  const partnerId = "PAR-002";
-  const affectedQuantityLb = state.approvedPlan.allocations
-    .filter((allocation) => allocation.destinationId === partnerId)
-    .reduce((total, allocation) => total + allocation.quantityLb, 0);
-  if (affectedQuantityLb <= 0) return state;
-  const originalMission = state.missions["MSN-104"];
-  if (originalMission.status !== "assigned" && originalMission.status !== "in_transit") {
-    return state;
-  }
-  const affectedStop = originalMission.stops.find(
-    (stop) => stop.locationId === partnerId,
-  );
-  if (!affectedStop || affectedStop.status === "complete" || affectedStop.status === "canceled") {
-    return state;
-  }
-  const replanningMission: Mission = {
-    ...originalMission,
-    status: "replanning",
-    stops: originalMission.stops.map((stop) =>
-      stop.locationId === partnerId
-        ? { ...stop, status: "canceled" as const }
-        : stop,
-    ),
-    updatedAt: "2026-07-15T11:18:00-07:00",
-  };
-  const recoveryOption = createRecoveryOption(state.approvedPlan);
+  const transition = triggerPartnerCancellationTransition(state.approvedPlan, originalMission, "Receiving staff unavailable.");
+  if (!transition.ok) return state;
+  const { disruption, originalMission: replanningMission, replacementPlan, auditEvents } = transition.value;
 
   return {
     ...state,
     stage: "disrupted",
     partnerStatusOverrides: {
       ...state.partnerStatusOverrides,
-      [partnerId]: "canceled",
+      [disruption.partnerId]: "canceled",
     },
     missions: { ...state.missions, [originalMission.id]: replanningMission },
     disruption: {
-      id: "DSP-001",
-      partnerId,
-      affectedQuantityLb,
-      recoveryOption,
+      id: disruption.id,
+      partnerId: disruption.partnerId,
+      affectedQuantityLb: disruption.affectedQuantityLb,
+      recoveryOption: replacementPlan,
     },
-    auditEvents: [
-      ...state.auditEvents,
-      auditEvent({
-        id: "AUD-103",
-        eventType: "partner_canceled",
-        entityType: "PartnerAgency",
-        entityId: partnerId,
-        actorType: "human",
-        actorId: "demo_user",
-        occurredAt: "2026-07-15T11:18:00-07:00",
-        previousState: { status: "available" },
-        newState: { status: "canceled", affectedQuantityLb },
-        reason: "Receiving staff unavailable.",
-      }),
-      auditEvent({
-        id: "AUD-103A",
-        eventType: "mission_disrupted",
-        entityType: "Mission",
-        entityId: originalMission.id,
-        occurredAt: "2026-07-15T11:18:00-07:00",
-        previousState: { status: originalMission.status },
-        newState: { status: "disrupted", canceledStopPartnerId: partnerId },
-      }),
-      auditEvent({
-        id: "AUD-103B",
-        eventType: "mission_replanning",
-        entityType: "Mission",
-        entityId: originalMission.id,
-        occurredAt: "2026-07-15T11:18:01-07:00",
-        previousState: { status: "disrupted" },
-        newState: { status: "replanning", recoveryOptionId: recoveryOption.id },
-      }),
-    ],
+    auditEvents: [...state.auditEvents, ...auditEvents],
   };
 }
 
 export function approveRecovery(state: DemoState): DemoState {
-  if (!state.disruption || !state.missions["MSN-104"]) return state;
+  const originalMission = state.missions[scenarioContext.ids.primaryMissionId];
+  const originalPackingPlan = state.packingPlans[scenarioContext.ids.primaryPackingPlanId];
+  if (!state.disruption || !state.approvedPlan || !originalMission || !originalPackingPlan) return state;
   if (state.stage !== "disrupted") return state;
-
-  const approvedOption: PlanOption = {
-    ...state.disruption.recoveryOption,
-    status: "approved",
-  };
-  const originalMissionBeforeSupersession = state.missions["MSN-104"];
-  const replacementMission = preserveCompletedMissionWork(
-    originalMissionBeforeSupersession,
-    createMission(approvedOption, "MSN-105"),
-  );
-  const originalPackingPlan = state.packingPlans["PKG-104"];
-  const replacementPackingPlan = createRecoveryPackingPlan(
-    approvedOption,
-    originalPackingPlan,
-  );
-  const originalMission: Mission = {
-    ...state.missions["MSN-104"],
-    status: "superseded",
-    updatedAt: "2026-07-15T11:18:11-07:00",
-  };
+  const transition = approveRecoveryTransition(state.approvedPlan, originalPackingPlan, originalMission, { id: state.disruption.id, missionId: originalMission.id, partnerId: state.disruption.partnerId, affectedQuantityLb: state.disruption.affectedQuantityLb });
+  if (!transition.ok) return state;
+  const { approvedOption, originalMission: supersededMission, replacementMission, replacementPackingPlan, auditEvents } = transition.value;
 
   return {
     ...state,
@@ -460,54 +289,9 @@ export function approveRecovery(state: DemoState): DemoState {
     activePackingPlanId: replacementPackingPlan.id,
     missions: {
       ...state.missions,
-      [originalMission.id]: originalMission,
+      [supersededMission.id]: supersededMission,
       [replacementMission.id]: replacementMission,
     },
-    auditEvents: [
-      ...state.auditEvents,
-      auditEvent({
-        id: "AUD-104",
-        eventType: "recovery_approved",
-        entityType: "PlanOption",
-        entityId: approvedOption.id,
-        actorType: "human",
-        actorId: "demo_user",
-        occurredAt: "2026-07-15T11:18:11-07:00",
-        previousState: {
-          missionId: originalMission.id,
-          status: "replanning",
-          affectedQuantityLb: state.disruption.affectedQuantityLb,
-        },
-        newState: {
-          missionId: replacementMission.id,
-          status: "assigned",
-          modeledReplanningSeconds: scenario.modeledReplanningSeconds,
-        },
-        reason: "Approved alternate-partner recovery plan.",
-      }),
-      auditEvent({
-        id: "AUD-104A",
-        eventType: "mission_superseded",
-        entityType: "Mission",
-        entityId: originalMission.id,
-        occurredAt: "2026-07-15T11:18:11-07:00",
-        previousState: { status: "replanning" },
-        newState: {
-          status: "superseded",
-          replacementMissionId: replacementMission.id,
-        },
-      }),
-      auditEvent({
-        id: "AUD-104B",
-        eventType: "replacement_mission_assigned",
-        entityType: "Mission",
-        entityId: replacementMission.id,
-        occurredAt: "2026-07-15T11:18:11-07:00",
-        newState: {
-          status: "assigned",
-          supersedesMissionId: originalMission.id,
-        },
-      }),
-    ],
+    auditEvents: [...state.auditEvents, ...auditEvents],
   };
 }

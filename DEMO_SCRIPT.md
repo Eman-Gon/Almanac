@@ -8,7 +8,7 @@ All organizations, people, inventory, agency histories, capacities, coordinates,
 
 ## Before presenting
 
-1. Run `npm install`, `npm run demo:reset`, and `npm run dev`.
+1. Run `npm install`, `npm run demo:check`, and `npm run dev`.
 2. Open `http://localhost:3000/dashboard` and select **Reset scenario**.
 3. Keep these routes ready:
 

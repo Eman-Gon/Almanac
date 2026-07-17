@@ -1,9 +1,12 @@
-import { partners, productLot, scenario, warehouse } from "@/data/seed/scenario";
 import {
   modeledHouseholdEquivalents,
   plannedColdStorageUtilizationPct,
   refrigeratedStagingUtilizationPct,
 } from "@/domain/metrics/calculate";
+import {
+  scenarioContext,
+  type ChoiceGridScenarioContext,
+} from "@/domain/planning/scenario-context";
 import {
   acceptanceHistorySignal,
   calculateDestinationScore,
@@ -11,15 +14,14 @@ import {
 } from "@/domain/scoring/destination-score";
 import type { Allocation, DestinationScore, PlanOption, PlanSet } from "@/domain/types";
 
-const planSetId = "PLN-104";
-
 function partnerScore(
+  context: ChoiceGridScenarioContext,
   partnerId: string,
   input: Omit<DestinationScoreInput, "historicalAcceptance" | "refusalRiskPenalty">,
 ): DestinationScore {
-  const partner = partners.find((candidate) => candidate.id === partnerId);
+  const partner = context.partners.find((candidate) => candidate.id === partnerId);
   if (!partner) throw new Error(`Partner ${partnerId} was not found.`);
-  const acceptance = acceptanceHistorySignal(partner, productLot.category);
+  const acceptance = acceptanceHistorySignal(partner, context.productLot.category);
   return calculateDestinationScore({
     ...input,
     historicalAcceptance: acceptance.score,
@@ -27,62 +29,69 @@ function partnerScore(
   });
 }
 
-const destinationScores: Record<string, DestinationScore> = {
-  "WH-001": calculateDestinationScore({
-    documentedNeed: 40,
-    usabilityMatch: 100,
-    receivingWindowFit: 100,
-    availableCapacity: 35,
-    recentServiceGap: 20,
-    equityPriority: 30,
-    historicalAcceptance: 0,
-    travelPenalty: 2,
-    spoilagePenalty: 8,
-    refusalRiskPenalty: 0,
-  }),
-  "PAR-001": partnerScore("PAR-001", {
-    documentedNeed: 100,
-    usabilityMatch: 100,
-    receivingWindowFit: 100,
-    availableCapacity: 100,
-    recentServiceGap: 100,
-    equityPriority: 100,
-    travelPenalty: 2,
-    spoilagePenalty: 1,
-  }),
-  "PAR-002": partnerScore("PAR-002", {
-    documentedNeed: 100,
-    usabilityMatch: 100,
-    receivingWindowFit: 100,
-    availableCapacity: 100,
-    recentServiceGap: 100,
-    equityPriority: 100,
-    travelPenalty: 4,
-    spoilagePenalty: 2,
-  }),
-  "PAR-003": partnerScore("PAR-003", {
-    documentedNeed: 100,
-    usabilityMatch: 100,
-    receivingWindowFit: 100,
-    availableCapacity: 100,
-    recentServiceGap: 100,
-    equityPriority: 100,
-    travelPenalty: 4,
-    spoilagePenalty: 3,
-  }),
-  "PAR-004": partnerScore("PAR-004", {
-    documentedNeed: 100,
-    usabilityMatch: 100,
-    receivingWindowFit: 100,
-    availableCapacity: 95,
-    recentServiceGap: 100,
-    equityPriority: 100,
-    travelPenalty: 5,
-    spoilagePenalty: 2,
-  }),
-};
+function destinationScores(
+  context: ChoiceGridScenarioContext,
+): Record<string, DestinationScore> {
+  const [partnerOne] = context.partners;
+  return {
+    [context.warehouse.id]: calculateDestinationScore({
+      documentedNeed: 40,
+      usabilityMatch: 100,
+      receivingWindowFit: 100,
+      availableCapacity: 35,
+      recentServiceGap: 20,
+      equityPriority: 30,
+      historicalAcceptance: 0,
+      travelPenalty: 2,
+      spoilagePenalty: 8,
+      refusalRiskPenalty: 0,
+    }),
+    [partnerOne.id]: partnerScore(context, partnerOne.id, {
+      documentedNeed: 100,
+      usabilityMatch: 100,
+      receivingWindowFit: 100,
+      availableCapacity: 100,
+      recentServiceGap: 100,
+      equityPriority: 100,
+      travelPenalty: 2,
+      spoilagePenalty: 1,
+    }),
+    [context.ids.canceledPartnerId]: partnerScore(context, context.ids.canceledPartnerId, {
+      documentedNeed: 100,
+      usabilityMatch: 100,
+      receivingWindowFit: 100,
+      availableCapacity: 100,
+      recentServiceGap: 100,
+      equityPriority: 100,
+      travelPenalty: 4,
+      spoilagePenalty: 2,
+    }),
+    [context.ids.mealKitPartnerId]: partnerScore(context, context.ids.mealKitPartnerId, {
+      documentedNeed: 100,
+      usabilityMatch: 100,
+      receivingWindowFit: 100,
+      availableCapacity: 100,
+      recentServiceGap: 100,
+      equityPriority: 100,
+      travelPenalty: 4,
+      spoilagePenalty: 3,
+    }),
+    [context.ids.alternatePartnerId]: partnerScore(context, context.ids.alternatePartnerId, {
+      documentedNeed: 100,
+      usabilityMatch: 100,
+      receivingWindowFit: 100,
+      availableCapacity: 95,
+      recentServiceGap: 100,
+      equityPriority: 100,
+      travelPenalty: 5,
+      spoilagePenalty: 2,
+    }),
+  };
+}
 
 function allocation(
+  context: ChoiceGridScenarioContext,
+  scores: Record<string, DestinationScore>,
   id: string,
   destinationId: string,
   destinationType: Allocation["destinationType"],
@@ -92,22 +101,22 @@ function allocation(
 ): Allocation {
   return {
     id,
-    productLotId: productLot.id,
+    productLotId: context.productLot.id,
     destinationId,
     destinationType,
     quantityLb,
     plannedArrivalAt: arrivalAt,
     handling,
-    score: destinationScores[destinationId] ?? destinationScores["WH-001"],
+    score: scores[destinationId] ?? scores[context.warehouse.id],
   };
 }
 
-function commonAssumptions() {
+function commonAssumptions(context: ChoiceGridScenarioContext) {
   return [
-    "All quantities use the validated 1,200 lb available inventory at WH-001.",
+    `All quantities use the validated ${context.availableInventoryQuantityLb.toLocaleString()} lb available inventory at ${context.warehouse.id}.`,
     "Route miles use the seeded distance matrix; no live routing service is required.",
     "Staff condition review is recorded; the explicit inspection hold still requires supervisor release.",
-    `Destination ranking uses ${scenario.scoreConfigVersion}.`,
+    `Destination ranking uses ${context.scenario.scoreConfigVersion}.`,
     "Category-specific agency acceptance uses synthetic accepted, refused, and short-receipt history with visible sample sizes.",
     "Expected spoilage, staff effort, need-match, equity, and refusal-risk are seeded strategy-level estimates; allocation edits recalculate outbound quantity, household-equivalents, and capacity metrics only.",
   ];
@@ -116,23 +125,48 @@ function commonAssumptions() {
 function plannedOutboundAllocationLb(allocations: Allocation[]): number {
   return allocations
     .filter(
-      (allocation) =>
-        allocation.destinationType !== "warehouse" &&
-        allocation.destinationType !== "external_redirect" &&
-        allocation.handling !== "redirect",
+      (item) =>
+        item.destinationType !== "warehouse" &&
+        item.destinationType !== "external_redirect" &&
+        item.handling !== "redirect",
     )
-    .reduce((total, allocation) => total + allocation.quantityLb, 0);
+    .reduce((total, item) => total + item.quantityLb, 0);
 }
 
-export function withDerivedCapacityMetrics(plan: PlanOption): PlanOption {
+function metricSeed(
+  context: ChoiceGridScenarioContext,
+  estimate: ChoiceGridScenarioContext["strategyEstimates"]["balancedRelease"],
+  quantityPlannedOutboundInTimeLb: number,
+) {
+  return {
+    quantityPlannedOutboundInTimeLb,
+    expectedSpoilageLb: estimate.expectedSpoilageLb,
+    modeledHouseholdEquivalents: modeledHouseholdEquivalents(
+      quantityPlannedOutboundInTimeLb,
+      context.scenario.householdWeightLb,
+    ),
+    totalMiles: estimate.totalMiles,
+    staffMinutes: estimate.staffMinutes,
+    coldCapacityUtilizationPct: 0,
+    refrigeratedStagingUtilizationPct: 0,
+    needMatchScore: estimate.needMatchScore,
+    equityIndicator: estimate.equityIndicator,
+    refusalRiskScore: estimate.refusalRiskScore,
+  };
+}
+
+export function withDerivedCapacityMetrics(
+  plan: PlanOption,
+  context: ChoiceGridScenarioContext = scenarioContext,
+): PlanOption {
   return {
     ...plan,
     metrics: {
       ...plan.metrics,
-      coldCapacityUtilizationPct: plannedColdStorageUtilizationPct(plan, warehouse),
+      coldCapacityUtilizationPct: plannedColdStorageUtilizationPct(plan, context.warehouse),
       refrigeratedStagingUtilizationPct: refrigeratedStagingUtilizationPct(
         plan,
-        warehouse,
+        context.warehouse,
       ),
     },
   };
@@ -141,6 +175,7 @@ export function withDerivedCapacityMetrics(plan: PlanOption): PlanOption {
 export function applyCanonicalAllocationEdit(
   canonical: PlanOption,
   submitted: PlanOption,
+  context: ChoiceGridScenarioContext = scenarioContext,
 ): PlanOption | null {
   if (
     canonical.id !== submitted.id ||
@@ -173,177 +208,215 @@ export function applyCanonicalAllocationEdit(
     };
   });
 
-  if (allocations.some((allocation) => allocation === null)) return null;
+  if (allocations.some((item) => item === null)) return null;
   const canonicalAllocations = allocations as Allocation[];
-  const quantityPlannedOutboundInTimeLb = plannedOutboundAllocationLb(
-    canonicalAllocations,
+  const quantityPlannedOutboundInTimeLb = plannedOutboundAllocationLb(canonicalAllocations);
+
+  return withDerivedCapacityMetrics(
+    {
+      ...canonical,
+      allocations: canonicalAllocations,
+      metrics: {
+        ...canonical.metrics,
+        quantityPlannedOutboundInTimeLb,
+        modeledHouseholdEquivalents: modeledHouseholdEquivalents(
+          quantityPlannedOutboundInTimeLb,
+          context.scenario.householdWeightLb,
+        ),
+      },
+    },
+    context,
+  );
+}
+
+export function generatePlanSet(
+  context: ChoiceGridScenarioContext = scenarioContext,
+): PlanSet {
+  const scores = destinationScores(context);
+  const quantities = context.planQuantities;
+  const [partnerOne] = context.partners;
+  const assumptions = commonAssumptions(context);
+  const storageHeadroomLb =
+    context.warehouse.refrigeratedCapacityLb - context.warehouse.occupiedRefrigeratedLb;
+  const all = (
+    id: string,
+    destinationId: string,
+    destinationType: Allocation["destinationType"],
+    quantityLb: number,
+    arrivalAt: string,
+    handling: Allocation["handling"],
+  ) => allocation(context, scores, id, destinationId, destinationType, quantityLb, arrivalAt, handling);
+
+  const holdPlan = withDerivedCapacityMetrics(
+    {
+      id: "OPT-001",
+      planSetId: context.ids.planSetId,
+      name: "Hold for Later",
+      strategy: "hold_for_later",
+      status: "generated",
+      allocations: [
+        all(
+          "ALL-001",
+          context.warehouse.id,
+          "warehouse",
+          quantities.holdForLaterLb,
+          context.timeline.warehouseArrivalAt,
+          "store",
+        ),
+      ],
+      inspectionHoldLb: 0,
+      unallocatedLb: 0,
+      metrics: metricSeed(context, context.strategyEstimates.holdForLater, 0),
+      assumptions,
+      risks: [
+        {
+          code: "CAPACITY_EXCEEDED",
+          level: "critical",
+          message: `Exceeds refrigerated capacity by ${quantities.holdForLaterLb - storageHeadroomLb} lb.`,
+          blocking: true,
+        },
+      ],
+      excludedDestinations: [],
+    },
+    context,
   );
 
-  return withDerivedCapacityMetrics({
-    ...canonical,
-    allocations: canonicalAllocations,
-    metrics: {
-      ...canonical.metrics,
-      quantityPlannedOutboundInTimeLb,
-      modeledHouseholdEquivalents: modeledHouseholdEquivalents(
-        quantityPlannedOutboundInTimeLb,
-        scenario.householdWeightLb,
+  const fastestPlan = withDerivedCapacityMetrics(
+    {
+      id: "OPT-002",
+      planSetId: context.ids.planSetId,
+      name: "Fastest Agency Release",
+      strategy: "fastest_release",
+      status: "generated",
+      allocations: [
+        all(
+          "ALL-002",
+          partnerOne.id,
+          "partner",
+          quantities.fastestPartnerOneLb,
+          context.timeline.partnerOneArrivalAt,
+          "cross_dock",
+        ),
+        all(
+          "ALL-003",
+          context.ids.canceledPartnerId,
+          "partner",
+          quantities.fastestCanceledPartnerLb,
+          context.timeline.canceledPartnerArrivalAt,
+          "cross_dock",
+        ),
+        all(
+          "ALL-004",
+          context.ids.mealKitPartnerId,
+          "packing_program",
+          quantities.fastestMealKitLb,
+          context.timeline.mealKitArrivalAt,
+          "pack",
+        ),
+      ],
+      inspectionHoldLb: 0,
+      unallocatedLb: 0,
+      metrics: metricSeed(
+        context,
+        context.strategyEstimates.fastestRelease,
+        quantities.fastestPartnerOneLb +
+          quantities.fastestCanceledPartnerLb +
+          quantities.fastestMealKitLb,
       ),
+      assumptions,
+      risks: [
+        {
+          code: "WINDOW_SENSITIVITY",
+          level: "medium",
+          message: "Three same-day receiving windows leave limited recovery time.",
+          blocking: false,
+        },
+      ],
+      excludedDestinations: [
+        { destinationId: "PAR-010", reason: "Destination is unavailable today." },
+      ],
     },
-  });
-}
+    context,
+  );
 
-function createHoldPlan(): PlanOption {
-  const storageHeadroomLb =
-    warehouse.refrigeratedCapacityLb - warehouse.occupiedRefrigeratedLb;
-  const storedQuantityLb = 1_200;
+  const balancedOutboundLb =
+    quantities.balancedPartnerOneLb +
+    quantities.balancedCanceledPartnerLb +
+    quantities.balancedMealKitLb;
 
-  return withDerivedCapacityMetrics({
-    id: "OPT-001",
-    planSetId,
-    name: "Hold for Later",
-    strategy: "hold_for_later",
-    status: "generated",
-    allocations: [
-      allocation(
-        "ALL-001",
-        warehouse.id,
-        "warehouse",
-        1_200,
-        "2026-07-15T11:35:00-07:00",
-        "store",
+  const balancedPlan = withDerivedCapacityMetrics(
+    {
+      id: context.ids.primaryOptionId,
+      planSetId: context.ids.planSetId,
+      name: "Balanced Release",
+      strategy: "balanced_release",
+      status: "selected",
+      allocations: [
+        all(
+          "ALL-005",
+          partnerOne.id,
+          "partner",
+          quantities.balancedPartnerOneLb,
+          context.timeline.partnerOneArrivalAt,
+          "cross_dock",
+        ),
+        all(
+          "ALL-006",
+          context.ids.canceledPartnerId,
+          "partner",
+          quantities.balancedCanceledPartnerLb,
+          context.timeline.canceledPartnerArrivalAt,
+          "cross_dock",
+        ),
+        all(
+          "ALL-007",
+          context.ids.mealKitPartnerId,
+          "packing_program",
+          quantities.balancedMealKitLb,
+          context.timeline.mealKitArrivalAt,
+          "pack",
+        ),
+      ],
+      inspectionHoldLb: quantities.balancedInspectionHoldLb,
+      unallocatedLb: 0,
+      metrics: metricSeed(
+        context,
+        context.strategyEstimates.balancedRelease,
+        balancedOutboundLb,
       ),
-    ],
-    inspectionHoldLb: 0,
-    unallocatedLb: 0,
-    metrics: {
-      quantityPlannedOutboundInTimeLb: 0,
-      expectedSpoilageLb: 210,
-      modeledHouseholdEquivalents: 0,
-      totalMiles: 0,
-      staffMinutes: 110,
-      coldCapacityUtilizationPct: 0,
-      refrigeratedStagingUtilizationPct: 0,
-      needMatchScore: 72,
-      equityIndicator: 54,
-      refusalRiskScore: 6,
+      assumptions,
+      risks: [
+        {
+          code: "INSPECTION_REQUIRED",
+          level: "medium",
+          message: `Supervisor inspection is required for the ${quantities.balancedInspectionHoldLb} lb hold.`,
+          blocking: false,
+        },
+      ],
+      excludedDestinations: [
+        {
+          destinationId: "PAR-005",
+          reason: "Only 160 lb compatible cold capacity is available.",
+        },
+        { destinationId: "PAR-010", reason: "Destination is unavailable today." },
+      ],
     },
-    assumptions: commonAssumptions(),
-    risks: [
-      {
-        code: "CAPACITY_EXCEEDED",
-        level: "critical",
-        message: `Exceeds refrigerated capacity by ${storedQuantityLb - storageHeadroomLb} lb.`,
-        blocking: true,
-      },
-    ],
-    excludedDestinations: [],
-  });
-}
+    context,
+  );
 
-function createFastestReleasePlan(): PlanOption {
-  return withDerivedCapacityMetrics({
-    id: "OPT-002",
-    planSetId,
-    name: "Fastest Agency Release",
-    strategy: "fastest_release",
-    status: "generated",
-    allocations: [
-      allocation("ALL-002", "PAR-001", "partner", 420, "2026-07-15T11:30:00-07:00", "cross_dock"),
-      allocation("ALL-003", "PAR-002", "partner", 380, "2026-07-15T12:05:00-07:00", "cross_dock"),
-      allocation("ALL-004", "PAR-003", "packing_program", 400, "2026-07-15T12:40:00-07:00", "pack"),
-    ],
-    inspectionHoldLb: 0,
-    unallocatedLb: 0,
-    metrics: {
-      quantityPlannedOutboundInTimeLb: 1_200,
-      expectedSpoilageLb: 90,
-      modeledHouseholdEquivalents: modeledHouseholdEquivalents(1_200, 3),
-      totalMiles: 45.7,
-      staffMinutes: 108,
-      coldCapacityUtilizationPct: 0,
-      refrigeratedStagingUtilizationPct: 0,
-      needMatchScore: 84,
-      equityIndicator: 83,
-      refusalRiskScore: 11,
-    },
-    assumptions: commonAssumptions(),
-    risks: [
-      {
-        code: "WINDOW_SENSITIVITY",
-        level: "medium",
-        message: "Three same-day receiving windows leave limited recovery time.",
-        blocking: false,
-      },
-    ],
-    excludedDestinations: [
-      { destinationId: "PAR-010", reason: "Destination is unavailable today." },
-    ],
-  });
-}
-
-function createBalancedReleasePlan(): PlanOption {
-  return withDerivedCapacityMetrics({
-    id: "OPT-003",
-    planSetId,
-    name: "Balanced Release",
-    strategy: "balanced_release",
-    status: "selected",
-    allocations: [
-      allocation("ALL-005", "PAR-001", "partner", 420, "2026-07-15T11:30:00-07:00", "cross_dock"),
-      allocation("ALL-006", "PAR-002", "partner", 320, "2026-07-15T12:05:00-07:00", "cross_dock"),
-      allocation("ALL-007", "PAR-003", "packing_program", 400, "2026-07-15T12:40:00-07:00", "pack"),
-    ],
-    inspectionHoldLb: 60,
-    unallocatedLb: 0,
-    metrics: {
-      quantityPlannedOutboundInTimeLb: 1_140,
-      expectedSpoilageLb: 60,
-      modeledHouseholdEquivalents: modeledHouseholdEquivalents(1_140, 3),
-      totalMiles: 24.8,
-      staffMinutes: 96,
-      coldCapacityUtilizationPct: 0,
-      refrigeratedStagingUtilizationPct: 0,
-      needMatchScore: 91,
-      equityIndicator: 87,
-      refusalRiskScore: 8,
-    },
-    assumptions: commonAssumptions(),
-    risks: [
-      {
-        code: "INSPECTION_REQUIRED",
-        level: "medium",
-        message: "Supervisor inspection is required for the 60 lb hold.",
-        blocking: false,
-      },
-    ],
-    excludedDestinations: [
-      {
-        destinationId: "PAR-005",
-        reason: "Only 160 lb compatible cold capacity is available.",
-      },
-      { destinationId: "PAR-010", reason: "Destination is unavailable today." },
-    ],
-  });
-}
-
-export function generatePlanSet(): PlanSet {
-  const set: PlanSet = {
-    id: planSetId,
-    inventoryLotId: productLot.id,
-    options: [
-      createHoldPlan(),
-      createFastestReleasePlan(),
-      createBalancedReleasePlan(),
-    ],
-    generatedAt: "2026-07-15T10:47:00-07:00",
-    selectedOptionId: "OPT-003",
+  return {
+    id: context.ids.planSetId,
+    inventoryLotId: context.productLot.id,
+    options: [holdPlan, fastestPlan, balancedPlan],
+    generatedAt: context.timeline.planGeneratedAt,
+    selectedOptionId: context.ids.primaryOptionId,
   };
-
-  return set;
 }
 
-export function getDestinationName(destinationId: string): string {
-  if (destinationId === warehouse.id) return warehouse.name;
-  return partners.find((partner) => partner.id === destinationId)?.name ?? destinationId;
+export function getDestinationName(
+  destinationId: string,
+  context: ChoiceGridScenarioContext = scenarioContext,
+): string {
+  if (destinationId === context.warehouse.id) return context.warehouse.name;
+  return context.partners.find((partner) => partner.id === destinationId)?.name ?? destinationId;
 }

@@ -8,7 +8,7 @@
 
 ## Recording preparation
 
-1. Run `npm run demo:reset` to verify immutable fixture readiness.
+1. Run `npm run demo:check` to verify immutable fixture readiness.
 2. Run `npm run dev` and open `/dashboard`.
 3. Select **Reset scenario** in the app to clear browser demo state.
 4. Set the browser to a common laptop viewport and close developer tools.
