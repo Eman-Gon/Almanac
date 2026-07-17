@@ -63,14 +63,17 @@ describe("NetworkMap interactions", () => {
     fireEvent.click(zoomIn);
     fireEvent.click(zoomIn);
     fireEvent.click(zoomIn);
+    // Selecting the far-southeast context hub pans the viewport until the
+    // clamp engages, pushing the northwest route stops past the canvas edge.
+    fireEvent.click(screen.getByTestId("map-marker-PAR-010"));
 
-    const warehouseMarkerWrap = screen.getByTestId("map-marker-WH-001").parentElement;
-    const warehouseLabelAnchor = screen.getByTestId("map-route-label-WH-001").parentElement;
-    const markerTop = Number.parseFloat(warehouseMarkerWrap?.style.top ?? "");
-    const labelTop = Number.parseFloat(warehouseLabelAnchor?.style.top ?? "");
+    const partnerMarkerWrap = screen.getByTestId("map-marker-PAR-003").parentElement;
+    const partnerLabelAnchor = screen.getByTestId("map-route-label-PAR-003").parentElement;
+    const markerLeft = Number.parseFloat(partnerMarkerWrap?.style.left ?? "");
+    const labelLeft = Number.parseFloat(partnerLabelAnchor?.style.left ?? "");
 
-    expect(markerTop).toBeGreaterThan(98);
-    expect(labelTop).toBe(98);
-    expect(warehouseMarkerWrap?.style.top).not.toBe(warehouseLabelAnchor?.style.top);
+    expect(markerLeft).toBeLessThan(2);
+    expect(labelLeft).toBe(2);
+    expect(partnerMarkerWrap?.style.left).not.toBe(partnerLabelAnchor?.style.left);
   });
 });

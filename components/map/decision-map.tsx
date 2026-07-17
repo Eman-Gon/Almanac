@@ -325,7 +325,7 @@ export function DecisionMap({
 
   const dataBounds = useMemo<GeoBounds>(() => {
     const bounds = boundsOf([warehouse.location, ...partners.map((partner) => partner.location)]);
-    return bounds ?? { minLatitude: 37.2, maxLatitude: 37.46, minLongitude: -122.08, maxLongitude: -121.74 };
+    return bounds ?? { minLatitude: 37.52, maxLatitude: 37.9, minLongitude: -122.33, maxLongitude: -121.95 };
   }, []);
   const dataCenter = useMemo(() => boundsCenter(dataBounds), [dataBounds]);
   // The default view frames the decision story (warehouse + route stops);

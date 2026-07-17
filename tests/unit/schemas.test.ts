@@ -100,16 +100,16 @@ describe("seed schemas", () => {
 
   it("keeps display-only inventory history distinct from the executable lot", () => {
     const ids = historicalInventoryLots.map((lot) => lot.id);
-    expect(ids).toHaveLength(8);
+    expect(ids).toHaveLength(18);
     expect(new Set(ids).size).toBe(ids.length);
     expect(ids).not.toContain(productLot.id);
     expect(historicalInventoryLots.every((lot) => lot.quantityLb > 0)).toBe(true);
   });
 
   it("keeps dashboard context fixtures populated and display-only", () => {
-    expect(backgroundMissions).toHaveLength(5);
+    expect(backgroundMissions).toHaveLength(10);
     expect(new Set(backgroundMissions.map((mission) => mission.id)).size).toBe(backgroundMissions.length);
-    expect(expirationRiskItems).toHaveLength(6);
+    expect(expirationRiskItems).toHaveLength(12);
     expect(expirationRiskItems.every((item) => item.quantityLb > 0)).toBe(true);
   });
 });

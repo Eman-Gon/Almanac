@@ -57,10 +57,10 @@ const defaultLayers: MapLayers = {
 };
 
 const mapBounds = {
-  minLatitude: 37.2,
-  maxLatitude: 37.46,
-  minLongitude: -122.08,
-  maxLongitude: -121.74,
+  minLatitude: 37.52,
+  maxLatitude: 37.9,
+  minLongitude: -122.33,
+  maxLongitude: -121.95,
 };
 
 const MAP_ZOOM_LEVELS = [1, 1.25, 1.5, 1.75] as const;
@@ -892,11 +892,12 @@ export function NetworkMap({
             </g>
             {interactive ? (
               <g className="map-place-labels">
-                <text x="24" y="27">Sunnyvale</text>
-                <text x="42" y="37">Santa Clara</text>
-                <text x="68" y="58" className="map-place-primary">San Jose</text>
-                <text x="58" y="17">Milpitas</text>
-                <text x="44" y="85">Campbell</text>
+                <text x="16" y="9">Berkeley</text>
+                <text x="32" y="33" className="map-place-primary">Oakland</text>
+                <text x="10" y="38">Alameda</text>
+                <text x="46" y="50">San Leandro</text>
+                <text x="64" y="63">Hayward</text>
+                <text x="82" y="88">Fremont</text>
                 <text x="34" y="52" className="map-road-label">Local corridor</text>
                 <text x="52" y="69" className="map-road-label">Cross-town corridor</text>
               </g>

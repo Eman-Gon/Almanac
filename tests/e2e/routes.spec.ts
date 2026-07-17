@@ -12,7 +12,7 @@ test("seeded routes and invalid record states are intentional", async ({ page })
 
   await page.goto("/inventory");
   await expect(page.getByRole("heading", { name: "At-risk inventory" })).toBeVisible();
-  await expect(page.getByText(/LOT-103 · South County Distribution Center/)).toBeVisible();
+  await expect(page.getByText(/LOT-103 · East Bay Distribution Center/)).toBeVisible();
   await expect(page.getByText("Mock history · display only")).toBeVisible();
   await page.locator('a[href="/inventory/LOT-104"]').filter({ hasText: "Strawberries" }).click();
   await expect(page.getByRole("heading", { name: "Confirmed inventory facts" })).toBeVisible();
