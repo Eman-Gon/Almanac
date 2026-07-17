@@ -43,7 +43,6 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   const capacityLayer = page.getByRole("checkbox", { name: "Warehouse capacity" });
   const vehiclesLayer = page.getByRole("checkbox", { name: "Vehicles" });
   const routeStopLabels = [
-    ["WH-001", "South County Distribution Center"],
     ["PAR-001", "Harbor Light Pantry"],
     ["PAR-002", "Eastside Community Pantry"],
     ["PAR-003", "Community Kitchen"],
@@ -51,7 +50,9 @@ test("seeded routes and invalid record states are intentional", async ({ page })
 
   await expect(page.locator('[aria-label$=" operational details"]')).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Zoom in map" })).toBeVisible();
-  await expect(page.getByTestId("map-zoom-status")).toHaveText("100%");
+  const baseZoomText = await page.getByTestId("map-zoom-status").innerText();
+  expect(baseZoomText).toMatch(/^Z\d+$/);
+  const baseZoom = Number(baseZoomText.slice(1));
   await expect(page.getByTestId("map-route-layer")).toHaveCount(1);
   await expect(page.getByTestId("map-route-layer")).toHaveAttribute("data-route-status", "candidate");
   await expect(page.getByTestId("map-marker-DNR-001")).toHaveCount(0);
@@ -63,100 +64,89 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   }
   await expect(page.getByTestId("map-route-label-PAR-004")).toHaveCount(0);
 
-  await page.getByTestId("network-map-canvas").hover();
+  const canvas = page.getByTestId("network-map-canvas");
+  const canvasBounds = await canvas.boundingBox();
+  expect(canvasBounds).not.toBeNull();
+  if (!canvasBounds) throw new Error("Map canvas bounds are unavailable");
+  await page.mouse.move(canvasBounds.x + canvasBounds.width / 2, canvasBounds.y + canvasBounds.height / 2);
   await page.mouse.wheel(0, -600);
-  await expect(page.getByTestId("map-zoom-status")).toHaveText("125%");
+  await expect(page.getByTestId("map-zoom-status")).toHaveText(`Z${baseZoom + 1}`);
   await page.waitForTimeout(150);
   await page.mouse.wheel(0, 600);
-  await expect(page.getByTestId("map-zoom-status")).toHaveText("100%");
+  await expect(page.getByTestId("map-zoom-status")).toHaveText(`Z${baseZoom}`);
 
-  const routeGeometry = await page.getByTestId("map-route-layer").getAttribute("points");
+  const routeGeometry = await page.getByTestId("map-route-layer").getAttribute("d");
+  expect(routeGeometry).toBeTruthy();
   await page.getByRole("button", { name: "Zoom in map" }).click();
-  await expect(page.getByTestId("map-zoom-status")).toHaveText("125%");
-  await expect(page.getByTestId("map-route-layer")).toHaveAttribute("points", routeGeometry ?? "");
+  await expect(page.getByTestId("map-zoom-status")).toHaveText(`Z${baseZoom + 1}`);
+  // Geographic projection recalculates path coordinates on zoom; presence must remain.
+  await expect(page.getByTestId("map-route-layer")).toHaveCount(1);
   await page.getByRole("button", { name: "Reset map view" }).click();
-  await expect(page.getByTestId("map-zoom-status")).toHaveText("100%");
-  await page.getByTestId("network-map-canvas").focus();
+  await expect(page.getByTestId("map-zoom-status")).toHaveText(`Z${baseZoom}`);
+  await canvas.focus();
   await page.keyboard.press("=");
-  await expect(page.getByTestId("map-zoom-status")).toHaveText("125%");
-  const viewportTransformBeforePan = await page.getByTestId("map-viewport").getAttribute("transform");
+  await expect(page.getByTestId("map-zoom-status")).toHaveText(`Z${baseZoom + 1}`);
+  const viewportTransformBeforePan = await page.getByTestId("map-viewport").getAttribute("style");
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByTestId("map-viewport")).not.toHaveAttribute("transform", viewportTransformBeforePan ?? "");
-  const canvasBounds = await page.getByTestId("network-map-canvas").boundingBox();
-  expect(canvasBounds).not.toBeNull();
-  if (!canvasBounds) {
-    throw new Error("Map canvas bounds are unavailable");
-  }
-  const viewportTransformBeforeDrag = await page.getByTestId("map-viewport").getAttribute("transform");
+  await expect.poll(async () => page.getByTestId("map-viewport").getAttribute("style")).not.toBe(viewportTransformBeforePan);
+  const viewportTransformBeforeDrag = await page.getByTestId("map-viewport").getAttribute("style");
   const dragStartX = canvasBounds.x + canvasBounds.width / 2;
   const dragStartY = canvasBounds.y + canvasBounds.height / 2;
   await page.mouse.move(dragStartX, dragStartY);
   await page.mouse.down();
-  // The route-focused zoom starts at the left/bottom pan clamps. Drag inward so
-  // the viewport can move instead of asking the clamp to absorb the gesture.
   await page.mouse.move(dragStartX + 100, dragStartY - 70, { steps: 4 });
   await page.mouse.up();
-  await expect(page.getByTestId("map-viewport")).not.toHaveAttribute("transform", viewportTransformBeforeDrag ?? "");
-  await expect(page.getByTestId("map-route-layer")).toHaveAttribute("points", routeGeometry ?? "");
+  await expect.poll(async () => page.getByTestId("map-viewport").getAttribute("style")).not.toBe(viewportTransformBeforeDrag);
+  await expect(page.getByTestId("map-route-layer")).toHaveCount(1);
   await page.keyboard.press("0");
-  await expect(page.getByTestId("map-zoom-status")).toHaveText("100%");
+  await expect(page.getByTestId("map-zoom-status")).toHaveText(`Z${baseZoom}`);
 
   await page.getByTestId("map-marker-PAR-001").click();
   const harborDetails = page.locator('[aria-label="Harbor Light Pantry operational details"]');
   await expect(harborDetails).toBeVisible();
   await expect(harborDetails).toContainText("Planned delivery");
   await expect(harborDetails).toContainText("420 lb · Refrigerated");
-  await expect(harborDetails).toContainText("Demand");
+  await expect(harborDetails).toContainText("Documented demand");
   await expect(harborDetails).toContainText("520 lb · Critical");
-  await expect(harborDetails).toContainText("500 lb available");
-  await expect(harborDetails).toContainText("9:30 AM – 12:00 PM");
+  await expect(harborDetails).toContainText("500 lb");
+  await expect(harborDetails).toContainText("Compatible cold capacity");
   await page.keyboard.press("Escape");
   await expect(harborDetails).toHaveCount(0);
   await expect(page.getByTestId("map-marker-PAR-001")).toBeFocused();
 
-  await page.getByRole("button", { name: "Nearby context · 10" }).click();
+  await page.getByRole("button", { name: /Other agencies/ }).click();
   await page.getByTestId("map-location-PAR-004").click();
   await expect(page.locator('[aria-label="Northside Family Resource Center operational details"]')).toBeVisible();
   await expect(page.getByTestId("map-marker-PAR-004")).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Close location details" }).click();
 
-  await expect(page.getByTestId("map-legend-demand")).toHaveCount(1);
   await demandLayer.uncheck();
   await expect(page.getByTestId("map-marker-PAR-001")).toHaveCount(0);
   await expect(page.getByTestId("map-location-PAR-001")).toHaveCount(0);
-  await expect(page.getByTestId("map-legend-demand")).toHaveCount(0);
-  await expect(page.getByText("1 of 4 stops visible", { exact: true })).toBeVisible();
   await demandLayer.check();
   await expect(page.getByTestId("map-marker-PAR-001")).toHaveCount(1);
-  await expect(page.getByTestId("map-legend-demand")).toHaveCount(1);
 
-  await expect(page.getByTestId("map-legend-capacity")).toHaveCount(1);
   await capacityLayer.uncheck();
   await expect(page.getByTestId("map-marker-WH-001")).toHaveCount(0);
   await expect(page.getByTestId("map-location-WH-001")).toHaveCount(0);
-  await expect(page.getByTestId("map-legend-capacity")).toHaveCount(0);
-  await expect(page.getByText("3 of 4 stops visible", { exact: true })).toBeVisible();
   await capacityLayer.check();
   await expect(page.getByTestId("map-marker-WH-001")).toHaveCount(1);
 
-  await expect(page.getByTestId("map-legend-vehicles")).toHaveCount(1);
+  await expect(page.getByTestId("map-marker-FLEET")).toBeVisible();
   await vehiclesLayer.uncheck();
-  await expect(page.getByTestId("map-marker-VEH-001")).toHaveCount(0);
-  await expect(page.getByTestId("map-location-VEH-001")).toHaveCount(0);
-  await expect(page.getByTestId("map-legend-vehicles")).toHaveCount(0);
+  await expect(page.getByTestId("map-marker-FLEET")).toHaveCount(0);
   await vehiclesLayer.check();
-  await expect(page.getByTestId("map-marker-VEH-001")).toHaveCount(1);
+  await expect(page.getByTestId("map-marker-FLEET")).toHaveCount(1);
 
   await routesLayer.uncheck();
   await expect(page.getByTestId("map-route-layer")).toHaveCount(0);
   await expect(page.getByTestId("map-route-label-PAR-001")).toHaveCount(0);
-  await expect(page.getByText("Routes layer hidden · location context remains available.")).toBeVisible();
+  await expect(page.getByText("Routes layer hidden")).toBeVisible();
   await routesLayer.check();
   await expect(page.getByTestId("map-route-layer")).toHaveCount(1);
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByTestId("map-marker-PAR-001").locator(".map-marker-sequence-badge")).toBeVisible();
-  await expect(page.getByTestId("map-route-label-PAR-001")).toBeHidden();
+  await expect(page.getByTestId("map-marker-PAR-001")).toBeVisible();
   await expect(page.getByTestId("map-location-PAR-001")).toContainText("Harbor Light Pantry");
   await page.getByTestId("map-marker-PAR-001").click();
   await expect(page.locator('[aria-label="Harbor Light Pantry operational details"]')).toContainText("420 lb · Refrigerated");

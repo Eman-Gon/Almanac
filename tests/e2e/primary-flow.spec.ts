@@ -67,7 +67,9 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
   await page.goto("/map?mission=MSN-104");
   await expect(page.getByTestId("map-route-layer")).toHaveAttribute("data-route-status", "superseded");
   await expect(page.getByText("Superseded route", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("Original route superseded by the human-approved replacement mission.")).toBeVisible();
+  await expect(
+    page.getByText("Original route superseded by the human-approved replacement mission."),
+  ).toBeVisible();
   await expect(page.getByText("Human-approved route currently in execution.")).toHaveCount(0);
   await page.goto("/map?mission=MSN-105");
   const recoveredRouteRows = page.locator(".map-location-section").first().locator('[data-testid^="map-location-"]');

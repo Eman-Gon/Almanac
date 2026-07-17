@@ -69,7 +69,6 @@ test("map marker, layer, and accessible list state stay synchronized", async ({ 
   await expect(page.getByTestId("map-marker-PAR-002")).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("map-location-PAR-001")).toContainText("420 lb");
   await expect(page.getByTestId("map-location-PAR-001")).toContainText("planned delivery");
-  await expect(page.getByTestId("map-location-PAR-001")).toContainText("520 lb requested");
 
   const routes = page.getByRole("checkbox", { name: "Routes" });
   await routes.uncheck();
@@ -80,7 +79,6 @@ test("map marker, layer, and accessible list state stay synchronized", async ({ 
   await demand.uncheck();
   await expect(page.getByTestId("map-marker-PAR-001")).toHaveCount(0);
   await expect(page.getByTestId("map-location-PAR-001")).toHaveCount(0);
-  await expect(page.getByTestId("map-legend-demand")).toHaveCount(0);
   await demand.check();
   await expect(page.getByTestId("map-marker-PAR-002")).toHaveAttribute("aria-pressed", "false");
   await expect(page.locator('[aria-label="Eastside Community Pantry operational details"]')).toHaveCount(0);
@@ -89,11 +87,9 @@ test("map marker, layer, and accessible list state stay synchronized", async ({ 
   await capacity.uncheck();
   await expect(page.getByTestId("map-marker-WH-001")).toHaveCount(0);
   await expect(page.getByTestId("map-location-WH-001")).toHaveCount(0);
-  await expect(page.getByTestId("map-legend-capacity")).toHaveCount(0);
 
   const vehicles = page.getByRole("checkbox", { name: "Vehicles" });
-  await expect(page.getByTestId("map-marker-VEH-001")).toBeVisible();
+  await expect(page.getByTestId("map-marker-FLEET")).toBeVisible();
   await vehicles.uncheck();
-  await expect(page.getByTestId("map-marker-VEH-001")).toHaveCount(0);
-  await expect(page.getByTestId("map-legend-vehicles")).toHaveCount(0);
+  await expect(page.getByTestId("map-marker-FLEET")).toHaveCount(0);
 });

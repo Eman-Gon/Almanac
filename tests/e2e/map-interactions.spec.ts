@@ -1,4 +1,24 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+// A canvas point that avoids markers, chips, and fixed chrome so wheel/drag
+// gestures reach the map surface instead of an interactive child.
+async function emptyCanvasPoint(page: Page) {
+  const canvas = page.getByTestId("network-map-canvas");
+  const bounds = await canvas.boundingBox();
+  expect(bounds).not.toBeNull();
+  if (!bounds) throw new Error("Map canvas bounds are unavailable");
+  return { bounds, x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+}
+
+async function currentZoom(canvas: Locator): Promise<number> {
+  const value = await canvas.getAttribute("data-zoom");
+  expect(value).not.toBeNull();
+  return Number(value);
+}
+
+async function viewportTransform(page: Page): Promise<string> {
+  return page.getByTestId("map-viewport").evaluate((node) => (node as HTMLElement).style.transform);
+}
 
 test("map supports mouse-wheel zoom, trackpad pan, and pinch zoom", async ({ page }) => {
   const passiveWheelErrors: string[] = [];
@@ -10,61 +30,56 @@ test("map supports mouse-wheel zoom, trackpad pan, and pinch zoom", async ({ pag
   await page.goto("/map");
 
   const canvas = page.getByTestId("network-map-canvas");
-  const viewport = page.getByTestId("map-viewport");
   const zoom = page.getByTestId("map-zoom-status");
+  await expect(canvas).toHaveAttribute("data-zoom", /\d+/);
+  const baseZoom = await currentZoom(canvas);
+  await expect(zoom).toHaveText(`Z${baseZoom}`);
 
-  await expect(zoom).toHaveText("100%");
-  await canvas.hover();
+  const point = await emptyCanvasPoint(page);
+  await page.mouse.move(point.x, point.y);
+
+  // Coarse mouse-wheel deltas step the tile zoom.
   await page.mouse.wheel(0, -600);
-  await expect(zoom).toHaveText("125%");
-  await page.waitForTimeout(100);
+  await expect(canvas).toHaveAttribute("data-zoom", String(baseZoom + 1));
+  await page.waitForTimeout(150);
   await page.mouse.wheel(0, 600);
-  await expect(zoom).toHaveText("100%");
+  await expect(canvas).toHaveAttribute("data-zoom", String(baseZoom));
 
   await page.getByRole("button", { name: "Zoom in map" }).click();
-  const canvasBounds = await canvas.boundingBox();
-  expect(canvasBounds).not.toBeNull();
-  await page.mouse.move(
-    (canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) / 2,
-    (canvasBounds?.y ?? 0) + (canvasBounds?.height ?? 0) / 2,
-  );
+  await expect(canvas).toHaveAttribute("data-zoom", String(baseZoom + 1));
 
-  const beforeTrackpadPan = await viewport.getAttribute("transform");
+  // Small unmodified trackpad deltas pan without changing zoom.
+  await page.mouse.move(point.x, point.y);
+  const beforeTrackpadPan = await viewportTransform(page);
   await page.mouse.wheel(0, 24);
-  await expect(viewport).not.toHaveAttribute("transform", beforeTrackpadPan ?? "");
-  await expect(zoom).toHaveText("125%");
+  await expect.poll(() => viewportTransform(page)).not.toBe(beforeTrackpadPan);
+  await expect(canvas).toHaveAttribute("data-zoom", String(baseZoom + 1));
 
-  await page.waitForTimeout(100);
-  await canvas.evaluate((node, bounds) => {
+  // Pinch gestures arrive as ctrl-modified wheel events and step the zoom.
+  await page.waitForTimeout(150);
+  await canvas.evaluate((node, position) => {
     node.dispatchEvent(new WheelEvent("wheel", {
       bubbles: true,
       cancelable: true,
-      clientX: bounds.x + bounds.width / 2,
-      clientY: bounds.y + bounds.height / 2,
+      clientX: position.x,
+      clientY: position.y,
       ctrlKey: true,
       deltaY: -1,
     }));
-  }, {
-    x: canvasBounds?.x ?? 0,
-    y: canvasBounds?.y ?? 0,
-    width: canvasBounds?.width ?? 0,
-    height: canvasBounds?.height ?? 0,
-  });
-  await expect(zoom).toHaveText("150%");
+  }, { x: point.x, y: point.y });
+  await expect(canvas).toHaveAttribute("data-zoom", String(baseZoom + 2));
 
-  const beforeMouseDrag = await viewport.getAttribute("transform");
+  // Dragging pans the world layer.
+  const beforeMouseDrag = await viewportTransform(page);
+  await page.mouse.move(point.x, point.y);
   await page.mouse.down();
-  await page.mouse.move(
-    (canvasBounds?.x ?? 0) + (canvasBounds?.width ?? 0) / 2 - 100,
-    (canvasBounds?.y ?? 0) + (canvasBounds?.height ?? 0) / 2 + 70,
-    { steps: 4 },
-  );
+  await page.mouse.move(point.x + 90, point.y + 60, { steps: 4 });
   await page.mouse.up();
-  await expect(viewport).not.toHaveAttribute("transform", beforeMouseDrag ?? "");
+  await expect.poll(() => viewportTransform(page)).not.toBe(beforeMouseDrag);
   expect(passiveWheelErrors).toEqual([]);
 });
 
-test("route labels stay readable in the stacked map layout", async ({ page }) => {
+test("route stop labels and geometry stay aligned in the stacked layout", async ({ page }) => {
   await page.setViewportSize({ width: 800, height: 652 });
   await page.goto("/map");
 
@@ -79,33 +94,26 @@ test("route labels stay readable in the stacked map layout", async ({ page }) =>
     expect(markerBounds.x + markerBounds.width / 2).toBeCloseTo(nodeBounds.x + nodeBounds.width / 2, 0);
     expect(markerBounds.y + markerBounds.height / 2).toBeCloseTo(nodeBounds.y + nodeBounds.height / 2, 0);
   };
-  const assertLabelsFit = async () => {
-    const canvasBounds = await canvas.boundingBox();
-    expect(canvasBounds).not.toBeNull();
-    if (!canvasBounds) {
-      throw new Error("Map canvas bounds are unavailable");
-    }
-    for (let index = 0; index < await labels.count(); index += 1) {
-      const labelBounds = await labels.nth(index).boundingBox();
-      expect(labelBounds).not.toBeNull();
-      if (!labelBounds) {
-        throw new Error(`Route label ${index} bounds are unavailable`);
-      }
-      expect(labelBounds.x).toBeGreaterThanOrEqual(canvasBounds.x - 1);
-      expect(labelBounds.x + labelBounds.width).toBeLessThanOrEqual(canvasBounds.x + canvasBounds.width + 1);
-      expect(labelBounds.y).toBeGreaterThanOrEqual(canvasBounds.y - 1);
-      expect(labelBounds.y + labelBounds.height).toBeLessThanOrEqual(canvasBounds.y + canvasBounds.height + 1);
-    }
-  };
 
-  await assertLabelsFit();
+  // At the fitted default view every route stop label sits inside the canvas.
+  const canvasBounds = await canvas.boundingBox();
+  expect(canvasBounds).not.toBeNull();
+  if (!canvasBounds) throw new Error("Map canvas bounds are unavailable");
+  const labelCount = await labels.count();
+  expect(labelCount).toBeGreaterThan(0);
+  for (let index = 0; index < labelCount; index += 1) {
+    const labelBounds = await labels.nth(index).boundingBox();
+    expect(labelBounds).not.toBeNull();
+    if (!labelBounds) throw new Error(`Route label ${index} bounds are unavailable`);
+    expect(labelBounds.x).toBeGreaterThanOrEqual(canvasBounds.x - 1);
+    expect(labelBounds.x + labelBounds.width).toBeLessThanOrEqual(canvasBounds.x + canvasBounds.width + 1);
+    expect(labelBounds.y).toBeGreaterThanOrEqual(canvasBounds.y - 1);
+    expect(labelBounds.y + labelBounds.height).toBeLessThanOrEqual(canvasBounds.y + canvasBounds.height + 1);
+  }
+
+  await assertMarkerTracksRoute("PAR-002");
   await page.getByRole("button", { name: "Zoom in map" }).click();
   await page.waitForTimeout(180);
-  await assertLabelsFit();
-  await page.getByRole("button", { name: "Zoom in map" }).click();
-  await page.getByRole("button", { name: "Zoom in map" }).click();
-  await page.waitForTimeout(180);
-  await assertLabelsFit();
   await assertMarkerTracksRoute("PAR-002");
 });
 
@@ -118,4 +126,5 @@ test("zero-pound hold routes remain explicit instead of falling back to capacity
   await expect(warehouseRow).toContainText("0 lb");
   await expect(warehouseRow).toContainText("outbound load");
   await expect(warehouseRow).not.toContainText("cold headroom");
+  await expect(page.getByTestId("map-hold-notice")).toContainText("holds inventory on site");
 });

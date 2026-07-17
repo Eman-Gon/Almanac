@@ -8,7 +8,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { DetailsAccordion } from "@/components/shared/details-accordion";
 import { EmptyState } from "@/components/shared/empty-state";
 import { LoadingState } from "@/components/shared/loading-state";
-import { NetworkMap, type MapLayers, type MapRouteSummary } from "@/components/shared/network-map";
+import { DecisionMap } from "@/components/map/decision-map";
+import type { MapLayers, MapRouteSummary } from "@/components/shared/network-map";
 import { Panel } from "@/components/shared/panel";
 import { partners, productLot, warehouse } from "@/data/seed/scenario";
 import { createMission } from "@/domain/execution/create-execution";
@@ -185,7 +186,6 @@ export default function MapPage() {
     ? state.approvedPlan ? "approved" : "candidate"
     : routeDisplayStatus(persistedMission, recovery, Boolean(state.approvedPlan));
   const disrupted = routeStatus === "disrupted";
-  const routeLocationIds = mission.stops.map((stop) => stop.locationId);
   const stagingLb = activePlan.allocations
     .filter((allocation) => allocation.handling === "pack")
     .reduce((total, allocation) => total + allocation.quantityLb, 0);
@@ -274,13 +274,13 @@ export default function MapPage() {
               <span className="map-control-note"><Snowflake size={15} aria-hidden="true" />Refrigerated product fit</span>
             </div>
           </div>
-          <NetworkMap
-            variant={recovery ? "recovery" : "initial"}
+          <DecisionMap
             layers={layers}
-            interactive
             routeSummary={routeSummary}
             routeStops={mission.stops}
-            routeLocationIds={routeLocationIds}
+            routeLegs={mission.routeLegs}
+            ghostRouteStops={recovery ? state.missions[scenarioContext.ids.primaryMissionId]?.stops : undefined}
+            activePlan={activePlan}
             selectedLocationId={selectedMapLocationId}
             onSelectedLocationChange={setSelectedMapLocationId}
           />
