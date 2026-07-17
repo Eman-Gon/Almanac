@@ -12,7 +12,7 @@ The MVP is not a complete food-bank operating system.
 
 ## Authoritative scope boundary
 
-The judged workflow begins **after receiving and staff condition review**. `LOT-104` is existing inventory at `WH-001`; ChoiceGrid does not schedule a donor pickup, book a driver, inspect the incoming donation, or coordinate upstream collection in the hero scenario.
+The judged workflow begins **after receiving and staff condition review**. `LOT-104` is existing inventory at `WH-001`; Almanac does not schedule a donor pickup, book a driver, inspect the incoming donation, or coordinate upstream collection in the hero scenario.
 
 Donor intake, donor pickup, Vapi outreach, and driver scheduling are not hero features. Existing experimental routes may remain only as clearly isolated, non-navigation test surfaces until removed or repurposed.
 

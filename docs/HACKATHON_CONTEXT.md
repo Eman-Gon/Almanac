@@ -113,9 +113,9 @@ Do not claim these percentages or weights as official.
 
 ---
 
-## ChoiceGrid alignment
+## Almanac alignment
 
-| Official area | ChoiceGrid contribution |
+| Official area | Almanac contribution |
 |---|---|
 | Accepting donations | Outside the hero; existing upstream systems may provide source lineage |
 | Warehousing | Identifies at-risk on-hand lots and checks storage/staging feasibility |

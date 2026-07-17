@@ -1,4 +1,4 @@
-# ChoiceGrid Validation Evidence Register
+# Almanac Validation Evidence Register
 
 ## Status summary
 
@@ -19,7 +19,7 @@ Store only de-identified summaries here. Keep participant names, contact informa
 
 | Evidence type | What it can support | What it cannot support |
 |---|---|---|
-| Official challenge request | The problem or capability was requested by challenge organizers | ChoiceGrid adoption or effectiveness |
+| Official challenge request | The problem or capability was requested by challenge organizers | Almanac adoption or effectiveness |
 | Completed operator interview | What that participant reported about their workflow | Market-wide demand |
 | Observed usability session | Whether that participant completed defined tasks in the tested scenario | Live operational impact |
 | Pilot interest | Willingness to continue a conversation | A committed pilot |

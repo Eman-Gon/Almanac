@@ -59,13 +59,13 @@ A performance measure comparing committed and actual product, quantity, timing, 
 A quantity of one product sharing relevant arrival, condition, source, and shelf-life attributes.
 
 ### At-risk inventory lot
-An existing product lot already received into the food-bank warehouse that may not move before its staff-entered or modeled risk deadline. This is the ChoiceGrid hero starting point.
+An existing product lot already received into the food-bank warehouse that may not move before its staff-entered or modeled risk deadline. This is the Almanac hero starting point.
 
 ### Agency acceptance history
 A category-specific synthetic summary of accepted, refused, and short-receipt outcomes with an explicit sample size. It informs a recommendation but never overrides current capacity, availability, temperature, or receiving-window constraints.
 
 ### Shelf life
-The expected period during which a product remains usable under stated storage conditions. ChoiceGrid treats this as an estimate requiring staff judgment.
+The expected period during which a product remains usable under stated storage conditions. Almanac treats this as an estimate requiring staff judgment.
 
 ### Expiration risk
 A modeled risk that product will become unusable before it can move through the planned workflow.
@@ -145,7 +145,7 @@ The arrangement of stations, materials, workers, and tasks for a packing run.
 Placing required product and materials near a dock, route, or production line before execution.
 
 ### Mission
-An approved operational warehouse-load and partner-delivery plan. The ChoiceGrid hero begins at `WH-001` and contains no donor pickup.
+An approved operational warehouse-load and partner-delivery plan. The Almanac hero begins at `WH-001` and contains no donor pickup.
 
 ### Route stop
 The warehouse origin or a partner destination in the hero mission sequence.
@@ -180,7 +180,7 @@ A scheduled distribution using a vehicle or temporary site to reach locations wi
 
 ---
 
-## ChoiceGrid-specific terms
+## Almanac-specific terms
 
 ### Plan option
 One complete proposed way to accept, allocate, pack, and deliver a donation.

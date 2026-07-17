@@ -2,7 +2,7 @@
 
 ## Architecture principle
 
-ChoiceGrid uses a set of specialized agents, but the word **agent** does not mean unrestricted autonomy. Each agent has a narrow contract, structured inputs and outputs, explicit failure behavior, and human review where consequences matter.
+Almanac uses a set of specialized agents, but the word **agent** does not mean unrestricted autonomy. Each agent has a narrow contract, structured inputs and outputs, explicit failure behavior, and human review where consequences matter.
 
 Quantitative calculations must be deterministic. LLMs may interpret text and produce explanations but must not be the source of authoritative capacities, quantities, route distances, or food-safety decisions.
 

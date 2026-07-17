@@ -1,6 +1,6 @@
-# ChoiceGrid mobile (Expo Go)
+# Almanac mobile (Expo Go)
 
-Native shell that opens the **hosted ChoiceGrid web app** in a WebView. It is not a separate ops backend and does not rewrite the control-tower UI in React Native.
+Native shell that opens the **hosted Almanac web app** in a WebView. It is not a separate ops backend and does not rewrite the control-tower UI in React Native.
 
 Demo state (`localStorage`) lives inside the WebView on this device. It does not sync with desktop browsers.
 
@@ -9,7 +9,7 @@ Demo state (`localStorage`) lives inside the WebView on this device. It does not
 ## Prerequisites
 
 - [Expo Go](https://expo.dev/go) on iOS or Android
-- A reachable ChoiceGrid URL:
+- A reachable Almanac URL:
   - **Production:** your Vercel deployment (see [`docs/DEPLOY.md`](../docs/DEPLOY.md))
   - **Local:** `npm run dev` on your computer, then use the machine **LAN IP** (for example `http://192.168.1.20:3000`). Phones cannot use `localhost` to reach your laptop.
 

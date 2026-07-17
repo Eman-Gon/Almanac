@@ -4,7 +4,7 @@
 
 Show one coherent 90-second story:
 
-> A perishable lot is already sitting in the food-bank warehouse. ChoiceGrid combines current constraints with agency acceptance history, compares outbound plans, requires human approval, creates warehouse-origin instructions, and recovers when an agency cancels.
+> A perishable lot is already sitting in the food-bank warehouse. Almanac combines current constraints with agency acceptance history, compares outbound plans, requires human approval, creates warehouse-origin instructions, and recovers when an agency cancels.
 
 ---
 

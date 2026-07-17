@@ -9,7 +9,7 @@ import {
   PackageCheck,
   Snowflake,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { DetailsAccordion } from "@/components/shared/details-accordion";
 import { LoadingState } from "@/components/shared/loading-state";
@@ -25,6 +25,28 @@ export function PackingPlanClient({
 }) {
   const router = useRouter();
   const { state, hydrated, startPacking, setPackingBatchComplete } = useDemoState();
+  const [alertStatus, setAlertStatus] = useState<string | null>(null);
+
+  async function handleStartPacking() {
+    startPacking(packingPlanId);
+    if (packingPlanId !== "PKG-104") return;
+    setAlertStatus("Calling coordinator about the Eastside cancellation…");
+    try {
+      const response = await fetch("/api/communications/disruption-alert", { method: "POST" });
+      const payload = await response.json().catch(() => null);
+      if (response.ok && payload?.data) {
+        setAlertStatus(
+          payload.data.mode === "live"
+            ? "Disruption alert call placed — your phone should ring shortly."
+            : "Disruption alert previewed (enable live calls to actually dial).",
+        );
+      } else {
+        setAlertStatus(payload?.error?.message ?? "The disruption alert call could not be placed.");
+      }
+    } catch {
+      setAlertStatus("The disruption alert call could not be placed.");
+    }
+  }
   const planSet = useMemo(() => generatePlanSet(), []);
   const selectedPlan =
     (packingPlanId === "PKG-105" ? state.disruption?.recoveryOption : state.approvedPlan) ??
@@ -115,13 +137,15 @@ export function PackingPlanClient({
               </div>
             </Panel>
             <DetailsAccordion title="Label preview">
-              <div className="batch-label"><span>CHOICEGRID · LOT-104</span><strong>STRAWBERRIES</strong><span>KEEP REFRIGERATED</span><div><small>Mission</small><b>{packingPlanId === "PKG-105" ? "MSN-105" : "MSN-104"}</b><small>Source</small><b>Simulated scenario</b></div></div>
+              <div className="batch-label"><span>ALMANAC · LOT-104</span><strong>STRAWBERRIES</strong><span>KEEP REFRIGERATED</span><div><small>Mission</small><b>{packingPlanId === "PKG-105" ? "MSN-105" : "MSN-104"}</b><small>Source</small><b>Simulated scenario</b></div></div>
             </DetailsAccordion>
           </div>
         </div>
 
+        {alertStatus ? <div className="guardrail-note"><CheckCircle2 size={18} aria-hidden="true" /><div><strong>Disruption alert</strong><span>{alertStatus}</span></div></div> : null}
+
         <StickyActionBar status={<><CheckCircle2 size={20} aria-hidden="true" /><span><strong>{completedCount} of {packingPlan.batches.length} batches checked</strong><small>Packing completion persists and does not change approved allocations.</small></span></>}>
-          {!started && !historical ? <button className="button button-secondary" type="button" onClick={() => startPacking(packingPlan.id)}>Start packing</button> : null}
+          {!started && !historical ? <button className="button button-secondary" type="button" onClick={handleStartPacking}>Start packing</button> : null}
           <button className="button button-primary" type="button" onClick={() => router.push(packingPlanId === "PKG-105" ? "/missions/MSN-105" : "/missions/MSN-104")}>{started ? "Continue to mission" : "Create mission"}<ArrowRight size={16} aria-hidden="true" /></button>
         </StickyActionBar>
       </div>

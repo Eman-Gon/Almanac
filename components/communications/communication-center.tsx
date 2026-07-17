@@ -118,7 +118,7 @@ function ResponseCard({ response, recipient }: { response: Response; recipient: 
         <ol>
           {response.transcript.map((turn, index) => (
             <li key={`${turn.speaker}-${index}`}>
-              <strong>{turn.speaker === "choicegrid" ? "ChoiceGrid" : "Partner fixture"}</strong>
+              <strong>{turn.speaker === "choicegrid" ? "Almanac" : "Partner fixture"}</strong>
               <span>{turn.text}</span>
             </li>
           ))}
@@ -220,7 +220,7 @@ export function CommunicationCenter() {
           <ShieldCheck size={21} aria-hidden="true" />
           <div>
             <strong>Simulation only — no calls are placed</strong>
-            <span>This isolated experiment never contacts a provider or changes ChoiceGrid state.</span>
+            <span>This isolated experiment never contacts a provider or changes Almanac state.</span>
           </div>
           <DemoDataBadge />
         </div>
@@ -272,7 +272,7 @@ export function CommunicationCenter() {
           <span className={styles.eyebrow}><Sparkles size={14} aria-hidden="true" />Voice coordination preview</span>
           <h2 id="outreach-simulation-title">One approval. {preview.recipients.length} simulated partner conversations.</h2>
           <p>
-            ChoiceGrid turns the current approved release into consistent, reviewable
+            Almanac turns the current approved release into consistent, reviewable
             partner scripts, then demonstrates how structured responses could return.
           </p>
         </div>

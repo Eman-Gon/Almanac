@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { generatePlanSet } from "@/domain/planning/generate-plans";
 import { validatePlanOption } from "@/domain/planning/quantity";
-import { scenarioContext, type ChoiceGridScenarioContext } from "@/domain/planning/scenario-context";
+import { scenarioContext, type AlmanacScenarioContext } from "@/domain/planning/scenario-context";
 import { createRecoveryOptionResult } from "@/domain/recovery/create-recovery";
 import {
   approvePlanTransition,
@@ -9,7 +9,7 @@ import {
   triggerPartnerCancellationTransition,
 } from "@/domain/workflow/transitions";
 
-function secondScenario(): ChoiceGridScenarioContext {
+function secondScenario(): AlmanacScenarioContext {
   const roleIds = ["PAR-A", "PAR-B", "PAR-C", "PAR-D"];
   const partners = scenarioContext.partners.map((partner, index) => {
     if (index >= roleIds.length) return partner;

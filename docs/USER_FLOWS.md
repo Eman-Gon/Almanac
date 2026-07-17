@@ -12,7 +12,7 @@ Confirms on-hand quantity, location, risk deadline, temperature class, and staff
 Reviews storage, staging, packing, and handling instructions.
 
 ### Dispatcher
-Reviews the approved warehouse-origin route and handles disruptions; ChoiceGrid does not schedule drivers in the MVP.
+Reviews the approved warehouse-origin route and handles disruptions; Almanac does not schedule drivers in the MVP.
 
 ### Partner-agency coordinator
 Maintains current capacity, demand, receiving hours, and category-specific acceptance/refusal/short-receipt history.
@@ -174,7 +174,7 @@ The presenter uses **Reset scenario** to restore `LOT-104`, agency history, capa
 2. Before plan approval, the screen shows a prerequisite state and cannot run.
 3. After plan or recovery approval, the screen derives recipient scripts from the active approved allocations and canonical partner facts.
 4. User reviews every exact script, enters an authorization reason, and confirms a local simulation.
-5. ChoiceGrid produces deterministic synthetic responses and transcripts with no network request.
+5. Almanac produces deterministic synthetic responses and transcripts with no network request.
 6. The screen labels every response unverified and confirms that operational state did not change.
 
 The flow never requests contact information, records audio, calls a provider,
@@ -185,13 +185,13 @@ or writes its preview timeline into `DemoState`.
 ## Flow 12 — Multi-item warehouse triage (secondary scenario)
 
 1. User opens **Demo controls** and selects **Multi-item Warehouse Day**.
-2. ChoiceGrid navigates to `/inventory/preview`; the route, not temporary UI state, identifies the scenario.
+2. Almanac navigates to `/inventory/preview`; the route, not temporary UI state, identifies the scenario.
 3. User reviews four independent lots ranked by the deterministic scenario clock, risk signal, and compatible storage pressure.
 4. Selecting a lot reveals its condition, handling, headroom, deadline, and explanation.
-5. ChoiceGrid calculates one grouped release preview while conserving every `productLotId` independently.
+5. Almanac calculates one grouped release preview while conserving every `productLotId` independently.
 6. Frozen chicken remains entirely in inspection hold because staff confirmation is missing.
 7. User reviews the four-lot reconciliation, checks the human-authorization control, and approves the local preview.
-8. ChoiceGrid reveals four grouped agency outreach drafts labeled synthetic and not sent.
+8. Almanac reveals four grouped agency outreach drafts labeled synthetic and not sent.
 9. Reload clears local approval but keeps the route-selected scenario label; Strawberry Rescue state is unchanged.
 10. User returns to `/dashboard` to continue the executable hero.
 

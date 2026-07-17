@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { scenarioContext, type ChoiceGridScenarioContext } from "@/domain/planning/scenario-context";
+import { scenarioContext, type AlmanacScenarioContext } from "@/domain/planning/scenario-context";
 import {
   ConfidenceSchema,
   EntityIdSchema,
@@ -105,7 +105,7 @@ function addSeconds(value: string, seconds: number): string {
 
 function partnerFor(
   destinationId: string,
-  context: ChoiceGridScenarioContext,
+  context: AlmanacScenarioContext,
 ): PartnerAgency {
   const partner = context.partners.find((candidate) => candidate.id === destinationId);
   if (!partner) {
@@ -117,12 +117,12 @@ function partnerFor(
 function draftScript(
   partner: PartnerAgency,
   quantityLb: number,
-  context: ChoiceGridScenarioContext,
+  context: AlmanacScenarioContext,
 ): string {
   const lot = context.productLot;
   const warehouse = context.warehouse;
   return [
-    `This is the ChoiceGrid automated assistant with a simulated message for ${partner.name}.`,
+    `This is the Almanac automated assistant with a simulated message for ${partner.name}.`,
     `A human-approved plan assigns ${quantityLb.toLocaleString()} pounds of ${lot.productName.toLowerCase()} from ${warehouse.name}.`,
     `The product is ${lot.temperatureClass} and the modeled risk deadline is ${lot.riskDeadline}.`,
     "Please confirm the quantity and receiving window in this simulation.",
@@ -134,7 +134,7 @@ function draftRecipient(
   plan: PlanOption,
   destinationId: string,
   quantityLb: number,
-  context: ChoiceGridScenarioContext,
+  context: AlmanacScenarioContext,
 ): z.infer<typeof OutreachRecipientSchema> {
   const partner = partnerFor(destinationId, context);
   if (partner.status === "unavailable" || partner.status === "canceled") {
@@ -170,7 +170,7 @@ function draftRecipient(
 
 export function createVoiceOutreachPreview(
   rawPlan: PlanOption,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): VoiceOutreachPreview {
   const plan = ApprovedPlanSchema.parse(rawPlan);
   const recipients = plan.allocations
@@ -307,7 +307,7 @@ function simulateResponse(
 
 export function simulateVoiceOutreach(
   rawPreview: VoiceOutreachPreview,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): VoiceOutreachPreview {
   const preview = VoiceOutreachPreviewSchema.parse(rawPreview);
   if (preview.status === "simulated") return preview;

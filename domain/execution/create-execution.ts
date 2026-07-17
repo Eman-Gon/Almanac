@@ -1,5 +1,5 @@
 import { getDestinationName } from "@/domain/planning/generate-plans";
-import { scenarioContext, type ChoiceGridScenarioContext } from "@/domain/planning/scenario-context";
+import { scenarioContext, type AlmanacScenarioContext } from "@/domain/planning/scenario-context";
 import type { AuditEvent, Mission, PackingPlan, PlanOption } from "@/domain/types";
 
 function stagingFor(plan: PlanOption, destinationId: string): string {
@@ -8,7 +8,7 @@ function stagingFor(plan: PlanOption, destinationId: string): string {
   return "Cross-dock outbound · Lane B";
 }
 
-function receivingWindowFor(destinationId: string, context: ChoiceGridScenarioContext) {
+function receivingWindowFor(destinationId: string, context: AlmanacScenarioContext) {
   const partner = context.partners.find((candidate) => candidate.id === destinationId);
   const window = partner?.receivingWindows[0];
   if (!window) {
@@ -20,7 +20,7 @@ function receivingWindowFor(destinationId: string, context: ChoiceGridScenarioCo
 export function createPackingPlan(
   plan: PlanOption,
   packingPlanId = scenarioContext.ids.primaryPackingPlanId,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): PackingPlan {
   const batchNumberOffset = packingPlanId === context.ids.recoveryPackingPlanId ? 100 : 0;
   const batches: PackingPlan["batches"] = plan.allocations.map((allocation, index) => ({
@@ -110,7 +110,7 @@ function scaleRouteLegs(
   });
 }
 
-function locationPoint(locationId: string, context: ChoiceGridScenarioContext): [number, number] {
+function locationPoint(locationId: string, context: AlmanacScenarioContext): [number, number] {
   const location = locationId === context.warehouse.id
     ? context.warehouse.location
     : context.partners.find((partner) => partner.id === locationId)?.location;
@@ -120,8 +120,8 @@ function locationPoint(locationId: string, context: ChoiceGridScenarioContext): 
 function routeLegs(
   stops: Mission["stops"],
   targetMiles: number,
-  template: ChoiceGridScenarioContext["routes"]["primary"],
-  context: ChoiceGridScenarioContext,
+  template: AlmanacScenarioContext["routes"]["primary"],
+  context: AlmanacScenarioContext,
 ): Mission["routeLegs"] {
   return scaleRouteLegs(stops.slice(0, -1).map((stop, index) => ({
     fromStopId: stop.id,
@@ -135,7 +135,7 @@ function routeLegs(
 export function createMission(
   plan: PlanOption,
   missionId = scenarioContext.ids.primaryMissionId,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): Mission {
   const recovery = missionId === context.ids.recoveryMissionId;
   const warehouseAllocationLb = plan.allocations
@@ -239,7 +239,7 @@ export function getNextCompletableMissionStopId(mission: Mission): string | null
 export function createApprovalAuditEvent(
   plan: PlanOption,
   reason?: string,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): AuditEvent {
   return {
     id: "AUD-102",

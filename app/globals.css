@@ -9,7 +9,7 @@
  * contrast: 28/28 AA — npm run check:contrast
  */
 
-/* Cold Chain — ChoiceGrid's palette encodes temperature, not decoration.
+/* Cold Chain — Almanac's palette encodes temperature, not decoration.
  *
  * The product's governing variable is whether perishable inventory stays cold.
  * So the workspace is cool by default: every neutral is a teal-shifted slate,
@@ -4043,7 +4043,7 @@ a {
   .dialog-actions .button { flex: 1; }
 }
 
-/* ChoiceGrid information architecture refactor */
+/* Almanac information architecture refactor */
 .page-header {
   min-height: 0;
   align-items: flex-start;

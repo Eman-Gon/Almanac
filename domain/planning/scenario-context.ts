@@ -45,7 +45,7 @@ type StrategyEstimate = {
 
 type RouteTemplateLeg = { distanceMiles: number; durationMinutes: number };
 
-export type ChoiceGridScenarioContext = PlanValidationContext & {
+export type AlmanacScenarioContext = PlanValidationContext & {
   scenario: {
     id: string;
     scoreConfigVersion: string;
@@ -113,7 +113,7 @@ export type ChoiceGridScenarioContext = PlanValidationContext & {
   };
 };
 
-export const scenarioContext: ChoiceGridScenarioContext = {
+export const scenarioContext: AlmanacScenarioContext = {
   scenario,
   ids: { ...scenario.workflow },
   donor,

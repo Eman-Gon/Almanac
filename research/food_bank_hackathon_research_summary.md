@@ -3,7 +3,7 @@
 **Prepared:** July 16, 2026  
 **Purpose:** Consolidate the important hackathon requirements, Reddit findings, research analytics, formal evidence, competitor landscape, product ideas, and final recommendation developed during this research process.
 
-> **Most important conclusion:** The strongest opportunity identified in the reviewed evidence is not another pantry locator, recipe chatbot, donation listing board, or ordinary routing app. ChoiceGrid's **hypothesized integration wedge** is an AI-assisted allocation and recovery system that matches urgent food with feasible destinations, then turns the human-approved decision into a packing and delivery plan. This positioning still requires operator validation.
+> **Most important conclusion:** The strongest opportunity identified in the reviewed evidence is not another pantry locator, recipe chatbot, donation listing board, or ordinary routing app. Almanac's **hypothesized integration wedge** is an AI-assisted allocation and recovery system that matches urgent food with feasible destinations, then turns the human-approved decision into a packing and delivery plan. This positioning still requires operator validation.
 
 ---
 
@@ -18,7 +18,7 @@
 7. [Existing products and crowded categories](#7-existing-products-and-crowded-categories)  
 8. [The main market and product gap](#8-the-main-market-and-product-gap)  
 9. [Top five hackathon ideas](#9-top-five-hackathon-ideas)  
-10. [Recommended project: ChoiceGrid](#10-recommended-project-choicegrid)  
+10. [Recommended project: Almanac](#10-recommended-project-choicegrid)  
 11. [MVP build plan](#11-mvp-build-plan)  
 12. [Demo metrics](#12-demo-metrics)  
 13. [Risks and guardrails](#13-risks-and-guardrails)  
@@ -79,7 +79,7 @@ A strong product should help staff answer:
 
 ## Recommended project
 
-**ChoiceGrid** — an AI-assisted food allocation and disruption-recovery control tower.
+**Almanac** — an AI-assisted food allocation and disruption-recovery control tower.
 
 A representative demo:
 
@@ -890,9 +890,9 @@ Source: [CT Insider — Connecticut Foodshare Warehouse Expansion](https://www.c
 |---|---|---|
 | **Plentiful** | Pantry finder, reservations, multilingual access, digital check-in, messaging, reporting, network insights | Do not build only a pantry locator or reservation tool |
 | **Vivery** | Centralized food-resource map, agency updates, language and food-category information, analytics | A public find-food map is already crowded |
-| **MealConnect** | Connects food banks, donors, partner agencies, and pickups for scheduled and real-time donations | A donation-posting and pickup marketplace is not ChoiceGrid's intended wedge |
+| **MealConnect** | Connects food banks, donors, partner agencies, and pickups for scheduled and real-time donations | A donation-posting and pickup marketplace is not Almanac's intended wedge |
 | **Food Rescue Hero** | Volunteer scheduling, donor coordination, rescue tracking, mobile workflows, dashboards, equity analytics | Generic rescue dispatch is already mature |
-| **Careit** | Donation posting, matching, pickup coordination, records, reporting, and publicly described impact tracking | Position ChoiceGrid as a complementary allocation and recovery layer |
+| **Careit** | Donation posting, matching, pickup coordination, records, reporting, and publicly described impact tracking | Position Almanac as a complementary allocation and recovery layer |
 | **Link2Feed** | Client intake, household and program tracking, reporting, volunteer tools, delivery integration | Do not rebuild case management |
 | **PantrySoft** | CRM, visit tracking, inventory, client portal, online ordering, reporting, volunteer platform | Pantry management and online ordering are crowded |
 
@@ -958,7 +958,7 @@ It is:
 
 # 9. Top five hackathon ideas
 
-## 1. ChoiceGrid
+## 1. Almanac
 
 **Target user:** food-bank allocation, warehouse, and transportation managers.
 
@@ -1069,15 +1069,15 @@ It is:
 
 ---
 
-# 10. Recommended project: ChoiceGrid
+# 10. Recommended project: Almanac
 
 ## Product statement
 
-> **ChoiceGrid helps food-bank staff decide where urgent food should go, how it should be packed, and how to recover when the plan changes—using shelf life, capacity, access, community need, and product usability.**
+> **Almanac helps food-bank staff decide where urgent food should go, how it should be packed, and how to recover when the plan changes—using shelf life, capacity, access, community need, and product usability.**
 
 ## Why it is the best choice
 
-ChoiceGrid combines:
+Almanac combines:
 
 - DonationIQ's donation interpretation
 - FreshRoute's perishable urgency
@@ -1087,7 +1087,7 @@ ChoiceGrid combines:
 
 But it keeps one clear story:
 
-> **An urgent donation arrives, and ChoiceGrid makes sure it reaches a useful destination before it spoils.**
+> **An urgent donation arrives, and Almanac makes sure it reaches a useful destination before it spoils.**
 
 ## AI-agent structure
 
@@ -1524,11 +1524,11 @@ Public product pages may not describe every internal capability. Therefore:
 
 Current adoption context:
 
-- [Feeding America — What is MealConnect?](https://www.feedingamerica.org/hunger-blog/what-mealconnect-learn-about-feeding-americas-food-rescue-platform), April 14, 2026. Feeding America reported more than seven billion pounds facilitated since 2014; this is category-adoption evidence, not ChoiceGrid demand.
+- [Feeding America — What is MealConnect?](https://www.feedingamerica.org/hunger-blog/what-mealconnect-learn-about-feeding-americas-food-rescue-platform), April 14, 2026. Feeding America reported more than seven billion pounds facilitated since 2014; this is category-adoption evidence, not Almanac demand.
 - [Careit — Impact](https://careit.com/impact/). Public figures are vendor-reported and should be labeled as product-page claims.
 
 ---
 
 # Final one-sentence recommendation
 
-> Build **ChoiceGrid** as a focused AI decision-and-recovery product for urgent perishable donations: interpret the offer, compare destinations and plans, obtain human approval, generate packing and routes, recover from one disruption, and prove the result with calculated impact metrics.
+> Build **Almanac** as a focused AI decision-and-recovery product for urgent perishable donations: interpret the offer, compare destinations and plans, obtain human approval, generate packing and routes, recover from one disruption, and prove the result with calculated impact metrics.

@@ -124,7 +124,7 @@ This file records important project decisions so coding agents do not repeatedly
 ## D-014 — Existing products shape differentiation
 
 **Status:** Accepted
-**Decision:** ChoiceGrid will not be positioned as only a pantry locator, reservation system, donation marketplace, volunteer pickup app, client CRM, or inventory dashboard.
+**Decision:** Almanac will not be positioned as only a pantry locator, reservation system, donation marketplace, volunteer pickup app, client CRM, or inventory dashboard.
 **Reason:** Reviewed products already cover those categories.
 **Consequence:** The pitch emphasizes closed-loop allocation, packing, route, recovery, and impact.
 
@@ -153,7 +153,7 @@ This file records important project decisions so coding agents do not repeatedly
 ## D-017 — Start with existing at-risk warehouse inventory
 
 **Status:** Accepted
-**Decision:** The hero begins with `LOT-104`, 1,200 lb of strawberries already received at `WH-001`. ChoiceGrid combines current agency constraints with category-specific acceptance/refusal/short-receipt history, compares outbound plans, requires human approval, creates packing and warehouse-origin delivery instructions, and replans after a partner cancellation. Donor intake, donor pickup, Vapi outreach, and driver scheduling are not hero features.
+**Decision:** The hero begins with `LOT-104`, 1,200 lb of strawberries already received at `WH-001`. Almanac combines current agency constraints with category-specific acceptance/refusal/short-receipt history, compares outbound plans, requires human approval, creates packing and warehouse-origin delivery instructions, and replans after a partner cancellation. Donor intake, donor pickup, Vapi outreach, and driver scheduling are not hero features.
 **Reason:** Authoritative hackathon-operator product direction says upstream donor collection introduces too many scheduling, quality-review, and handling steps; the higher-value problem is deciding where existing over-inventory should go before it spoils.
 **Evidence boundary:** This is authoritative challenge/product direction, not consent to publish a person's identity or raw transcript, not proof of broad user demand, and not a pilot commitment.
 **Alternatives considered:** Preserve the donor-first story; add existing inventory as a secondary tab; broaden into a logistics scheduler.
@@ -174,7 +174,7 @@ This file records important project decisions so coding agents do not repeatedly
 ## D-019 — Simulate partner voice outreach without external delivery
 
 **Status:** Accepted
-**Decision:** ChoiceGrid may expose a direct-route-only partner voice-outreach simulation after a human-approved plan or recovery. It creates deterministic scripts and clearly synthetic responses from approved allocations and canonical seeded facts. It never requests a phone number or microphone, calls or polls a provider, records a commitment, or mutates operational state.
+**Decision:** Almanac may expose a direct-route-only partner voice-outreach simulation after a human-approved plan or recovery. It creates deterministic scripts and clearly synthetic responses from approved allocations and canonical seeded facts. It never requests a phone number or microphone, calls or polls a provider, records a commitment, or mutates operational state.
 **Reason:** One-to-many voice coordination demonstrates how staff could reduce repetitive outreach while keeping the warehouse-inventory workflow, exact quantities, and human control intact. A local simulation proves the interaction without making a live communications dependency part of the product.
 **Alternatives considered:** Put Vapi in the judged flow; collect live pre-plan capacity; clone a staff member's voice; leave the obsolete donor-first test form as the communication experience.
 **Consequence:** `/communications` remains absent from primary navigation and the judged demo. It requires an approved plan plus a separate preview-authorization reason, validates output with `voice-outreach-sim-v1`, labels all responses synthetic and unverified, and leaves `DemoState`, product metrics, and operational audit history byte-for-byte unchanged. Legacy Vapi endpoints remain developer-only and disconnected from this user surface.
@@ -184,7 +184,7 @@ This file records important project decisions so coding agents do not repeatedly
 ## D-020 — Add multi-item triage as an isolated secondary scenario
 
 **Status:** Accepted
-**Decision:** ChoiceGrid exposes `SCN-MULTI-ITEM-001` at `/inventory/preview` with four separate warehouse lots, deterministic urgency ranking, per-lot reconciliation, cumulative partner preview capacity, a human checkpoint, and grouped outreach drafts. Strawberry Rescue remains the only executable packing, mission, disruption, and impact workflow.
+**Decision:** Almanac exposes `SCN-MULTI-ITEM-001` at `/inventory/preview` with four separate warehouse lots, deterministic urgency ranking, per-lot reconciliation, cumulative partner preview capacity, a human checkpoint, and grouped outreach drafts. Strawberry Rescue remains the only executable packing, mission, disruption, and impact workflow.
 **Reason:** Real warehouse staff may face peanut butter, cabbage, blueberries, chicken, and other overstock together. Demonstrating portfolio triage strengthens the product story, but the current `PlanSet`, packing, mission, and route contracts are singular and cannot safely represent mixed-product execution.
 **Alternatives considered:** Replace the hero with multiple products; add untyped rows that only look operational; force aggregate pounds into the single-lot mission model; defer all multi-item evidence.
 **Consequence:** The secondary route uses `multi-item-preview-v1`, `inventory-urgency-v1`, and `multi-item-match-v1`, never `Date.now()`. Every allocation carries a `productLotId`; equal aggregate totals cannot hide product substitution. Frozen chicken stays in inspection hold pending staff confirmation. Local approval reveals drafts but never mutates `choicegrid-demo-v3`, reserves pounds, contacts partners, or creates packing, mission, route, impact, or operational audit records.

@@ -1,4 +1,4 @@
-# ChoiceGrid Product Specification and Coding Brief
+# Almanac Product Specification and Coding Brief
 
 **Status:** Approved hackathon direction  
 **Audience:** Coding agents, designers, QA agents, technical leads, and presentation agents  
@@ -11,9 +11,9 @@
 
 ## 1. How coding agents should use this file
 
-This is the single product-level starting document for **ChoiceGrid**. It explains what the product is, why it exists, the workflow that must be built, and how the complete demo should behave.
+This is the single product-level starting document for **Almanac**. It explains what the product is, why it exists, the workflow that must be built, and how the complete demo should behave.
 
-It does **not** replace the detailed Markdown files already provided in the ChoiceGrid documentation pack.
+It does **not** replace the detailed Markdown files already provided in the Almanac documentation pack.
 
 Before changing code:
 
@@ -35,7 +35,7 @@ When this file summarizes a topic and a detailed companion contract is more spec
 |---|---|
 | [`AGENTS.md`](AGENTS.md) | Mandatory coding-agent rules, source priority, tests, coding standards, and prohibited changes |
 | [`README.md`](README.md) | Stack, setup, commands, routes, environment variables, and local run instructions |
-| `CHOICEGRID_PRODUCT_SPEC.md` | This product north star and coding brief |
+| `ALMANAC_PRODUCT_SPEC.md` | This product north star and coding brief |
 | [`DEMO_SCRIPT.md`](DEMO_SCRIPT.md) | Three-to-five-minute walkthrough, backup paths, and 90-second cut |
 | [`PITCH_DECK_OUTLINE.md`](PITCH_DECK_OUTLINE.md) | Evidence-safe slide outline and speaker notes |
 | [`BACKUP_DEMO_VIDEO.md`](BACKUP_DEMO_VIDEO.md) | Two-to-four-minute recording plan and shot list |
@@ -84,7 +84,7 @@ When this file summarizes a topic and a detailed companion contract is more spec
 
 ## 3. Product in one sentence
 
-> **ChoiceGrid helps food-bank staff move at-risk inventory already inside the warehouse before it spoils, using current agency constraints and historical acceptance to compare outbound plans, then replans when conditions change.**
+> **Almanac helps food-bank staff move at-risk inventory already inside the warehouse before it spoils, using current agency constraints and historical acceptance to compare outbound plans, then replans when conditions change.**
 
 ### Tagline
 
@@ -92,9 +92,9 @@ When this file summarizes a topic and a detailed companion contract is more spec
 
 ---
 
-## 4. What ChoiceGrid is—and is not
+## 4. What Almanac is—and is not
 
-### ChoiceGrid is
+### Almanac is
 
 - A food-bank operations decision tool
 - A human-approved AI-agent workflow
@@ -106,7 +106,7 @@ When this file summarizes a topic and a detailed companion contract is more spec
 - An explainable plan-comparison experience
 - A calculated impact and audit view
 
-### ChoiceGrid is not
+### Almanac is not
 
 - A generic chatbot
 - A recipe generator
@@ -167,7 +167,7 @@ The repeated problem is not merely a lack of food. Existing warehouse inventory 
 - Delivered through a feasible route
 - Reallocated when circumstances change
 
-ChoiceGrid connects these concerns after receiving, when staff are already sitting on inventory that must move. The authoritative hackathon direction is to avoid making upstream donor scheduling and pickup the product bottleneck.
+Almanac connects these concerns after receiving, when staff are already sitting on inventory that must move. The authoritative hackathon direction is to avoid making upstream donor scheduling and pickup the product bottleneck.
 
 ---
 
@@ -183,7 +183,7 @@ The official prompt asks teams to use AI agents to improve food-bank supply chai
 - Distribution
 - Delivery
 
-ChoiceGrid directly demonstrates:
+Almanac directly demonstrates:
 
 - Existing-inventory risk triage
 - Shelf-life urgency after warehouse receiving
@@ -651,7 +651,7 @@ The implemented layer checkboxes toggle routes, demand partners, warehouse capac
 
 ## 17. Agent architecture
 
-ChoiceGrid uses narrow agents with structured contracts.
+Almanac uses narrow agents with structured contracts.
 
 ### Inventory Risk Review Agent
 
@@ -1136,7 +1136,7 @@ Read:
 
 ```text
 AGENTS.md
-CHOICEGRID_PRODUCT_SPEC.md
+ALMANAC_PRODUCT_SPEC.md
 docs/SCOPE_AND_NON_GOALS.md
 docs/DATA_MODEL.md
 docs/API_AND_STATE_CONTRACTS.md
@@ -1221,7 +1221,7 @@ Build:
 
 ```text
 AGENTS.md
-CHOICEGRID_PRODUCT_SPEC.md
+ALMANAC_PRODUCT_SPEC.md
 docs/SCOPE_AND_NON_GOALS.md
 docs/USER_FLOWS.md
 docs/SCREEN_SPECIFICATIONS.md
@@ -1233,7 +1233,7 @@ docs/API_AND_STATE_CONTRACTS.md
 
 ```text
 AGENTS.md
-CHOICEGRID_PRODUCT_SPEC.md
+ALMANAC_PRODUCT_SPEC.md
 docs/DATA_MODEL.md
 docs/API_AND_STATE_CONTRACTS.md
 docs/METRICS_AND_EVIDENCE.md
@@ -1245,7 +1245,7 @@ docs/TEST_AND_ACCEPTANCE_PLAN.md
 
 ```text
 AGENTS.md
-CHOICEGRID_PRODUCT_SPEC.md
+ALMANAC_PRODUCT_SPEC.md
 docs/AI_AGENT_CONTRACTS.md
 docs/DATA_MODEL.md
 docs/METRICS_AND_EVIDENCE.md
@@ -1257,7 +1257,7 @@ docs/RESEARCH_INSIGHTS.md
 
 ```text
 AGENTS.md
-CHOICEGRID_PRODUCT_SPEC.md
+ALMANAC_PRODUCT_SPEC.md
 docs/SCOPE_AND_NON_GOALS.md
 docs/DEMO_SCENARIOS.md
 docs/TEST_AND_ACCEPTANCE_PLAN.md
@@ -1291,7 +1291,7 @@ Do not:
 
 ### Recommended
 
-> “ChoiceGrid is a human-approved decision and recovery layer for at-risk food already inside a food-bank warehouse. It combines current constraints with agency acceptance history, compares outbound plans, creates packing and delivery instructions, and replans when conditions change.”
+> “Almanac is a human-approved decision and recovery layer for at-risk food already inside a food-bank warehouse. It combines current constraints with agency acceptance history, compares outbound plans, creates packing and delivery instructions, and replans when conditions change.”
 
 ### Avoid
 
@@ -1307,7 +1307,7 @@ Do not:
 - “The prototype estimates urgency and requests staff review.”
 - “The metrics are calculated from a simulated scenario.”
 - “The system uses transparent constraints and human approval.”
-- “Existing products cover pieces of the workflow; ChoiceGrid demonstrates the closed operational loop.”
+- “Existing products cover pieces of the workflow; Almanac demonstrates the closed operational loop.”
 
 ---
 
@@ -1315,7 +1315,7 @@ Do not:
 
 Build the smallest reliable product that proves this story:
 
-> **An existing perishable lot is at risk inside the warehouse. ChoiceGrid compares feasible destinations using current constraints and agency history, obtains human approval, creates warehouse-origin packing and route instructions, recovers from one partner cancellation, and shows calculated impact.**
+> **An existing perishable lot is at risk inside the warehouse. Almanac compares feasible destinations using current constraints and agency history, obtains human approval, creates warehouse-origin packing and route instructions, recovers from one partner cancellation, and shows calculated impact.**
 
 Do not optimize for the number of features.
 

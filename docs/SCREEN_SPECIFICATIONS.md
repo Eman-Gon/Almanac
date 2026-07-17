@@ -112,7 +112,7 @@ Historical rows are not interactive operational records and must not affect dash
 
 ### Purpose
 
-Show how ChoiceGrid can triage several warehouse lots and group compatible
+Show how Almanac can triage several warehouse lots and group compatible
 product lines without pretending the current single-lot mission contract can
 execute them together.
 

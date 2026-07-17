@@ -2,7 +2,7 @@
 
 ## Scope
 
-ChoiceGrid is a food-bank operations prototype. It must not become a repository of real recipient medical data, a food-safety authority, or an autonomous dispatch system.
+Almanac is a food-bank operations prototype. It must not become a repository of real recipient medical data, a food-safety authority, or an autonomous dispatch system.
 
 ---
 

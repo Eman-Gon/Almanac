@@ -143,7 +143,7 @@ export default function MapPage() {
         />
         <div className="page-content map-page">
           <EmptyState
-            title="That ChoiceGrid record was not found."
+            title="That Almanac record was not found."
             action={<Link className="button button-primary" href="/map">Open current network map</Link>}
           >Check the mission or plan link, or return to the current seeded map.</EmptyState>
         </div>
@@ -166,7 +166,7 @@ export default function MapPage() {
           <EmptyState
             title="Replacement mission not created"
             action={<Link className="button button-primary" href="/simulate?mission=MSN-104">Review recovery plan</Link>}
-          >Human approval is required before ChoiceGrid can display a replacement route.</EmptyState>
+          >Human approval is required before Almanac can display a replacement route.</EmptyState>
         </div>
       </>
     );

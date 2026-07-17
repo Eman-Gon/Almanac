@@ -5,7 +5,7 @@ import {
 } from "@/domain/metrics/calculate";
 import {
   scenarioContext,
-  type ChoiceGridScenarioContext,
+  type AlmanacScenarioContext,
 } from "@/domain/planning/scenario-context";
 import {
   acceptanceHistorySignal,
@@ -15,7 +15,7 @@ import {
 import type { Allocation, DestinationScore, PlanOption, PlanSet } from "@/domain/types";
 
 function partnerScore(
-  context: ChoiceGridScenarioContext,
+  context: AlmanacScenarioContext,
   partnerId: string,
   input: Omit<DestinationScoreInput, "historicalAcceptance" | "refusalRiskPenalty">,
 ): DestinationScore {
@@ -30,7 +30,7 @@ function partnerScore(
 }
 
 function destinationScores(
-  context: ChoiceGridScenarioContext,
+  context: AlmanacScenarioContext,
 ): Record<string, DestinationScore> {
   const [partnerOne] = context.partners;
   return {
@@ -90,7 +90,7 @@ function destinationScores(
 }
 
 function allocation(
-  context: ChoiceGridScenarioContext,
+  context: AlmanacScenarioContext,
   scores: Record<string, DestinationScore>,
   id: string,
   destinationId: string,
@@ -111,7 +111,7 @@ function allocation(
   };
 }
 
-function commonAssumptions(context: ChoiceGridScenarioContext) {
+function commonAssumptions(context: AlmanacScenarioContext) {
   return [
     `All quantities use the validated ${context.availableInventoryQuantityLb.toLocaleString()} lb available inventory at ${context.warehouse.id}.`,
     "Route miles use the seeded distance matrix; no live routing service is required.",
@@ -134,8 +134,8 @@ function plannedOutboundAllocationLb(allocations: Allocation[]): number {
 }
 
 function metricSeed(
-  context: ChoiceGridScenarioContext,
-  estimate: ChoiceGridScenarioContext["strategyEstimates"]["balancedRelease"],
+  context: AlmanacScenarioContext,
+  estimate: AlmanacScenarioContext["strategyEstimates"]["balancedRelease"],
   quantityPlannedOutboundInTimeLb: number,
 ) {
   return {
@@ -157,7 +157,7 @@ function metricSeed(
 
 export function withDerivedCapacityMetrics(
   plan: PlanOption,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): PlanOption {
   return {
     ...plan,
@@ -175,7 +175,7 @@ export function withDerivedCapacityMetrics(
 export function applyCanonicalAllocationEdit(
   canonical: PlanOption,
   submitted: PlanOption,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): PlanOption | null {
   if (
     canonical.id !== submitted.id ||
@@ -230,7 +230,7 @@ export function applyCanonicalAllocationEdit(
 }
 
 export function generatePlanSet(
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): PlanSet {
   const scores = destinationScores(context);
   const quantities = context.planQuantities;
@@ -415,7 +415,7 @@ export function generatePlanSet(
 
 export function getDestinationName(
   destinationId: string,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): string {
   if (destinationId === context.warehouse.id) return context.warehouse.name;
   return context.partners.find((partner) => partner.id === destinationId)?.name ?? destinationId;

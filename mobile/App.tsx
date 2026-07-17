@@ -86,7 +86,7 @@ export default function App() {
       <View style={styles.toolbar}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Go back in ChoiceGrid"
+          accessibilityLabel="Go back in Almanac"
           disabled={!canGoBack}
           onPress={() => webRef.current?.goBack()}
           style={[styles.toolButton, !canGoBack && styles.toolButtonDisabled]}
@@ -95,7 +95,7 @@ export default function App() {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Reload ChoiceGrid"
+          accessibilityLabel="Reload Almanac"
           onPress={() => {
             setError(null);
             setLoading(true);
@@ -120,13 +120,13 @@ export default function App() {
         {loading ? (
           <View style={styles.loadingOverlay} pointerEvents="none">
             <ActivityIndicator color="#0d6e8c" size="large" />
-            <Text style={styles.loadingText}>Loading ChoiceGrid…</Text>
+            <Text style={styles.loadingText}>Loading Almanac…</Text>
           </View>
         ) : null}
 
         {error ? (
           <View style={styles.errorPanel}>
-            <Text style={styles.errorTitle}>Could not load ChoiceGrid</Text>
+            <Text style={styles.errorTitle}>Could not load Almanac</Text>
             <Text style={styles.errorBody}>{error}</Text>
             <Text style={styles.errorHint}>
               Use a deployed Vercel URL, or your computer's LAN IP with the Next.js
@@ -186,7 +186,7 @@ export default function App() {
       >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>ChoiceGrid server</Text>
+            <Text style={styles.modalTitle}>Almanac server</Text>
             <Text style={styles.modalBody}>
               This Expo Go app is a native shell over the hosted web demo. Demo
               state stays inside the WebView localStorage.

@@ -1,8 +1,8 @@
-# ChoiceGrid Validation and Pilot Plan
+# Almanac Validation and Pilot Plan
 
 ## Current evidence status
 
-ChoiceGrid is ready for facilitated operator usability testing on the synthetic Strawberry Rescue scenario. It is **not yet ready for a live operational pilot or a multi-case historical replay**.
+Almanac is ready for facilitated operator usability testing on the synthetic Strawberry Rescue scenario. It is **not yet ready for a live operational pilot or a multi-case historical replay**.
 
 No food-bank interview, pilot commitment, or observed operational outcome is documented in this repository. Do not describe this plan as completed validation.
 
@@ -11,7 +11,7 @@ No food-bank interview, pilot commitment, or observed operational outcome is doc
 | Level | Purpose | Current status | Required before starting |
 |---|---|---|---|
 | 1. Operator usability validation | Test whether the workflow, language, constraints, approvals, and recovery behavior make sense to real operators | **Ready** | Recruit participants and use synthetic data only |
-| 2. Historical case replay | Compare ChoiceGrid recommendations with de-identified past inventory lots, agency outcomes, and disruption cases | **Blocked** | Add a configurable case-import path and obtain approved de-identified data |
+| 2. Historical case replay | Compare Almanac recommendations with de-identified past inventory lots, agency outcomes, and disruption cases | **Blocked** | Add a configurable case-import path and obtain approved de-identified data |
 | 3. Live shadow pilot | Run beside existing procedures without controlling acceptance, packing, dispatch, communications, or food-safety decisions | **Not ready** | Complete Levels 1–2, name an operational owner, approve data handling, and define incident/manual-fallback procedures |
 
 The current plan-generation endpoint and browser state are tied to seeded `LOT-104`. A configurable case path is a separate implementation task; documentation alone does not remove that limitation.
@@ -82,7 +82,7 @@ After Level 1, request 20–50 de-identified past cases. The minimum useful case
 
 Do not request recipient-level records, medical data, staff credentials, exact household addresses, or donor information that the partner has not approved for research use.
 
-For each case, compare staff-only and ChoiceGrid-assisted results on:
+For each case, compare staff-only and Almanac-assisted results on:
 
 - Time to a reviewable plan
 - Time to a reviewable recovery after disruption
@@ -99,7 +99,7 @@ Success thresholds must be agreed with the pilot partner before reviewing result
 
 Duration: two to four weeks.
 
-ChoiceGrid may generate a recommendation beside the existing process, but during shadow mode it must not:
+Almanac may generate a recommendation beside the existing process, but during shadow mode it must not:
 
 - Accept or decline a donation
 - Declare food safe
@@ -108,11 +108,11 @@ ChoiceGrid may generate a recommendation beside the existing process, but during
 - Contact a donor or partner
 - Replace the organization's existing system of record
 
-The partner's existing procedure remains authoritative. A named staff member decides whether any ChoiceGrid output is useful.
+The partner's existing procedure remains authoritative. A named staff member decides whether any Almanac output is useful.
 
 ### Required stop conditions
 
-Stop the ChoiceGrid workflow and return to the partner's normal procedure when:
+Stop the Almanac workflow and return to the partner's normal procedure when:
 
 - Food condition, temperature history, source, quantity, or destination capacity is uncertain and operational review is required.
 - The system produces a quantity-conservation, capacity, temperature, or receiving-window conflict.
@@ -148,4 +148,4 @@ Only after the corresponding work occurs:
 
 Until then, use this statement:
 
-> ChoiceGrid is a tested synthetic MVP prepared for operator usability validation. A configurable historical-data path and partner-approved shadow pilot are the next steps.
+> Almanac is a tested synthetic MVP prepared for operator usability validation. A configurable historical-data path and partner-approved shadow pilot are the next steps.

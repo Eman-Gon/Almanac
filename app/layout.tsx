@@ -25,14 +25,14 @@ const martianMono = Martian_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "ChoiceGrid",
-    template: "%s · ChoiceGrid",
+    default: "Almanac",
+    template: "%s · Almanac",
   },
   description:
     "Human-approved warehouse inventory allocation and disruption recovery for food banks.",
-  applicationName: "ChoiceGrid",
+  applicationName: "Almanac",
   openGraph: {
-    title: "ChoiceGrid",
+    title: "Almanac",
     description:
       "Human-approved warehouse inventory allocation and disruption recovery for food banks.",
     type: "website",

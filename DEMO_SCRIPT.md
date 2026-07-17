@@ -1,4 +1,4 @@
-# ChoiceGrid Demo Script
+# Almanac Demo Script
 
 ## Purpose and timing
 
@@ -32,7 +32,7 @@ Open `/dashboard`.
 
 Say:
 
-> “The food bank already has 1,200 pounds of strawberries in refrigerated inventory. The hard part is using rough agency data to move them somewhere useful before they spoil. ChoiceGrid starts here—after receiving—not with donor pickup scheduling.”
+> “The food bank already has 1,200 pounds of strawberries in refrigerated inventory. The hard part is using rough agency data to move them somewhere useful before they spoil. Almanac starts here—after receiving—not with donor pickup scheduling.”
 
 Point to the at-risk inventory alert, risk-deadline pounds, and cold capacity. Open `LOT-104`.
 
@@ -50,7 +50,7 @@ On `/inventory/LOT-104`, show:
 
 Say:
 
-> “ChoiceGrid uses the facts the warehouse already has. Unknowns stay unknown, and the system never makes a food-safety decision.”
+> “Almanac uses the facts the warehouse already has. Unknowns stay unknown, and the system never makes a food-safety decision.”
 
 Select **Generate outbound plans**.
 
@@ -77,7 +77,7 @@ Say:
 
 > “The approved allocation becomes warehouse instructions. Completion can update progress, but it cannot change approved pounds.”
 
-Open `MSN-104`. Show the route beginning at `WH-001`, partner drop-offs, receiving windows, and approval audit. There is no donor pickup and ChoiceGrid is not scheduling the driver.
+Open `MSN-104`. Show the route beginning at `WH-001`, partner drop-offs, receiving windows, and approval audit. There is no donor pickup and Almanac is not scheduling the driver.
 
 ### 2:15–3:10 — Recover from agency cancellation
 
@@ -92,7 +92,7 @@ Show:
 
 Say:
 
-> “ChoiceGrid preserves unchanged completed work, recalculates the recovery, and still requires a second human approval.”
+> “Almanac preserves unchanged completed work, recalculates the recovery, and still requires a second human approval.”
 
 Approve recovery. Show `PKG-105` with the completed 400 lb `-C` row and pending 60 lb `-R` delta, then open `MSN-105`.
 

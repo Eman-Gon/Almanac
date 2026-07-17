@@ -1,12 +1,12 @@
-# ChoiceGrid
+# Almanac
 
-ChoiceGrid is an AI-assisted food-bank operations prototype for moving at-risk inventory already inside a warehouse, deciding which agencies can realistically take it, and recovering when the plan changes.
+Almanac is an AI-assisted food-bank operations prototype for moving at-risk inventory already inside a warehouse, deciding which agencies can realistically take it, and recovering when the plan changes.
 
 The product is designed for food-bank allocation, warehouse, and transportation teams. Inventory facts, agency history, capacity, scoring, routing assumptions, and impact metrics stay deterministic and auditable; an optional model may explain validated facts but is never required.
 
 ## Start here
 
-Coding agents should read [`AGENTS.md`](AGENTS.md) first and then [`CHOICEGRID_PRODUCT_SPEC.md`](CHOICEGRID_PRODUCT_SPEC.md). The product spec explains the complete ChoiceGrid workflow and points each agent to the detailed contracts in `docs/`.
+Coding agents should read [`AGENTS.md`](AGENTS.md) first and then [`ALMANAC_PRODUCT_SPEC.md`](ALMANAC_PRODUCT_SPEC.md). The product spec explains the complete Almanac workflow and points each agent to the detailed contracts in `docs/`.
 
 ---
 
@@ -15,7 +15,7 @@ Coding agents should read [`AGENTS.md`](AGENTS.md) first and then [`CHOICEGRID_P
 
 The food bank already has **1,200 pounds of strawberries** at `WH-001`. The lot is not moving fast enough and is approaching a seeded spoilage-risk deadline.
 
-ChoiceGrid:
+Almanac:
 
 1. Reviews the existing lot, available pounds, risk deadline, refrigeration, and staff condition status.
 2. Checks warehouse capacity, partner demand, receiving windows, assigned execution capacity, service gaps, and category-specific acceptance/refusal history.

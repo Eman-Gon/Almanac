@@ -1,12 +1,12 @@
 # Architecture
 
-Short overview of how ChoiceGrid is structured in this repository. Detailed contracts remain authoritative; when this file and a contract disagree, follow the source-of-truth order in [`AGENTS.md`](../AGENTS.md).
+Short overview of how Almanac is structured in this repository. Detailed contracts remain authoritative; when this file and a contract disagree, follow the source-of-truth order in [`AGENTS.md`](../AGENTS.md).
 
 ---
 
 ## Intent
 
-ChoiceGrid is a **hackathon control-tower prototype**, not a production platform. The architecture optimizes for:
+Almanac is a **hackathon control-tower prototype**, not a production platform. The architecture optimizes for:
 
 1. A runnable warehouse inventory-release → plan → approve → pack → disrupt → recover → impact demo
 2. Deterministic, testable operational math
@@ -179,7 +179,7 @@ Out of MVP scope and must not be introduced casually:
 
 | Need | Document |
 |---|---|
-| Product north star and hero scenario | [`CHOICEGRID_PRODUCT_SPEC.md`](../CHOICEGRID_PRODUCT_SPEC.md) |
+| Product north star and hero scenario | [`ALMANAC_PRODUCT_SPEC.md`](../ALMANAC_PRODUCT_SPEC.md) |
 | Hosted deploy | [`DEPLOY.md`](DEPLOY.md) |
 | Expo Go companion | [`mobile/README.md`](../mobile/README.md) |
 | Entities and enums | [`DATA_MODEL.md`](DATA_MODEL.md) |

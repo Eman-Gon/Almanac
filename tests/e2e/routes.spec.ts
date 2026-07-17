@@ -169,7 +169,7 @@ test("seeded routes and invalid record states are intentional", async ({ page })
     "/map?mission=UNKNOWN",
   ]) {
     await page.goto(path);
-    await expect(page.getByText("That ChoiceGrid record was not found.")).toBeVisible();
+    await expect(page.getByText("That Almanac record was not found.")).toBeVisible();
   }
 
   expect(pageErrors).toEqual([]);

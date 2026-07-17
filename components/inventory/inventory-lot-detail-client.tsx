@@ -173,7 +173,7 @@ export function InventoryLotDetailClient() {
           <div className="supporting-details-grid">
             <div>
               <h3>Staff condition record</h3>
-              <p>Staff-cleared for planning. ChoiceGrid does not certify safety or replace warehouse inspection policy.</p>
+              <p>Staff-cleared for planning. Almanac does not certify safety or replace warehouse inspection policy.</p>
             </div>
             <div>
               <h3>Source and current state</h3>

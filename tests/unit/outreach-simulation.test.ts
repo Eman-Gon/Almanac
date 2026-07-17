@@ -45,7 +45,7 @@ describe("simulated voice outreach", () => {
         0,
       ),
     ).toBe(1_140);
-    expect(preview.recipients[0].script).toContain("ChoiceGrid automated assistant");
+    expect(preview.recipients[0].script).toContain("Almanac automated assistant");
     expect(preview.recipients[0].script).toContain("human-approved plan");
   });
 

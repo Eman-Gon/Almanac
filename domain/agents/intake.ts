@@ -139,7 +139,7 @@ function extractJson(content: string): unknown {
 
 function buildPrompt(sourceText: string, schemaReminder = false): string {
   return [
-    "You are ChoiceGrid's bounded donation-intake extractor.",
+    "You are Almanac's bounded donation-intake extractor.",
     "Extract only facts explicitly stated in the donor message.",
     "Do not accept or reject the donation, certify food safety, invent an address, or guess a quantity.",
     "Use pounds for quantity only when pounds are explicit or an explicit conversion is present.",

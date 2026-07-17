@@ -150,7 +150,7 @@ function ImpactStateError({ onRestart }: { onRestart: () => void }) {
       <div className="route-state" role="alert">
         <strong>Impact cannot be calculated from this saved state.</strong>
         <span>
-          The approved plan, mission, or recovery record is missing. ChoiceGrid will not
+          The approved plan, mission, or recovery record is missing. Almanac will not
           reconstruct operational history from seed data.
         </span>
         <button className="button button-primary" type="button" onClick={onRestart}>

@@ -1,6 +1,6 @@
-# Deploying ChoiceGrid (hosted web)
+# Deploying Almanac (hosted web)
 
-ChoiceGrid is a Next.js App Router demo. Host it on **Vercel** for a shareable public URL. Demo progress stays in each browser's `localStorage` (`choicegrid-demo-v3`); it does not sync across users or devices.
+Almanac is a Next.js App Router demo. Host it on **Vercel** for a shareable public URL. Demo progress stays in each browser's `localStorage` (`choicegrid-demo-v3`); it does not sync across users or devices.
 
 The Expo Go companion in [`mobile/`](../mobile/) loads this same hosted URL in a WebView. See [`mobile/README.md`](../mobile/README.md).
 

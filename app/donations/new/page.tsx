@@ -161,7 +161,7 @@ export default function DonationIntakePage() {
         <Panel title="Offer details" className="form-panel">
           <div className="form-intro">
             <FileText size={20} aria-hidden="true" />
-            <p>Paste the original donor message. ChoiceGrid keeps it visible beside the validated extraction.</p>
+            <p>Paste the original donor message. Almanac keeps it visible beside the validated extraction.</p>
             <button className="button button-secondary" type="button" onClick={loadDemo}><Sparkles size={15} aria-hidden="true" />Load demo offer</button>
           </div>
           <form className="form-grid" onSubmit={(event) => { event.preventDefault(); parseOffer(); }}>

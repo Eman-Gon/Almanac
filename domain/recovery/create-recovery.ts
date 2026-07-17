@@ -3,7 +3,7 @@ import { modeledHouseholdEquivalents } from "@/domain/metrics/calculate";
 import { withDerivedCapacityMetrics } from "@/domain/planning/generate-plans";
 import {
   scenarioContext,
-  type ChoiceGridScenarioContext,
+  type AlmanacScenarioContext,
 } from "@/domain/planning/scenario-context";
 import {
   acceptanceHistorySignal,
@@ -34,7 +34,7 @@ function issue(
 
 export function createRecoveryOptionResult(
   original: PlanOption,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): RecoveryOptionResult {
   const { canceledPartnerId, mealKitPartnerId, alternatePartnerId } = context.ids;
   const affectedQuantityLb = original.allocations
@@ -207,7 +207,7 @@ export function createRecoveryOptionResult(
 
 export function createRecoveryOption(
   original: PlanOption,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): PlanOption {
   const result = createRecoveryOptionResult(original, context);
   return (
@@ -231,7 +231,7 @@ export function createRecoveryOption(
 
 export function createRecoveryMission(
   original: PlanOption,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): Mission {
   return createMission(
     createRecoveryOption(original, context),
@@ -261,7 +261,7 @@ export function preserveCompletedMissionWork(
 export function createRecoveryPackingPlan(
   recoveryOption: PlanOption,
   originalPackingPlan?: PackingPlan,
-  context: ChoiceGridScenarioContext = scenarioContext,
+  context: AlmanacScenarioContext = scenarioContext,
 ): PackingPlan {
   const replacement = createPackingPlan(
     recoveryOption,

@@ -99,7 +99,7 @@ Use one of these labels in pitch notes, metric tooltips, or documentation:
 - The exact coded subset contained 269 items.
 - The broader study considered 32 thread pages and approximately 500 comment-level observations.
 - Existing public products already cover pantry maps, reservations, donation posting, volunteer pickup, case management, and pantry inventory.
-- ChoiceGrid is designed to join urgent-food analysis, destination matching, plan comparison, packing, route creation, and recovery.
+- Almanac is designed to join urgent-food analysis, destination matching, plan comparison, packing, route creation, and recovery.
 - The Alameda County challenge materials directly request routing using receiving windows and product urgency and rebuilding after a truck or agency disruption.
 - California guidance identifies refrigerated capacity, vehicles, and software for donor-to-rescue matching and inventory management as food-recovery capacity considerations.
 - Comparable platforms demonstrate that organizations use digital food-recovery coordination at scale.
@@ -113,8 +113,8 @@ Say:
 - “In the exact coded Reddit subset...” rather than “Most food-bank users...”
 - “Approximately 500 comments were considered...” rather than “500 comments were scraped.”
 - “The reviewed public product pages did not appear to center this full workflow...” rather than “No competitor has this feature.”
-- “ChoiceGrid's hypothesized integration wedge is explainable allocation and disruption recovery...” rather than “ChoiceGrid has no competitors.”
-- “The scenario estimates...” rather than “ChoiceGrid saves 94% of food waste.”
+- “Almanac's hypothesized integration wedge is explainable allocation and disruption recovery...” rather than “Almanac has no competitors.”
+- “The scenario estimates...” rather than “Almanac saves 94% of food waste.”
 - “Shelf-life risk estimate...” rather than “Safe until...”
 - “The participant expressed pilot interest...” rather than “The organization committed to a pilot,” unless written approval exists.
 - “In 4 of 6 observed sessions...” rather than “Operators found the product easy to use.”
@@ -124,7 +124,7 @@ Say:
 ## Claims that must not be made
 
 - The Reddit sample represents all recipients or food banks.
-- ChoiceGrid has been validated in a live food bank.
+- Almanac has been validated in a live food bank.
 - AI can determine whether food is safe.
 - A dietary tag constitutes medical advice.
 - Simulated households served are real beneficiaries.
@@ -142,11 +142,11 @@ Research snapshot: July 16, 2026.
 
 | Source | Safe claim | Evidence label and caveat |
 |---|---|---|
-| [StopWaste — Edible Food Recovery Capacity Planning Report for Alameda County](https://www.stopwaste.org/sites/default/files/2026-03/2024%20EFR%20Capacity%20Results%20Summary-7-Updated%20%281-16-26%29.pdf), September 2025 | Alameda County reported 14.39 million pounds recovered in 2024; the report describes 510 weekly ACCFB program pickups and 65 of 84 identified organizations participating in ACCFB's Food Recovery Program and reporting activity through MealConnect | `formal_research`; local network evidence, not ChoiceGrid impact or adoption |
+| [StopWaste — Edible Food Recovery Capacity Planning Report for Alameda County](https://www.stopwaste.org/sites/default/files/2026-03/2024%20EFR%20Capacity%20Results%20Summary-7-Updated%20%281-16-26%29.pdf), September 2025 | Alameda County reported 14.39 million pounds recovered in 2024; the report describes 510 weekly ACCFB program pickups and 65 of 84 identified organizations participating in ACCFB's Food Recovery Program and reporting activity through MealConnect | `formal_research`; local network evidence, not Almanac impact or adoption |
 | [StopWaste — Food Donation & Recovery in Alameda County](https://www.stopwaste.org/sites/default/files/topic-brief-2025-09-Food-Recovery-Network.pdf), September 2025 | Nearly 90% of local recovery organizations operated with fewer than five paid staff; cold storage and transportation were top infrastructure requests | `formal_research`; agency-reported system conditions |
-| [CalRecycle — Capacity Planning for Food Recovery](https://calrecycle.ca.gov/organics/slcp/foodrecovery/capacityplanning/) | California guidance names paid staff, refrigerated space and vehicles, storage, and software to match donors to rescues and manage inventory as capacity considerations | `formal_research`; guidance is not proof that a buyer wants ChoiceGrid |
+| [CalRecycle — Capacity Planning for Food Recovery](https://calrecycle.ca.gov/organics/slcp/foodrecovery/capacityplanning/) | California guidance names paid staff, refrigerated space and vehicles, storage, and software to match donors to rescues and manage inventory as capacity considerations | `formal_research`; guidance is not proof that a buyer wants Almanac |
 | [CalRecycle — Food Recovery Organizations and Services](https://calrecycle.ca.gov/organics/slcp/foodrecovery/organizations/) | Participating organizations with written mandated-donor agreements must retain donor-level receipt records and report annual pounds | `formal_research`; applicability depends on participation and agreements |
-| [Feeding America — What is MealConnect?](https://www.feedingamerica.org/hunger-blog/what-mealconnect-learn-about-feeding-americas-food-rescue-platform), April 14, 2026 | Feeding America reported that MealConnect facilitated more than seven billion pounds of food recovery since 2014 | `product_page_claim`; category adoption and incumbent evidence, not ChoiceGrid demand |
+| [Feeding America — What is MealConnect?](https://www.feedingamerica.org/hunger-blog/what-mealconnect-learn-about-feeding-americas-food-rescue-platform), April 14, 2026 | Feeding America reported that MealConnect facilitated more than seven billion pounds of food recovery since 2014 | `product_page_claim`; category adoption and incumbent evidence, not Almanac demand |
 | [Careit — How It Works](https://careit.com/how-it-works/) and [Impact](https://careit.com/impact/) | Careit publicly describes donation posting, matching, pickup coordination, records and reporting | `product_page_claim`; capability and impact figures are vendor-reported |
 | [USDA ERS — Household Food Security in the United States in 2024](https://ers.usda.gov/publications/113622), December 30, 2025 | USDA estimated 18.3 million U.S. households were food insecure in 2024 | `formal_research`; establishes need, not software demand |
 

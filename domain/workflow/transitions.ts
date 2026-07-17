@@ -9,7 +9,7 @@ import {
 } from "@/domain/execution/create-execution";
 import { applyCanonicalAllocationEdit, generatePlanSet } from "@/domain/planning/generate-plans";
 import { validatePlanOption } from "@/domain/planning/quantity";
-import { scenarioContext, type ChoiceGridScenarioContext } from "@/domain/planning/scenario-context";
+import { scenarioContext, type AlmanacScenarioContext } from "@/domain/planning/scenario-context";
 import {
   createRecoveryOptionResult,
   createRecoveryPackingPlan,
@@ -28,7 +28,7 @@ export function approvePlanTransition(input: {
   optionId: string;
   submittedOption?: PlanOption;
   reason?: string;
-}, context: ChoiceGridScenarioContext = scenarioContext): TransitionResult<{
+}, context: AlmanacScenarioContext = scenarioContext): TransitionResult<{
   approvedPlan: PlanOption;
   packingPlan: PackingPlan;
   mission: Mission;
@@ -55,7 +55,7 @@ export function approvePlanTransition(input: {
   return { ok: true, value: { approvedPlan, packingPlan, mission, auditEvents } };
 }
 
-export function startPackingTransition(packingPlan: PackingPlan, context: ChoiceGridScenarioContext = scenarioContext): TransitionResult<{ packingPlan: PackingPlan; auditEvent: AuditEvent }> {
+export function startPackingTransition(packingPlan: PackingPlan, context: AlmanacScenarioContext = scenarioContext): TransitionResult<{ packingPlan: PackingPlan; auditEvent: AuditEvent }> {
   if (packingPlan.status !== "ready") return fail("INVALID_STATE_TRANSITION", `Packing plan ${packingPlan.id} cannot start while ${packingPlan.status}.`);
   const recovery = packingPlan.id === context.ids.recoveryPackingPlanId;
   return { ok: true, value: {
@@ -64,7 +64,7 @@ export function startPackingTransition(packingPlan: PackingPlan, context: Choice
   } };
 }
 
-export function setPackingBatchTransition(packingPlan: PackingPlan, batchId: string, complete: boolean, context: ChoiceGridScenarioContext = scenarioContext): TransitionResult<{ packingPlan: PackingPlan; changed: boolean; auditEvent: AuditEvent | null }> {
+export function setPackingBatchTransition(packingPlan: PackingPlan, batchId: string, complete: boolean, context: AlmanacScenarioContext = scenarioContext): TransitionResult<{ packingPlan: PackingPlan; changed: boolean; auditEvent: AuditEvent | null }> {
   const batch = packingPlan.batches.find((candidate) => candidate.id === batchId);
   if (!batch) return fail("NOT_FOUND", `Packing batch ${batchId} was not found.`);
   if (packingPlan.status !== "in_progress" && packingPlan.status !== "complete") {
@@ -81,7 +81,7 @@ export function setPackingBatchTransition(packingPlan: PackingPlan, batchId: str
   } };
 }
 
-export function completeMissionStopTransition(mission: Mission, stopId: string, eventType: "pickup_complete" | "delivery_complete", context: ChoiceGridScenarioContext = scenarioContext): TransitionResult<{ mission: Mission; event: AuditEvent }> {
+export function completeMissionStopTransition(mission: Mission, stopId: string, eventType: "pickup_complete" | "delivery_complete", context: AlmanacScenarioContext = scenarioContext): TransitionResult<{ mission: Mission; event: AuditEvent }> {
   const stop = mission.stops.find((candidate) => candidate.id === stopId);
   if (!stop) return fail("NOT_FOUND", `Mission stop ${stopId} was not found.`);
   if (mission.status !== "assigned" && mission.status !== "in_transit") return fail("INVALID_STATE_TRANSITION", `Mission ${mission.id} cannot complete stops while ${mission.status}.`);
@@ -92,7 +92,7 @@ export function completeMissionStopTransition(mission: Mission, stopId: string, 
   return { ok: true, value: { mission: updated, event: audit({ id: `AUD-${mission.id}-${stopId}`, eventType, entityType: "RouteStop", entityId: stopId, actorType: "human", actorId: "demo_user", occurredAt: recovery ? context.timeline.recoveryMissionEventAt : context.timeline.primaryMissionEventAt, previousState: { status: stop.status }, newState: { status: "complete", missionStatus: updated.status } }) } };
 }
 
-export function triggerPartnerCancellationTransition(originalPlan: PlanOption, originalMission: Mission, reason: string, context: ChoiceGridScenarioContext = scenarioContext): TransitionResult<{
+export function triggerPartnerCancellationTransition(originalPlan: PlanOption, originalMission: Mission, reason: string, context: AlmanacScenarioContext = scenarioContext): TransitionResult<{
   disruption: { id: string; missionId: string; type: "partner_canceled"; affectedEntityId: string; partnerId: string; affectedQuantityLb: number; status: "plan_generated"; details: { reason: string } };
   partner: { id: string; status: "canceled" };
   originalMission: Mission;
@@ -119,7 +119,7 @@ export function triggerPartnerCancellationTransition(originalPlan: PlanOption, o
   return { ok: true, value: { disruption, partner: { id: partnerId, status: "canceled" }, originalMission: replanningMission, replacementPlan: recovery.option, auditEvents } };
 }
 
-export function approveRecoveryTransition(originalPlan: PlanOption, originalPackingPlan: PackingPlan, originalMission: Mission, disruption: { id: string; missionId: string; partnerId: string; affectedQuantityLb: number }, context: ChoiceGridScenarioContext = scenarioContext): TransitionResult<{
+export function approveRecoveryTransition(originalPlan: PlanOption, originalPackingPlan: PackingPlan, originalMission: Mission, disruption: { id: string; missionId: string; partnerId: string; affectedQuantityLb: number }, context: AlmanacScenarioContext = scenarioContext): TransitionResult<{
   approvedOption: PlanOption;
   originalMission: Mission;
   replacementMission: Mission;

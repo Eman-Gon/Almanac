@@ -1,4 +1,4 @@
-# ChoiceGrid Operator Discovery and Usability Guide
+# Almanac Operator Discovery and Usability Guide
 
 ## Current evidence status
 
@@ -41,9 +41,9 @@ If note permission is declined, thank the participant and do not create an evide
 
 ## Session plan — 25 minutes
 
-### Part A — neutral discovery before showing ChoiceGrid, 8 minutes
+### Part A — neutral discovery before showing Almanac, 8 minutes
 
-Begin with a recent example. Do not describe ChoiceGrid's solution first.
+Begin with a recent example. Do not describe Almanac's solution first.
 
 1. Tell me about the most recent lot that was already in the warehouse but was not moving quickly enough. How did the team decide where it should go?
 2. Which people, tools, spreadsheets, calls or systems were involved at each handoff?

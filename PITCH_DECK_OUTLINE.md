@@ -1,4 +1,4 @@
-# ChoiceGrid Pitch Deck Outline
+# Almanac Pitch Deck Outline
 
 Every operational value and product metric comes from the synthetic Strawberry Rescue scenario. Authoritative hackathon-operator feedback sets the product direction—existing warehouse inventory first—but it is not evidence of broad market demand, adoption, a pilot commitment, or observed impact. Do not identify or quote the person without separate permission.
 
@@ -12,7 +12,7 @@ Every operational value and product metric comes from the synthetic Strawberry R
 
 - The authoritative hackathon direction explicitly removes donor pickup scheduling from the hero.
 - Official challenge materials ask teams to use agency access windows and product urgency and to rebuild the day after an agency cancels.
-- ChoiceGrid focuses on the hard internal release decision after receiving and staff condition review.
+- Almanac focuses on the hard internal release decision after receiving and staff condition review.
 
 **Evidence note:** Describe this as challenge/product direction. Do not turn one authoritative scope decision into a prevalence statistic or customer-demand claim.
 
@@ -31,7 +31,7 @@ Every operational value and product metric comes from the synthetic Strawberry R
 
 ## Slide 3 — One human-controlled loop
 
-**Main message:** ChoiceGrid connects lot review, plan comparison, approval, packing, warehouse-origin delivery, recovery, and audit.
+**Main message:** Almanac connects lot review, plan comparison, approval, packing, warehouse-origin delivery, recovery, and audit.
 
 **Recommended visual:** Workflow above “explain” and “calculate” responsibility columns.
 
@@ -67,7 +67,7 @@ Every operational value and product metric comes from the synthetic Strawberry R
 
 ## Slide 6 — Recovery preserves work and history
 
-**Main message:** When Eastside Community Pantry cancels, ChoiceGrid replans only the affected 320 lb and requires another approval.
+**Main message:** When Eastside Community Pantry cancels, Almanac replans only the affected 320 lb and requires another approval.
 
 **Points:**
 
@@ -78,7 +78,7 @@ Every operational value and product metric comes from the synthetic Strawberry R
 
 ## Slide 7 — Results are traceable and synthetic
 
-**Main message:** ChoiceGrid shows calculated scenario outcomes without presenting them as real-world impact.
+**Main message:** Almanac shows calculated scenario outcomes without presenting them as real-world impact.
 
 **Points:**
 

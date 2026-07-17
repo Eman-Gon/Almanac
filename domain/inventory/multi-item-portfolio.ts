@@ -360,7 +360,7 @@ function buildOutreachGroups(
       capacityLb: partner.capacityLb,
       allocatedQuantityLb,
       lineItems,
-      draft: `ChoiceGrid preview: Can your team receive ${itemSummary} from ${fixture.warehouseName}? This is a draft only; no inventory is reserved and no commitment is recorded.`,
+      draft: `Almanac preview: Can your team receive ${itemSummary} from ${fixture.warehouseName}? This is a draft only; no inventory is reserved and no commitment is recorded.`,
     }];
   });
 }
