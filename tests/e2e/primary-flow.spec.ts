@@ -10,7 +10,7 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
 
   await page.locator(".urgent-offer-card").getByRole("link", { name: "Review inventory lot" }).click();
   await expect(page.getByRole("heading", { name: "Inventory lot detail" })).toBeVisible();
-  await expect(page.getByText("Historical agency acceptance", { exact: true })).toBeVisible();
+  await expect(page.getByText("Agencies that historically accept this product", { exact: true })).toBeVisible();
   await expect(page.getByText("No donor pickup is part of this workflow.")).toBeVisible();
   await page.getByRole("button", { name: "Generate outbound plans" }).click();
 
@@ -103,6 +103,6 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
     await page.getByText("Demo controls", { exact: true }).click();
   }
   await finalReset.click();
-  await expect(page.getByText("At-risk inventory", { exact: true })).toBeVisible();
+  await expect(page.getByText("Surplus not moving", { exact: true })).toBeVisible();
   await expect(page.getByText("Recovery approved.")).not.toBeVisible();
 });

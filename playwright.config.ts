@@ -12,6 +12,11 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3000",
     trace: "on-first-retry",
+    // Sandboxed CI images often pre-install a single Chromium that does not
+    // match this Playwright version's registry; allow pointing at it directly.
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+      : {},
   },
   webServer: {
     command: "npm run dev -- --hostname 127.0.0.1",

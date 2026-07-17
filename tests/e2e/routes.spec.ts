@@ -11,12 +11,12 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   await resetScenario.click();
 
   await page.goto("/inventory");
-  await expect(page.getByRole("heading", { name: "At-risk inventory" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Warehouse surplus" })).toBeVisible();
   await expect(page.getByText(/LOT-103 · East Bay Distribution Center/)).toBeVisible();
   await expect(page.getByText("Mock history · display only")).toBeVisible();
   await page.locator('a[href="/inventory/LOT-104"]').filter({ hasText: "Strawberries" }).click();
   await expect(page.getByRole("heading", { name: "Confirmed inventory facts" })).toBeVisible();
-  await expect(page.getByText("Historical agency acceptance", { exact: true })).toBeVisible();
+  await expect(page.getByText("Agencies that historically accept this product", { exact: true })).toBeVisible();
 
   await expect(page.locator('a[href="/missions/MSN-104"]', { hasText: "MSN-1023" })).toHaveCount(0);
 
@@ -68,7 +68,23 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   const canvasBounds = await canvas.boundingBox();
   expect(canvasBounds).not.toBeNull();
   if (!canvasBounds) throw new Error("Map canvas bounds are unavailable");
-  await page.mouse.move(canvasBounds.x + canvasBounds.width / 2, canvasBounds.y + canvasBounds.height / 2);
+  // Probe for a marker-free point so the wheel gesture reaches the map
+  // surface instead of an interactive child (which intentionally ignores it).
+  let wheelPoint: { x: number; y: number } | null = null;
+  for (const [fx, fy] of [[0.5, 0.5], [0.35, 0.5], [0.65, 0.5], [0.5, 0.35], [0.5, 0.65], [0.3, 0.3], [0.7, 0.7]] as const) {
+    const x = canvasBounds.x + canvasBounds.width * fx;
+    const y = canvasBounds.y + canvasBounds.height * fy;
+    const blocked = await page.evaluate(([px, py]) => {
+      const element = document.elementFromPoint(px, py);
+      return Boolean(element?.closest("button, a, [data-map-card], [data-map-chrome]"));
+    }, [x, y]);
+    if (!blocked) {
+      wheelPoint = { x, y };
+      break;
+    }
+  }
+  if (!wheelPoint) throw new Error("No marker-free canvas point found");
+  await page.mouse.move(wheelPoint.x, wheelPoint.y);
   await page.mouse.wheel(0, -600);
   await expect(page.getByTestId("map-zoom-status")).toHaveText(`Z${baseZoom + 1}`);
   await page.waitForTimeout(150);

@@ -7,7 +7,20 @@ async function emptyCanvasPoint(page: Page) {
   const bounds = await canvas.boundingBox();
   expect(bounds).not.toBeNull();
   if (!bounds) throw new Error("Map canvas bounds are unavailable");
-  return { bounds, x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2 };
+  const fractions: Array<[number, number]> = [
+    [0.5, 0.5], [0.35, 0.5], [0.65, 0.5], [0.5, 0.35], [0.5, 0.65],
+    [0.3, 0.3], [0.7, 0.3], [0.3, 0.7], [0.7, 0.7],
+  ];
+  for (const [fx, fy] of fractions) {
+    const x = bounds.x + bounds.width * fx;
+    const y = bounds.y + bounds.height * fy;
+    const blocked = await page.evaluate(([px, py]) => {
+      const element = document.elementFromPoint(px, py);
+      return Boolean(element?.closest("button, a, [data-map-card], [data-map-chrome]"));
+    }, [x, y]);
+    if (!blocked) return { bounds, x, y };
+  }
+  throw new Error("No marker-free canvas point found for gesture tests");
 }
 
 async function currentZoom(canvas: Locator): Promise<number> {

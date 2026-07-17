@@ -55,10 +55,17 @@ export function InventoryLotDetailClient() {
   const hoursToRisk = Math.round(
     (Date.parse(productLot.riskDeadline) - Date.parse(referenceTime)) / (60 * 60 * 1_000),
   );
-  const acceptanceRows = partners.slice(0, 4).map((partner) => ({
-    partner,
-    history: partner.acceptanceHistory.find((history) => history.category === productLot.category),
-  }));
+  const daysOnHand = Math.max(
+    1,
+    Math.floor((Date.parse(referenceTime) - Date.parse(productLot.receivedAt)) / 86_400_000),
+  );
+  const acceptanceRows = partners
+    .map((partner) => ({
+      partner,
+      history: partner.acceptanceHistory.find((history) => history.category === productLot.category),
+    }))
+    .sort((a, b) => (b.history?.acceptanceRatePct ?? 0) - (a.history?.acceptanceRatePct ?? 0))
+    .slice(0, 4);
 
   function openPlans() {
     generatePlans();
@@ -71,7 +78,7 @@ export function InventoryLotDetailClient() {
     <>
       <PageHeader
         title="Inventory lot detail"
-        subtitle="Review an existing warehouse lot before outbound planning."
+        subtitle="Review a surplus lot already on hand and the agencies that historically take it."
         breadcrumbs={[
           { label: "Dashboard", href: "/dashboard" },
           { label: "Inventory", href: "/inventory" },
@@ -87,9 +94,50 @@ export function InventoryLotDetailClient() {
           <div><span>Inventory lot</span><strong>{productLot.id}</strong></div>
           <div><span>Product</span><strong>{productLot.productName}</strong></div>
           <div><span>Available inventory</span><strong>{productLot.availableQuantityLb.toLocaleString()} lb</strong></div>
+          <div><span>Days on hand</span><strong>{daysOnHand} days without moving</strong></div>
           <div><span>Warehouse</span><strong>{warehouse.id} · {warehouse.name}</strong></div>
           <div><span>Handling</span><strong><Snowflake size={15} aria-hidden="true" />{formatTemperature(productLot.temperatureClass)}</strong></div>
         </section>
+
+        <Panel
+          title="Agencies that historically accept this product"
+          action={<span className="panel-meta-label">Explanatory evidence only</span>}
+        >
+          <div className="table-scroll">
+            <table className="data-table acceptance-history-table">
+              <caption className="sr-only">Synthetic produce acceptance history for candidate agencies</caption>
+              <thead>
+                <tr>
+                  <th>Candidate agency</th>
+                  <th>Full acceptance rate</th>
+                  <th>Accepted</th>
+                  <th>Refused</th>
+                  <th>Short receipt</th>
+                  <th>Sample size</th>
+                </tr>
+              </thead>
+              <tbody>
+                {acceptanceRows.map(({ partner, history }) => (
+                  <tr key={partner.id}>
+                    <td><Link href={`/partners/${partner.id}`}><strong>{partner.name}</strong></Link></td>
+                    <td>{history ? `${history.acceptanceRatePct}%` : "Unknown"}</td>
+                    <td>{history?.acceptedCount ?? "Unknown"}</td>
+                    <td>{history?.refusedCount ?? "Unknown"}</td>
+                    <td>{history?.shortReceiptCount ?? "Unknown"}</td>
+                    <td>{history ? `${history.sampleSize} produce offers` : "No sample"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="guardrail-note">
+            <History size={18} aria-hidden="true" />
+            <div>
+              <strong>History informs explanations, not eligibility</strong>
+              <span>Current capacity, receiving windows, status, and hard constraints always take precedence.</span>
+            </div>
+          </div>
+        </Panel>
 
         <div className="donation-review-grid refactor-donation-review-grid">
           <Panel title="Confirmed inventory facts" className="confirmed-facts-panel">
@@ -128,46 +176,6 @@ export function InventoryLotDetailClient() {
             <span>Quantity, temperature, warehouse location, received time, risk deadline, and staff condition status are confirmed in the seeded lot.</span>
           </div>
         </div>
-
-        <Panel
-          title="Historical agency acceptance"
-          action={<span className="panel-meta-label">Explanatory evidence only</span>}
-        >
-          <div className="table-scroll">
-            <table className="data-table acceptance-history-table">
-              <caption className="sr-only">Synthetic produce acceptance history for candidate agencies</caption>
-              <thead>
-                <tr>
-                  <th>Candidate agency</th>
-                  <th>Full acceptance rate</th>
-                  <th>Accepted</th>
-                  <th>Refused</th>
-                  <th>Short receipt</th>
-                  <th>Sample size</th>
-                </tr>
-              </thead>
-              <tbody>
-                {acceptanceRows.map(({ partner, history }) => (
-                  <tr key={partner.id}>
-                    <td><Link href={`/partners/${partner.id}`}><strong>{partner.name}</strong></Link></td>
-                    <td>{history ? `${history.acceptanceRatePct}%` : "Unknown"}</td>
-                    <td>{history?.acceptedCount ?? "Unknown"}</td>
-                    <td>{history?.refusedCount ?? "Unknown"}</td>
-                    <td>{history?.shortReceiptCount ?? "Unknown"}</td>
-                    <td>{history ? `${history.sampleSize} produce offers` : "No sample"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="guardrail-note">
-            <History size={18} aria-hidden="true" />
-            <div>
-              <strong>History informs explanations, not eligibility</strong>
-              <span>Current capacity, receiving windows, status, and hard constraints always take precedence.</span>
-            </div>
-          </div>
-        </Panel>
 
         <DetailsAccordion title="Audit and provenance details">
           <div className="supporting-details-grid">

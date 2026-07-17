@@ -20,6 +20,7 @@ import {
   partners,
   productLot,
   scenario,
+  surplusInventoryLots,
   vehicles,
   warehouse,
 } from "@/data/seed/scenario";
@@ -65,20 +66,27 @@ export default function DashboardPage() {
   const capacityWarnings = coldHeadroomLb < productLot.availableQuantityLb ? 1 : 0;
   const activeMissionId = state.stage === "recovered" ? "MSN-105" : "MSN-104";
   const activeMission = state.missions[activeMissionId];
+  const heroDaysOnHand = Math.max(
+    1,
+    Math.floor(
+      (Date.parse(scenario.timeline.planGeneratedAt) - Date.parse(productLot.receivedAt)) / 86_400_000,
+    ),
+  );
+  const surplusLotCount = 1 + surplusInventoryLots.length;
 
   return (
     <>
       <PageHeader
         title="Operations Control Tower"
-        subtitle={`${scenario.currentDateLabel} · Warehouse inventory release and disruption recovery.`}
+        subtitle={`${scenario.currentDateLabel} · Warehouse surplus release, donation intake, and disruption recovery.`}
       />
       <div className="page-content dashboard-page refactor-dashboard">
         <section className="urgent-offer-card" aria-labelledby="at-risk-inventory-title">
           <div className="urgent-offer-icon"><PackageSearch size={24} aria-hidden="true" /></div>
           <div className="urgent-offer-copy">
-            <span className="section-eyebrow">At-risk inventory</span>
+            <span className="section-eyebrow">Surplus not moving</span>
             <h2 id="at-risk-inventory-title">{productLot.productName}</h2>
-            <p>{productLot.id} · {productLot.availableQuantityLb.toLocaleString()} lb available · already at {warehouse.id} · refrigerated · high risk</p>
+            <p>{productLot.id} · {productLot.availableQuantityLb.toLocaleString()} lb still on hand after {heroDaysOnHand} days at {warehouse.id} · refrigerated · risk deadline Jul 16</p>
           </div>
           <Link className="button button-primary" href={`/inventory/${productLot.id}`}>
             Review inventory lot<ArrowRight size={16} aria-hidden="true" />
@@ -94,7 +102,7 @@ export default function DashboardPage() {
         ) : null}
 
         <section className="kpi-grid refactor-kpi-grid" aria-label="Urgent operational summary">
-          <KpiCard label="At-risk lots" value="1" tone="red" />
+          <KpiCard label="Surplus lots on hand" value={String(surplusLotCount)} tone="red" />
           <KpiCard label="Pounds approaching risk deadline" value={`${productLot.availableQuantityLb.toLocaleString()} lb`} tone="amber" />
           <KpiCard label="Refrigerated storage headroom" value={`${coldHeadroomLb.toLocaleString()} lb`} tone="blue" />
           <KpiCard label="Short-dwell cold staging" value={`${warehouse.refrigeratedStagingCapacityAvailableLb.toLocaleString()} lb`} tone="blue" />
@@ -129,9 +137,13 @@ export default function DashboardPage() {
         </div>
 
         <div className="dashboard-refactor-lower">
-          <Panel title="Overnight briefing" className="briefing-panel">
+          <Panel
+            title="Overnight briefing"
+            className="briefing-panel"
+            action={<Link className="panel-link" href="/donations/new">Log donation offer</Link>}
+          >
             <ul className="briefing-list">
-              <li>Release the 1,200 lb strawberry lot before its seeded risk deadline.</li>
+              <li>The 1,200 lb strawberry lot has sat {heroDaysOnHand} days without moving; release it before its seeded risk deadline.</li>
               <li>Long-term cold storage has only {coldHeadroomLb.toLocaleString()} lb of headroom; compare outbound alternatives.</li>
             </ul>
             <DetailsAccordion title="View full briefing">
@@ -156,11 +168,11 @@ export default function DashboardPage() {
             action={<Link className="panel-link" href="/inventory">View all inventory</Link>}
           >
             <div className="risk-list">
-              {expirationRiskItems.slice(0, 3).map((item, index) => (
+              {expirationRiskItems.slice(0, 5).map((item) => (
                 <div className={`risk-row risk-${item.risk.toLowerCase()}`} key={item.product}>
                   <strong>{item.product}</strong>
                   <span>{item.quantityLb.toLocaleString()} lb</span>
-                  <span>{index === 0 ? "Jul 16 by 10:45 PM" : item.timing}</span>
+                  <span>{item.timing}</span>
                   <span className="risk-badge">{item.risk}</span>
                 </div>
               ))}

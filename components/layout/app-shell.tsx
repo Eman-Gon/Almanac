@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ClipboardList,
   Gauge,
+  Gift,
   MapPinned,
   Menu,
   PackageSearch,
@@ -23,6 +24,7 @@ import { useDemoState } from "@/state/demo-state";
 const navigation = [
   { href: "/dashboard", label: "Dashboard", icon: Gauge },
   { href: "/inventory", label: "Inventory", icon: PackageSearch },
+  { href: "/donations", label: "Donations", icon: Gift },
   { href: "/plans/PLN-104", label: "Plans", icon: ClipboardList },
   { href: "/map", label: "Map", icon: MapPinned },
   { href: "/missions/MSN-104", label: "Missions", icon: Truck },
