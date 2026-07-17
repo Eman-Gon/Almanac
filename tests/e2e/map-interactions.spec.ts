@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 test("map supports mouse-wheel zoom, trackpad pan, and pinch zoom", async ({ page }) => {
+  const passiveWheelErrors: string[] = [];
+  page.on("console", (message) => {
+    if (/Unable to preventDefault inside passive event listener/i.test(message.text())) {
+      passiveWheelErrors.push(message.text());
+    }
+  });
   await page.goto("/map");
 
   const canvas = page.getByTestId("network-map-canvas");
@@ -55,6 +61,7 @@ test("map supports mouse-wheel zoom, trackpad pan, and pinch zoom", async ({ pag
   );
   await page.mouse.up();
   await expect(viewport).not.toHaveAttribute("transform", beforeMouseDrag ?? "");
+  expect(passiveWheelErrors).toEqual([]);
 });
 
 test("route labels stay readable in the stacked map layout", async ({ page }) => {
@@ -90,4 +97,15 @@ test("route labels stay readable in the stacked map layout", async ({ page }) =>
   await page.getByRole("button", { name: "Zoom in map" }).click();
   await page.waitForTimeout(180);
   await assertLabelsFit();
+});
+
+test("zero-pound hold routes remain explicit instead of falling back to capacity", async ({ page }) => {
+  await page.goto("/plans/PLN-104");
+  await page.locator(".plan-card").filter({ hasText: "Hold for Later" }).getByRole("button", { name: "Select plan" }).click();
+  await page.goto("/map?plan=PLN-104");
+
+  const warehouseRow = page.getByTestId("map-location-WH-001");
+  await expect(warehouseRow).toContainText("0 lb");
+  await expect(warehouseRow).toContainText("outbound load");
+  await expect(warehouseRow).not.toContainText("cold headroom");
 });

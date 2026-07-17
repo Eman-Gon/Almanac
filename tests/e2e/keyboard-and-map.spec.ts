@@ -53,6 +53,12 @@ test("map marker, layer, and accessible list state stay synchronized", async ({ 
 
   const harborMarker = page.getByTestId("map-marker-PAR-001");
   const harborList = page.getByTestId("map-location-PAR-001");
+  await harborList.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("button", { name: "Close location details" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(harborList).toBeFocused();
+
   await harborMarker.click();
   await expect(harborMarker).toHaveAttribute("aria-pressed", "true");
   await expect(harborList).toHaveAttribute("aria-pressed", "true");
@@ -61,6 +67,9 @@ test("map marker, layer, and accessible list state stay synchronized", async ({ 
   await eastsideList.click();
   await expect(eastsideList).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("map-marker-PAR-002")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("map-location-PAR-001")).toContainText("420 lb");
+  await expect(page.getByTestId("map-location-PAR-001")).toContainText("planned delivery");
+  await expect(page.getByTestId("map-location-PAR-001")).toContainText("520 lb requested");
 
   const routes = page.getByRole("checkbox", { name: "Routes" });
   await routes.uncheck();
@@ -72,6 +81,9 @@ test("map marker, layer, and accessible list state stay synchronized", async ({ 
   await expect(page.getByTestId("map-marker-PAR-001")).toHaveCount(0);
   await expect(page.getByTestId("map-location-PAR-001")).toHaveCount(0);
   await expect(page.getByTestId("map-legend-demand")).toHaveCount(0);
+  await demand.check();
+  await expect(page.getByTestId("map-marker-PAR-002")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator('[aria-label="Eastside Community Pantry operational details"]')).toHaveCount(0);
 
   const capacity = page.getByRole("checkbox", { name: "Warehouse capacity" });
   await capacity.uncheck();

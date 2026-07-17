@@ -14,6 +14,7 @@ import { partners, productLot, warehouse } from "@/data/seed/scenario";
 import { createMission } from "@/domain/execution/create-execution";
 import { totalRouteMiles } from "@/domain/metrics/calculate";
 import { generatePlanSet } from "@/domain/planning/generate-plans";
+import { scenarioContext } from "@/domain/planning/scenario-context";
 import type { Mission } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
 
@@ -98,21 +99,56 @@ export default function MapPage() {
   const { hydrated, state } = useDemoState();
   const searchParams = useSearchParams();
   const [layers, setLayers] = useState<MapLayers>({ routes: true, demand: true, capacity: true, vehicles: true });
+  const [selectedMapLocationId, setSelectedMapLocationId] = useState<string | null>(null);
   const requestedMissionId = searchParams.get("mission");
   const requestedPlanId = searchParams.get("plan");
-  const contextMissionId = requestedMissionId === "MSN-105" || (!requestedMissionId && state.stage === "recovered") ? "MSN-105" : "MSN-104";
+  const planSet = useMemo(() => generatePlanSet(), []);
+  const missionIdIsValid = requestedMissionId === null
+    || requestedMissionId === scenarioContext.ids.primaryMissionId
+    || requestedMissionId === scenarioContext.ids.recoveryMissionId;
+  const planIdIsValid = requestedPlanId === null || requestedPlanId === planSet.id;
+  const invalidMapContext = !missionIdIsValid || !planIdIsValid;
+  const explicitMissionId = requestedMissionId === scenarioContext.ids.primaryMissionId
+    || requestedMissionId === scenarioContext.ids.recoveryMissionId
+    ? requestedMissionId
+    : null;
+  const explicitPlanContext = explicitMissionId === null && requestedPlanId === planSet.id;
+  const contextMissionId = explicitMissionId
+    ?? (explicitPlanContext || state.stage !== "recovered"
+      ? scenarioContext.ids.primaryMissionId
+      : scenarioContext.ids.recoveryMissionId);
   const returnToParam = searchParams.get("returnTo");
   const returnTo = returnToParam?.startsWith("/") ? returnToParam : "/dashboard";
-  const recovery = contextMissionId === "MSN-105";
+  const recovery = contextMissionId === scenarioContext.ids.recoveryMissionId;
 
-  const planSet = useMemo(() => generatePlanSet(), []);
-  const replacementMissionUnavailable = recovery && (
+  const replacementMissionUnavailable = !invalidMapContext && recovery && (
     state.stage !== "recovered"
     || !state.disruption
-    || !state.missions["MSN-105"]
+    || !state.missions[scenarioContext.ids.recoveryMissionId]
   );
 
   if (!hydrated) return <LoadingState label="Loading saved map state…" />;
+
+  if (invalidMapContext) {
+    return (
+      <>
+        <PageHeader
+          title="Map context not found"
+          subtitle="The requested plan or mission is not part of this demo scenario."
+          breadcrumbs={[{ label: "Dashboard", href: "/dashboard" }, { label: "Map" }]}
+          backHref="/dashboard"
+          backLabel="Back to Dashboard"
+          status={<span className="plain-status plain-status-amber">Unknown context</span>}
+        />
+        <div className="page-content map-page">
+          <EmptyState
+            title="That ChoiceGrid record was not found."
+            action={<Link className="button button-primary" href="/map">Open current network map</Link>}
+          >Check the mission or plan link, or return to the current seeded map.</EmptyState>
+        </div>
+      </>
+    );
+  }
 
   if (replacementMissionUnavailable) {
     return (
@@ -143,9 +179,11 @@ export default function MapPage() {
     ? state.disruption!.recoveryOption
     : selectedPlan;
   const missionId = contextMissionId;
-  const persistedMission = state.missions[missionId];
+  const persistedMission = explicitPlanContext ? undefined : state.missions[missionId];
   const mission = recovery ? persistedMission! : persistedMission ?? createMission(activePlan, missionId);
-  const routeStatus = routeDisplayStatus(persistedMission, recovery, Boolean(state.approvedPlan));
+  const routeStatus = explicitPlanContext
+    ? state.approvedPlan ? "approved" : "candidate"
+    : routeDisplayStatus(persistedMission, recovery, Boolean(state.approvedPlan));
   const disrupted = routeStatus === "disrupted";
   const routeLocationIds = mission.stops.map((stop) => stop.locationId);
   const stagingLb = activePlan.allocations
@@ -222,14 +260,30 @@ export default function MapPage() {
               <span><Filter size={16} aria-hidden="true" />Layers</span>
               {Object.entries(layers).map(([key, value]) => (
                 <label key={key}>
-                  <input type="checkbox" checked={value} onChange={() => setLayers((current) => ({ ...current, [key]: !current[key as keyof MapLayers] }))} />
+                  <input
+                    type="checkbox"
+                    checked={value}
+                    onChange={() => {
+                      setSelectedMapLocationId(null);
+                      setLayers((current) => ({ ...current, [key]: !current[key as keyof MapLayers] }));
+                    }}
+                  />
                   {key === "demand" ? "Demand partners" : key === "capacity" ? "Warehouse capacity" : key === "vehicles" ? "Vehicles" : "Routes"}
                 </label>
               ))}
               <span className="map-control-note"><Snowflake size={15} aria-hidden="true" />Refrigerated product fit</span>
             </div>
           </div>
-          <NetworkMap variant={recovery ? "recovery" : "initial"} layers={layers} interactive routeSummary={routeSummary} routeStops={mission.stops} routeLocationIds={routeLocationIds} />
+          <NetworkMap
+            variant={recovery ? "recovery" : "initial"}
+            layers={layers}
+            interactive
+            routeSummary={routeSummary}
+            routeStops={mission.stops}
+            routeLocationIds={routeLocationIds}
+            selectedLocationId={selectedMapLocationId}
+            onSelectedLocationChange={setSelectedMapLocationId}
+          />
         </Panel>
 
         <section className="map-decision-summary" aria-label="Map decision summary">
@@ -255,6 +309,8 @@ export default function MapPage() {
                   const demand = partner.demandSignals[0];
                   const acceptance = partner.acceptanceHistory.find((history) => history.category === productLot.category);
                   const onRoute = routePartnerIds.has(partner.id);
+                  const routeStop = mission.stops.find((stop) => stop.locationId === partner.id);
+                  const canceledRouteStop = routeStop?.status === "canceled";
                   return (
                     <tr key={partner.id}>
                       <td><Link href={`/partners/${partner.id}`}><strong>{partner.name}</strong><span>{partner.location.city} · {titleCase(partner.agencyType)}</span></Link></td>
@@ -263,7 +319,17 @@ export default function MapPage() {
                       <td><strong>{partner.refrigeratedCapacityAvailableLb.toLocaleString()} lb</strong><span>Compatible refrigerated capacity</span></td>
                       <td>{partner.receivingWindows[0] ? formatWindow(partner.receivingWindows[0]) : "Window unknown"}</td>
                       <td>{acceptance ? <><strong>{acceptance.acceptanceRatePct}% full acceptance</strong><span>{acceptance.acceptedCount} accepted · {acceptance.refusedCount} refused · {acceptance.shortReceiptCount} short · n={acceptance.sampleSize}</span></> : "History unknown"}</td>
-                      <td>{onRoute ? <span className="fit-cell"><CheckCircle2 size={14} aria-hidden="true" />On route</span> : status === "canceled" || status === "unavailable" ? <span className="conflict-cell"><AlertTriangle size={14} aria-hidden="true" />Excluded</span> : <span className="plain-status plain-status-blue">Context</span>}</td>
+                      <td>
+                        {canceledRouteStop ? (
+                          <span className="conflict-cell"><AlertTriangle size={14} aria-hidden="true" />Canceled stop</span>
+                        ) : status === "canceled" || status === "unavailable" ? (
+                          <span className="conflict-cell"><AlertTriangle size={14} aria-hidden="true" />Excluded</span>
+                        ) : onRoute ? (
+                          <span className="fit-cell"><CheckCircle2 size={14} aria-hidden="true" />On route</span>
+                        ) : (
+                          <span className="plain-status plain-status-blue">Context</span>
+                        )}
+                      </td>
                     </tr>
                   );
                 })}

@@ -1322,6 +1322,13 @@ a {
   text-align: right;
 }
 
+.map-location-card-signal .map-location-card-requested {
+  overflow: visible;
+  line-height: 1.15;
+  text-overflow: clip;
+  white-space: normal;
+}
+
 .map-location-list-interactive .map-sync-note {
   display: flex;
   align-items: center;

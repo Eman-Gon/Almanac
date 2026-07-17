@@ -125,6 +125,7 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   await expect(page.getByTestId("map-marker-PAR-001")).toHaveCount(0);
   await expect(page.getByTestId("map-location-PAR-001")).toHaveCount(0);
   await expect(page.getByTestId("map-legend-demand")).toHaveCount(0);
+  await expect(page.getByText("1 of 4 stops visible", { exact: true })).toBeVisible();
   await demandLayer.check();
   await expect(page.getByTestId("map-marker-PAR-001")).toHaveCount(1);
   await expect(page.getByTestId("map-legend-demand")).toHaveCount(1);
@@ -134,6 +135,7 @@ test("seeded routes and invalid record states are intentional", async ({ page })
   await expect(page.getByTestId("map-marker-WH-001")).toHaveCount(0);
   await expect(page.getByTestId("map-location-WH-001")).toHaveCount(0);
   await expect(page.getByTestId("map-legend-capacity")).toHaveCount(0);
+  await expect(page.getByText("3 of 4 stops visible", { exact: true })).toBeVisible();
   await capacityLayer.check();
   await expect(page.getByTestId("map-marker-WH-001")).toHaveCount(1);
 
@@ -173,6 +175,8 @@ test("seeded routes and invalid record states are intentional", async ({ page })
     "/packing/UNKNOWN",
     "/missions/UNKNOWN",
     "/partners/UNKNOWN",
+    "/map?plan=UNKNOWN",
+    "/map?mission=UNKNOWN",
   ]) {
     await page.goto(path);
     await expect(page.getByText("That ChoiceGrid record was not found.")).toBeVisible();

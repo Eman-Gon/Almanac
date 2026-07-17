@@ -16,7 +16,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type WheelEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { partners, productLot, vehicles, warehouse } from "@/data/seed/scenario";
 import type { Mission } from "@/domain/types";
 import { useDemoState } from "@/state/demo-state";
@@ -406,7 +406,7 @@ function MapDetailCard({
         ) : location.routeStop ? <span className="map-context-chip">Route layer hidden</span> : <span className="map-context-chip">Context location</span>}
       </div>
       <div className="map-detail-facts">
-        {plannedQuantityLb ? <div><span>{location.kind === "warehouse" ? "Planned outbound load" : "Planned delivery"}</span><strong>{plannedQuantityLb.toLocaleString()} lb · Refrigerated</strong></div> : location.quantityLb ? <div><span>Available inventory</span><strong>{location.quantityLb.toLocaleString()} lb · Refrigerated</strong></div> : null}
+        {plannedQuantityLb !== undefined ? <div><span>{location.kind === "warehouse" ? "Planned outbound load" : "Planned delivery"}</span><strong>{plannedQuantityLb.toLocaleString()} lb · Refrigerated</strong></div> : location.quantityLb ? <div><span>Available inventory</span><strong>{location.quantityLb.toLocaleString()} lb · Refrigerated</strong></div> : null}
         {location.demand ? <div><span>Demand</span><strong>{location.demand.quantityLb.toLocaleString()} lb · {titleCase(location.demand.urgency)}</strong></div> : null}
         {location.capacity ? <div><span>{location.capacity.label}</span><strong>{location.capacity.availableLb.toLocaleString()} lb available</strong></div> : null}
         {location.receivingWindow ? <div><span>{location.kind === "warehouse" ? "Warehouse departure window" : "Receiving window"}</span><strong>{location.receivingWindow}</strong></div> : null}
@@ -465,8 +465,14 @@ function InteractiveLocationList({
   selectedLocationId: string | null;
   onSelect: (id: string, source: SelectionSource) => void;
 }) {
-  const routeLocations = routesVisible ? locations.filter((location) => location.routeStop) : [];
+  const locationById = new Map(locations.map((location) => [location.id, location]));
+  const routeLocations = routesVisible
+    ? routeStops
+      .map((stop) => locationById.get(stop.locationId))
+      .filter((location): location is MapLocation => Boolean(location))
+    : [];
   const contextLocations = routesVisible ? locations.filter((location) => !location.routeStop) : locations;
+  const hiddenRouteStopCount = routesVisible ? routeStops.length - routeLocations.length : 0;
   const [contextExpanded, setContextExpanded] = useState(false);
   const selectedContextLocation = selectedLocationId
     ? contextLocations.some((location) => location.id === selectedLocationId)
@@ -477,7 +483,16 @@ function InteractiveLocationList({
   return (
     <aside className="map-location-list map-location-list-interactive" aria-label="Synchronized map location list">
       <div className="map-list-heading">
-        <div><span className="map-eyebrow">On route</span><strong>{routesVisible ? `${routeLocations.length} stops` : `${contextLocations.length} visible locations`}</strong></div>
+        <div>
+          <span className="map-eyebrow">On route</span>
+          <strong>
+            {routesVisible
+              ? hiddenRouteStopCount > 0
+                ? `${routeLocations.length} of ${routeStops.length} stops visible`
+                : `${routeLocations.length} stops`
+              : `${contextLocations.length} visible locations`}
+          </strong>
+        </div>
         <span className="map-list-hint">Select for details</span>
       </div>
       {routeSummary ? routesVisible ? <div className="map-route-summary"><RouteSummaryLine routeSummary={routeSummary} /><span className="map-route-summary-note">{routeSummaryNotes[routeSummary.status]}</span></div> : <div className="map-layer-hidden-note"><RouteSummaryLine routeSummary={routeSummary} /><span>Routes layer hidden · location context remains available.</span></div> : null}
@@ -545,7 +560,35 @@ function LocationListButton({
       <span className={`map-location-card-icon ${markerClass(location)}`}><Icon size={14} aria-hidden="true" /></span>
       {sequence ? <span className="map-location-sequence">{sequence}</span> : null}
       <span className="map-location-card-copy"><strong>{location.name}</strong><small>{location.city} · {location.status}</small></span>
-      <span className="map-location-card-signal">{plannedQuantityLb ? <><b>{plannedQuantityLb.toLocaleString()} lb</b><small>{location.kind === "warehouse" ? "outbound load" : "planned delivery"}</small></> : location.demand ? <><b>{location.demand.quantityLb.toLocaleString()} lb</b><small>{titleCase(location.demand.urgency)} need</small></> : location.capacity ? <><b>{location.capacity.availableLb.toLocaleString()} lb</b><small>{location.kind === "vehicle" ? "payload" : "cold headroom"}</small></> : location.quantityLb ? <><b>{location.quantityLb.toLocaleString()} lb</b><small>available inventory</small></> : <><b>Window</b><small>{location.receivingWindow ?? "Window unknown"}</small></>}</span>
+      <span className="map-location-card-signal">
+        {plannedQuantityLb !== undefined ? (
+          <>
+            <b>{plannedQuantityLb.toLocaleString()} lb</b>
+            <small>{location.kind === "warehouse" ? "outbound load" : "planned delivery"}</small>
+            {location.demand ? <small className="map-location-card-requested">{location.demand.quantityLb.toLocaleString()} lb requested</small> : null}
+          </>
+        ) : location.demand ? (
+          <>
+            <b>{location.demand.quantityLb.toLocaleString()} lb</b>
+            <small>{titleCase(location.demand.urgency)} need</small>
+          </>
+        ) : location.capacity ? (
+          <>
+            <b>{location.capacity.availableLb.toLocaleString()} lb</b>
+            <small>{location.kind === "vehicle" ? "payload" : "cold headroom"}</small>
+          </>
+        ) : location.quantityLb ? (
+          <>
+            <b>{location.quantityLb.toLocaleString()} lb</b>
+            <small>available inventory</small>
+          </>
+        ) : (
+          <>
+            <b>Window</b>
+            <small>{location.receivingWindow ?? "Window unknown"}</small>
+          </>
+        )}
+      </span>
     </button>
   );
 }
@@ -558,6 +601,8 @@ export function NetworkMap({
   routeSummary,
   routeStops,
   routeLocationIds,
+  selectedLocationId: controlledSelectedLocationId,
+  onSelectedLocationChange,
 }: {
   variant?: MapVariant;
   showList?: boolean;
@@ -566,6 +611,8 @@ export function NetworkMap({
   routeSummary?: MapRouteSummary;
   routeStops?: MapRouteStop[];
   routeLocationIds?: string[];
+  selectedLocationId?: string | null;
+  onSelectedLocationChange?: (id: string | null) => void;
 }) {
   const { state } = useDemoState();
   const { locations, routeIds } = useMemo(
@@ -588,9 +635,19 @@ export function NetworkMap({
   });
   const listLocations = interactive ? visibleLocations : compactLocations(locations, routeIds, layers);
   const markerLocations = interactive ? visibleLocations : listLocations;
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [internalSelectedLocationId, setInternalSelectedLocationId] = useState<string | null>(null);
+  const selectedLocationId = controlledSelectedLocationId === undefined
+    ? internalSelectedLocationId
+    : controlledSelectedLocationId;
+  const setSelectedLocationId = useCallback((id: string | null) => {
+    if (controlledSelectedLocationId === undefined) {
+      setInternalSelectedLocationId(id);
+    }
+    onSelectedLocationChange?.(id);
+  }, [controlledSelectedLocationId, onSelectedLocationChange]);
   const [viewport, setViewport] = useState<MapViewport>(DEFAULT_VIEWPORT);
   const [dragging, setDragging] = useState(false);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{
     pointerId: number;
     startX: number;
@@ -660,7 +717,10 @@ export function NetworkMap({
         panY: -(location.point.y - 50) * current.zoom,
       });
     });
-  }, [locations]);
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLButtonElement>("#map-location-detail .map-detail-close")?.focus();
+    });
+  }, [locations, setSelectedLocationId]);
 
   const closeDetails = useCallback(() => {
     const trigger = lastSelectionTrigger.current;
@@ -669,7 +729,7 @@ export function NetworkMap({
     window.requestAnimationFrame(() => {
       document.querySelector<HTMLElement>(`[data-testid="map-${trigger.source}-${trigger.id}"]`)?.focus();
     });
-  }, []);
+  }, [setSelectedLocationId]);
 
   useEffect(() => {
     if (!selectedLocation) return;
@@ -702,12 +762,13 @@ export function NetworkMap({
     }
   }
 
-  function handleMapWheel(event: WheelEvent<HTMLDivElement>) {
-    if (!interactive || (Math.abs(event.deltaX) < 1 && Math.abs(event.deltaY) < 1)) return;
+  const handleMapWheel = useCallback((event: globalThis.WheelEvent) => {
+    const canvas = canvasRef.current;
+    if (!interactive || !canvas || (Math.abs(event.deltaX) < 1 && Math.abs(event.deltaY) < 1)) return;
     if (event.target instanceof Element && event.target.closest("button, a, .map-detail-card, .map-zoom-controls")) return;
     event.preventDefault();
 
-    const bounds = event.currentTarget.getBoundingClientRect();
+    const bounds = canvas.getBoundingClientRect();
     const isPinchZoom = event.ctrlKey || event.metaKey;
     const isCoarseWheel = event.deltaMode !== 0 || Math.abs(event.deltaY) >= 100;
 
@@ -728,7 +789,14 @@ export function NetworkMap({
         (-event.deltaY / bounds.height) * 100,
       );
     }
-  }
+  }, [interactive, panViewport, updateZoom, viewport.zoom]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!interactive || !canvas) return;
+    canvas.addEventListener("wheel", handleMapWheel, { passive: false });
+    return () => canvas.removeEventListener("wheel", handleMapWheel);
+  }, [handleMapWheel, interactive]);
 
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     if (!interactive || event.button !== 0 || viewport.zoom === 1) return;
@@ -772,6 +840,7 @@ export function NetworkMap({
   return (
     <div className={`network-map-layout ${showList ? "with-list" : ""} ${interactive ? "map-interactive" : ""}`}>
       <div
+        ref={canvasRef}
         className={`map-canvas ${viewport.zoom > 1 ? "map-canvas-zoomed" : ""} ${dragging ? "map-canvas-dragging" : ""}`}
         role={interactive ? "group" : "img"}
         aria-label="Schematic warehouse-origin route map for the current mission"
@@ -779,7 +848,6 @@ export function NetworkMap({
         tabIndex={interactive ? 0 : undefined}
         data-testid={interactive ? "network-map-canvas" : undefined}
         onKeyDown={interactive ? handleMapKeyDown : undefined}
-        onWheel={interactive ? handleMapWheel : undefined}
         onPointerDown={interactive ? handlePointerDown : undefined}
         onPointerMove={interactive ? handlePointerMove : undefined}
         onPointerUp={interactive ? handlePointerEnd : undefined}

@@ -47,6 +47,10 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
   await expect(page.getByText("Replanning required", { exact: true }).first()).toBeVisible();
   await page.getByTestId("map-marker-PAR-002").click();
   await expect(page.locator('[aria-label="Eastside Community Pantry operational details"]')).toContainText("Canceled during replanning");
+  await page.getByText("Partner capacity, demand, and receiving windows", { exact: true }).click();
+  const canceledEastsideRow = page.getByRole("row").filter({ hasText: "Eastside Community Pantry" });
+  await expect(canceledEastsideRow.getByText("Canceled stop", { exact: true })).toBeVisible();
+  await expect(canceledEastsideRow.getByText("On route", { exact: true })).toHaveCount(0);
 
   await page.goto("/partners/PAR-002");
   await expect(page.getByText("Partner canceled for this mission")).toBeVisible();
@@ -65,6 +69,18 @@ test("primary strawberry flow reaches recovered impact", async ({ page }) => {
   await expect(page.getByText("Superseded route", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Original route superseded by the human-approved replacement mission.")).toBeVisible();
   await expect(page.getByText("Human-approved route currently in execution.")).toHaveCount(0);
+  await page.goto("/map?mission=MSN-105");
+  const recoveredRouteRows = page.locator(".map-location-section").first().locator('[data-testid^="map-location-"]');
+  await expect(recoveredRouteRows).toHaveCount(4);
+  expect(await recoveredRouteRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-testid")))).toEqual([
+    "map-location-WH-001",
+    "map-location-PAR-001",
+    "map-location-PAR-004",
+    "map-location-PAR-003",
+  ]);
+  await page.goto("/map?plan=PLN-104&returnTo=/plans/PLN-104");
+  await expect(page.getByText("Balanced Release · Approved", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Recovery route", { exact: true })).toHaveCount(0);
   await page.goto("/missions/MSN-105");
   await page.locator('a[href="/packing/PKG-105"]').first().click();
   await expect(page.getByRole("checkbox", { name: "Mark Harbor Light Pantry batch complete" })).toBeChecked();
